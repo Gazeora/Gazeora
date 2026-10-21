@@ -1,0 +1,23 @@
+# Google style with 4-space indents and 100 columns, matching the existing code.
+---
+Language: Cpp
+BasedOnStyle: Google
+IndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -4
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Keep include groups as written, but always put <windows.h> first within a group:
+# many Windows/DirectX headers depend on it being included before them.
+IncludeBlocks: Preserve
+SortIncludes: CaseSensitive
+IncludeCategories:
+  - Regex: '^<windows\.h>$'
+    Priority: 1
+  - Regex: '^<.*\.h>$'
+    Priority: 2
+  - Regex: '^<.*>$'
+    Priority: 3
+  - Regex: '.*'
+    Priority: 4
