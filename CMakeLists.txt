@@ -10,15 +10,12 @@ include(ClangFormat)       # format / format-check targets
 # Keep the executables and gazeora_hook.dll side by side; they load the DLL from their own folder.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_subdirectory(common)         # gazeora_common: protocol shared by hook and host
-add_subdirectory(hook)           # gazeora_hook.dll: injected into the game
-add_subdirectory(host)           # gazeora_host_lib: injects the hook and receives frames
-add_subdirectory(src)            # Gazeora.exe (launcher UI) and GazeoraCLI.exe
-add_subdirectory(tools/testapp)  # gazeora_testapp.exe: test "game" for each API
-add_subdirectory(tools/streamprobe)  # gazeora_stream_probe.exe: measures the RTSP stream
+add_subdirectory(libs)   # common, hook (gazeora_hook.dll), host, library
+add_subdirectory(apps)   # Gazeora.exe (launcher UI) and GazeoraCLI.exe
+add_subdirectory(tools)  # gazeora_testapp.exe, gazeora_stream_probe.exe
 
 option(GAZEORA_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 if(GAZEORA_BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests)      # gazeora_*_tests.exe: run with ctest
+    add_subdirectory(tests)  # gazeora_*_tests.exe: run with ctest
 endif()

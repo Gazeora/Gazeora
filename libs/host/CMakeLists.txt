@@ -1,6 +1,6 @@
 # Launches games, injects the hook into them, receives their frames and streams them to
 # the local network over RTSP/RTP. A static library shared by Gazeora.exe, GazeoraCLI.exe
-# (src/) and the unit tests.
+# (apps/) and the unit tests.
 add_library(gazeora_host_lib STATIC
     # launch: starting games and injecting the hook into them
     src/launch/injector.cpp

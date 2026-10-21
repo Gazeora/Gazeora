@@ -10,10 +10,8 @@ if(NOT CLANG_FORMAT_EXE)
 endif()
 
 file(GLOB_RECURSE GAZEORA_FORMAT_SOURCES CONFIGURE_DEPENDS
-    ${CMAKE_SOURCE_DIR}/common/*.h
-    ${CMAKE_SOURCE_DIR}/hook/*.h ${CMAKE_SOURCE_DIR}/hook/*.cpp
-    ${CMAKE_SOURCE_DIR}/host/*.h ${CMAKE_SOURCE_DIR}/host/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/*.h ${CMAKE_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_SOURCE_DIR}/libs/*.h ${CMAKE_SOURCE_DIR}/libs/*.cpp
+    ${CMAKE_SOURCE_DIR}/apps/*.h ${CMAKE_SOURCE_DIR}/apps/*.cpp
     ${CMAKE_SOURCE_DIR}/tools/*.h ${CMAKE_SOURCE_DIR}/tools/*.cpp
     ${CMAKE_SOURCE_DIR}/tests/*.h ${CMAKE_SOURCE_DIR}/tests/*.cpp)
 
