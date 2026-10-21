@@ -1,4 +1,5 @@
-// TEMPORARY benchmark: per-frame CPU cost of the stream path at 1080p.
+// Benchmark: per-frame CPU cost of the stream path at 1080p. Disabled by default, as it
+// takes seconds and only prints; run with --gtest_also_run_disabled_tests --gtest_filter=*Bench*.
 #include <windows.h>
 #include <gtest/gtest.h>
 #include <mfapi.h>
@@ -7,6 +8,7 @@
 #include <cstdio>
 #include <vector>
 
+#include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/rtp_video.h"
 
@@ -17,7 +19,7 @@ static double Ms(Clock::time_point a, Clock::time_point b) {
     return std::chrono::duration<double, std::milli>(b - a).count();
 }
 
-TEST(Bench, StreamPath) {
+TEST(Bench, DISABLED_StreamPath) {
     CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     MFStartup(MF_VERSION, MFSTARTUP_LITE);
     const uint32_t W = 1920, H = 1080;
@@ -31,9 +33,14 @@ TEST(Bench, StreamPath) {
     printf("BgraToNv12 1080p: %.2f ms\n", Ms(t0, t1) / 50);
 
     for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) {
-        VideoEncoder encoder;
+        auto encoder = CreateVideoEncoder();
         std::wstring error;
-        ASSERT_TRUE(encoder.Open(codec, W, H, 30, 8000000, 30, true, error));
+        VideoEncoder::Settings settings;
+        settings.codec = codec;
+        settings.width = W;
+        settings.height = H;
+        settings.bitrate = 8000000;
+        ASSERT_TRUE(encoder->Open(settings, error));
         std::vector<VideoEncoder::Frame> frames;
         double encodeMs = 0, packMs = 0;
         uint16_t seq = 0;
@@ -43,11 +50,11 @@ TEST(Bench, StreamPath) {
             BgraToNv12(bgra.data(), W, W, H, nv12);
             frames.clear();
             auto a = Clock::now();
-            encoder.Encode(nv12.data(), int64_t(i) * 333333, frames, error);
+            encoder->Encode(nv12.data(), int64_t(i) * 333333, frames, error);
             auto b = Clock::now();
             for (auto& f : frames) {
                 SplitAnnexB(f.annexB, nals);
-                PacketizeRtpVideo(codec, nals, 0, 0, 1400, seq, packets);
+                RtpPayloadFormat::For(codec).Packetize(nals, 0, 0, 1400, seq, packets);
             }
             auto c = Clock::now();
             if (i >= 10) encodeMs += Ms(a, b), packMs += Ms(b, c);

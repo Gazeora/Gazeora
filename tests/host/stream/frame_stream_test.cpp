@@ -31,6 +31,7 @@ protected:
     void TearDown() override {
         if (rtsp != INVALID_SOCKET) closesocket(rtsp);
         if (rtp != INVALID_SOCKET) closesocket(rtp);
+        if (rtcpSink != INVALID_SOCKET) closesocket(rtcpSink);
         server.Stop();
         WSACleanup();
     }
@@ -114,15 +115,34 @@ protected:
     // DESCRIBE, SETUP over UDP and PLAY; returns the session id.
     std::string Play() {
         Connect();
-        rtp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        // Bind both ports of the pair, like a real player. The server sends its sender reports
+        // to the RTCP port; left unbound, it can be another test process's RTP port (ephemeral
+        // ports are handed out in sequence), which then receives this server's reports.
+        uint16_t port = 0;
+        if (rtcpSink != INVALID_SOCKET) closesocket(rtcpSink);
+        rtcpSink = INVALID_SOCKET;
+        for (int attempt = 0; attempt < 50 && rtcpSink == INVALID_SOCKET; ++attempt) {
+            if (rtp != INVALID_SOCKET) closesocket(rtp);
+            rtp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            sockaddr_in address = Loopback(0);
+            int length = sizeof(address);
+            if (bind(rtp, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) continue;
+            getsockname(rtp, reinterpret_cast<sockaddr*>(&address), &length);
+            port = ntohs(address.sin_port);
+            if (port == 65535) continue;
+            SOCKET sink = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            sockaddr_in next = Loopback(uint16_t(port + 1));
+            if (bind(sink, reinterpret_cast<sockaddr*>(&next), sizeof(next)) == 0) {
+                rtcpSink = sink;
+            } else {
+                closesocket(sink);
+            }
+        }
+        EXPECT_NE(rtcpSink, INVALID_SOCKET) << "no free pair of adjacent UDP ports";
+        if (rtcpSink == INVALID_SOCKET) return {};
         SetTimeout(rtp, 3000);
         int buffer = 8 << 20;
         setsockopt(rtp, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char*>(&buffer), sizeof(buffer));
-        sockaddr_in address = Loopback(0);
-        int length = sizeof(address);
-        EXPECT_EQ(bind(rtp, reinterpret_cast<sockaddr*>(&address), sizeof(address)), 0);
-        getsockname(rtp, reinterpret_cast<sockaddr*>(&address), &length);
-        uint16_t port = ntohs(address.sin_port);
 
         Request("DESCRIBE", base);
         std::string setup =
@@ -166,7 +186,7 @@ protected:
             std::vector<std::string> nals;
             SplitAnnexB(annexB, nals);
             nalTypes->clear();
-            for (const std::string& nal : nals) nalTypes->push_back(NalType(nal));
+            for (const std::string& nal : nals) nalTypes->push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
         }
         return packets;
     }
@@ -184,6 +204,7 @@ protected:
     std::string base;
     SOCKET rtsp = INVALID_SOCKET;
     SOCKET rtp = INVALID_SOCKET;
+    SOCKET rtcpSink = INVALID_SOCKET;  // holds the RTCP port of the pair; never read
     uint32_t ssrc = 0;
     uint16_t serverRtcpPort = 0;
     int cseq = 0;
@@ -265,10 +286,10 @@ TEST_F(FrameStreamTest, TcpPlayerThatFallsBehindResumesOnAKeyFrame) {
             sawSkip = true;
             std::vector<std::string> nals;
             SplitAnnexB(annexB, nals);
-            for (const std::string& nal : nals) resumedOnKey |= NalType(nal) == kNalIdrSlice;
+            for (const std::string& nal : nals) resumedOnKey |= RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice;
             seen = "after " + std::to_string(frames) + " frames, " +
                    std::to_string((frameTimestamp - lastTimestamp) / 90) + " ms skipped; NAL types";
-            for (const std::string& nal : nals) seen += " " + std::to_string(NalType(nal));
+            for (const std::string& nal : nals) seen += " " + std::to_string(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
         }
         ++frames;
         haveLast = true;
@@ -316,7 +337,7 @@ TEST_F(FrameStreamTest, StreamsInterleavedOverTcp) {
     std::vector<std::string> nals;
     SplitAnnexB(annexB, nals);
     std::vector<uint8_t> types;
-    for (const std::string& nal : nals) types.push_back(NalType(nal));
+    for (const std::string& nal : nals) types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
     EXPECT_TRUE(Has(types, kNalSps) && Has(types, kNalPps) && Has(types, kNalIdrSlice));
 
     // Requests still work on the connection the stream is flowing on.
@@ -485,10 +506,10 @@ TEST_F(FrameStreamTest, StreamsH265WhenChosenAndAvailable) {
     SplitAnnexB(annexB, nals);
     bool vps = false, sps = false, pps = false, key = false;
     for (const std::string& nal : nals) {
-        vps |= HevcNalType(nal) == kHevcVps;
-        sps |= HevcNalType(nal) == kHevcSps;
-        pps |= HevcNalType(nal) == kHevcPps;
-        key |= IsKeyFrameNal(VideoCodec::H265, nal);
+        vps |= RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) == kHevcVps;
+        sps |= RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) == kHevcSps;
+        pps |= RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) == kHevcPps;
+        key |= RtpPayloadFormat::For(VideoCodec::H265).IsKeyFrame(nal);
     }
     EXPECT_TRUE(vps && sps && pps && key);
     // Players that join later get the parameter sets in the SDP as well.

@@ -464,7 +464,7 @@ int main(int argc, char** argv) {
         if (saveFile) fwrite(frame.data(), 1, frame.size(), saveFile);
         gazeora::SplitAnnexB(frame, nalUnits);
         bool keyFrame = std::any_of(nalUnits.begin(), nalUnits.end(), [codec](const std::string& nal) {
-            return gazeora::IsKeyFrameNal(codec, nal);
+            return gazeora::RtpPayloadFormat::For(codec).IsKeyFrame(nal);
         });
         keyFramesTotal += keyFrame, interval.keyFrames += keyFrame;
         if (!intact) {

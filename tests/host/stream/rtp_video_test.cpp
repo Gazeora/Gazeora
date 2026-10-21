@@ -39,15 +39,15 @@ TEST(RtpH264Test, SplitsAnnexBWithBothStartCodeLengths) {
     EXPECT_EQ(nals[2],
               "\x65"
               "def");
-    EXPECT_EQ(NalType(nals[0]), kNalSps);
-    EXPECT_EQ(NalType(nals[2]), kNalIdrSlice);
+    EXPECT_EQ(RtpPayloadFormat::For(VideoCodec::H264).NalType(nals[0]), kNalSps);
+    EXPECT_EQ(RtpPayloadFormat::For(VideoCodec::H264).NalType(nals[2]), kNalIdrSlice);
 }
 
 TEST(RtpH264Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
     std::vector<std::string> nals = {Nal(0x67, 20), Nal(0x68, 5), Nal(0x65, 3000, 'y')};
     uint16_t seq = 65530;
     std::vector<std::string> packets;
-    PacketizeRtpVideo(VideoCodec::H264, nals, 0x11223344, 0xCAFEF00D, 1400, seq, packets);
+    RtpPayloadFormat::For(VideoCodec::H264).Packetize(nals, 0x11223344, 0xCAFEF00D, 1400, seq, packets);
     // 2 single NAL packets, then 3000 bytes in fragments of up to 1386.
     ASSERT_EQ(packets.size(), 5u);
     EXPECT_EQ(seq, uint16_t(65530 + 5));
@@ -81,7 +81,7 @@ TEST(RtpH264Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
 TEST(RtpH264Test, AFragmentWithoutItsStartIsRejected) {
     std::vector<std::string> packets;
     uint16_t seq = 0;
-    PacketizeRtpVideo(VideoCodec::H264, {Nal(0x65, 4000)}, 0, 0, 1400, seq, packets);
+    RtpPayloadFormat::For(VideoCodec::H264).Packetize({Nal(0x65, 4000)}, 0, 0, 1400, seq, packets);
     ASSERT_EQ(packets.size(), 3u);
     RtpVideoDepacketizer depacketizer;
     std::string annexB;
@@ -94,9 +94,12 @@ TEST(RtpH264Test, AFragmentWithoutItsStartIsRejected) {
 TEST(RtpH264Test, FmtpCarriesProfileAndParameterSets) {
     std::string sps = "\x67\x42\xC0\x28";  // Constrained Baseline, level 4.0
     std::string pps = "\x68\xCE";
-    EXPECT_EQ(H264Fmtp(sps, pps),
+    const RtpPayloadFormat& h264 = RtpPayloadFormat::For(VideoCodec::H264);
+    const std::string sets[4] = {"", "", sps, pps};  // indexed by ParameterSet
+    EXPECT_EQ(h264.Fmtp(sets),
               "packetization-mode=1;profile-level-id=42C028;sprop-parameter-sets=Z0LAKA==,aM4=");
-    EXPECT_EQ(H264Fmtp("", ""), "packetization-mode=1");
+    const std::string none[4];
+    EXPECT_EQ(h264.Fmtp(none), "packetization-mode=1");
 }
 
 // A decoder for `codec`: Microsoft's for H.264, which ships with Windows; for H.265 the
@@ -107,7 +110,7 @@ TEST(RtpH265Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
                                      HevcNal(kHevcPps, 8), HevcNal(kHevcIdrWRadl, 3000, 'y')};
     uint16_t seq = 7;
     std::vector<std::string> packets;
-    PacketizeRtpVideo(VideoCodec::H265, nals, 1234, 0xCAFEF00D, 1400, seq, packets);
+    RtpPayloadFormat::For(VideoCodec::H265).Packetize(nals, 1234, 0xCAFEF00D, 1400, seq, packets);
     // 3 single NAL packets, then 2998 bytes after the header in fragments of up to 1385.
     ASSERT_EQ(packets.size(), 6u);
     EXPECT_EQ(seq, 13);
@@ -134,8 +137,8 @@ TEST(RtpH265Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
     std::vector<std::string> rebuilt;
     SplitAnnexB(annexB, rebuilt);
     EXPECT_EQ(rebuilt, nals);
-    EXPECT_TRUE(IsKeyFrameNal(VideoCodec::H265, rebuilt[3]));
-    EXPECT_FALSE(IsKeyFrameNal(VideoCodec::H265, HevcNal(kHevcTrailR, 10)));
+    EXPECT_TRUE(RtpPayloadFormat::For(VideoCodec::H265).IsKeyFrame(rebuilt[3]));
+    EXPECT_FALSE(RtpPayloadFormat::For(VideoCodec::H265).IsKeyFrame(HevcNal(kHevcTrailR, 10)));
 }
 
 TEST(RtpH265Test, UnpacksAggregationPackets) {
@@ -158,7 +161,7 @@ TEST(RtpH265Test, UnpacksAggregationPackets) {
 TEST(RtpH265Test, AFragmentWithoutItsStartIsRejected) {
     std::vector<std::string> packets;
     uint16_t seq = 0;
-    PacketizeRtpVideo(VideoCodec::H265, {HevcNal(kHevcTrailR, 4000)}, 0, 0, 1400, seq, packets);
+    RtpPayloadFormat::For(VideoCodec::H265).Packetize({HevcNal(kHevcTrailR, 4000)}, 0, 0, 1400, seq, packets);
     ASSERT_EQ(packets.size(), 3u);
     RtpVideoDepacketizer depacketizer(VideoCodec::H265);
     std::string annexB;
@@ -168,9 +171,11 @@ TEST(RtpH265Test, AFragmentWithoutItsStartIsRejected) {
 }
 
 TEST(RtpH265Test, FmtpCarriesTheThreeParameterSets) {
-    EXPECT_EQ(H265Fmtp("\x40\x01", "\x42\x01", "\x44\x01"),
-              "sprop-vps=QAE=;sprop-sps=QgE=;sprop-pps=RAE=");
-    EXPECT_EQ(H265Fmtp("", "\x42\x01", "\x44\x01"), "");
+    const RtpPayloadFormat& h265 = RtpPayloadFormat::For(VideoCodec::H265);
+    const std::string all[4] = {"", "\x40\x01", "\x42\x01", "\x44\x01"};  // by ParameterSet
+    EXPECT_EQ(h265.Fmtp(all), "sprop-vps=QAE=;sprop-sps=QgE=;sprop-pps=RAE=");
+    const std::string noVps[4] = {"", "", "\x42\x01", "\x44\x01"};
+    EXPECT_EQ(h265.Fmtp(noVps), "");
 }
 
 }  // namespace

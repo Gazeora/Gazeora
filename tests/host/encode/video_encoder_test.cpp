@@ -10,10 +10,12 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
 
+#include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/rtp_video.h"
 
@@ -175,12 +177,19 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     const VideoCodec codec = std::get<0>(GetParam());
     const bool hardware = std::get<1>(GetParam());
     const bool hevc = codec == VideoCodec::H265;
-    VideoEncoder encoder;
+    std::unique_ptr<VideoEncoder> encoderPtr = CreateVideoEncoder();
+    VideoEncoder& encoder = *encoderPtr;
     std::wstring error;
     if (hevc && !VideoEncoder::Available(codec)) {
         GTEST_SKIP() << "no H.265 encoder on this machine";
     }
-    bool opened = encoder.Open(codec, 320, 240, 30, 2000000, 30, hardware, error);
+    VideoEncoder::Settings settings;
+    settings.codec = codec;
+    settings.width = 320;
+    settings.height = 240;
+    settings.bitrate = 2000000;
+    settings.preferHardware = hardware;
+    bool opened = encoder.Open(settings, error);
     if (!opened && hevc && !hardware) {
         GTEST_SKIP() << "no software H.265 encoder on this machine";
     }
@@ -189,7 +198,7 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
         GTEST_SKIP() << "no " << (hardware ? "hardware " : "software ") << CodecName(codec)
                      << " encoder on this machine";
     }
-    EXPECT_EQ(encoder.Codec(), codec);
+    EXPECT_EQ(encoder.Current().codec, codec);
 
     // Mid grey, then lighter: the decoded luma must follow.
     std::vector<uint8_t> bgra(320 * 240 * 4), nv12;
@@ -207,11 +216,11 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     SplitAnnexB(frames[0].annexB, nals);
     bool vps = !hevc, sps = false, pps = false, idr = false;
     for (const std::string& nal : nals) {
-        uint8_t type = hevc ? HevcNalType(nal) : NalType(nal);
+        uint8_t type = hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) : RtpPayloadFormat::For(VideoCodec::H264).NalType(nal);
         vps |= hevc && type == kHevcVps;
-        sps |= type == (hevc ? kHevcSps : kNalSps);
-        pps |= type == (hevc ? kHevcPps : kNalPps);
-        idr |= IsKeyFrameNal(codec, nal);
+        sps |= type == (hevc ? uint8_t(kHevcSps) : uint8_t(kNalSps));
+        pps |= type == (hevc ? uint8_t(kHevcPps) : uint8_t(kNalPps));
+        idr |= RtpPayloadFormat::For(codec).IsKeyFrame(nal);
     }
     EXPECT_TRUE(vps && sps && pps && idr) << "the first frame must be decodable on its own";
     // Slicing, so a lost packet costs a strip rather than the frame. Checked where it's known
@@ -219,8 +228,8 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     if (encoder.Name().find(L"NVIDIA") != std::wstring::npos) {
         int slices = 0;
         for (const std::string& nal : nals) {
-            slices += hevc ? HevcNalType(nal) < kHevcVps : (NalType(nal) == kNalSlice ||
-                                                            NalType(nal) == kNalIdrSlice);
+            slices += hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) < kHevcVps : (RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalSlice ||
+                                                            RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice);
         }
         EXPECT_GE(slices, 8);
     }
@@ -234,7 +243,7 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     for (const VideoEncoder::Frame& frame : frames) {
         SplitAnnexB(frame.annexB, nals);
         std::vector<std::string> packets;
-        PacketizeRtpVideo(codec, nals, 0, 0, 1400, seq, packets);
+        RtpPayloadFormat::For(codec).Packetize(nals, 0, 0, 1400, seq, packets);
         RtpVideoDepacketizer depacketizer(codec);
         std::string annexB;
         for (const std::string& packet : packets) {

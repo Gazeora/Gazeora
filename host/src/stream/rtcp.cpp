@@ -31,7 +31,7 @@ std::string BuildSenderReport(uint32_t ssrc, uint32_t packetsSent, uint32_t octe
     uint32_t ntpFraction = uint32_t((ticks % 10000000 << 32) / 10000000);
 
     std::string report;
-    report.reserve(44);
+    report.reserve(48);
     auto put32 = [&](uint32_t v) {
         for (int shift = 24; shift >= 0; shift -= 8) report += char(v >> shift);
     };
@@ -47,7 +47,8 @@ std::string BuildSenderReport(uint32_t ssrc, uint32_t packetsSent, uint32_t octe
     report +=
         "\x01\x07"
         "Gazeora";           // CNAME
-    report.append(2, '\0');  // end of items, padded to a word
+    // End of items, padding the chunk to a word: 4 + 9 + 3 = 16 bytes (RFC 3550 6.5).
+    report.append(3, '\0');
     return report;
 }
 

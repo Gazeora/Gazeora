@@ -43,8 +43,12 @@ gazeora_add_test(gazeora_host_tests
         host/capture/capture_client_test.cpp
         host/capture/frame_dump_test.cpp
         host/encode/video_encoder_test.cpp
-        host/stream/rtp_video_test.cpp
+        host/stream/bitrate_controller_test.cpp
         host/stream/frame_stream_test.cpp
+        host/stream/rtcp_test.cpp
+        host/stream/rtp_video_test.cpp
+        host/stream/rtsp_message_test.cpp
+        host/stream/video_pipeline_test.cpp
         host/bench_test.cpp
     LIBS gazeora_host_lib)
 
