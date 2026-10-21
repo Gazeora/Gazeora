@@ -5,8 +5,20 @@ enable_language(RC)
 add_executable(Gazeora WIN32
     src/main.cpp
     src/app.cpp
+    src/app_actions.cpp
     src/game_session.cpp
     src/textures.cpp
+    src/pages/chrome.cpp
+    src/pages/details_page.cpp
+    src/pages/home_page.cpp
+    src/pages/library_page.cpp
+    src/pages/settings_page.cpp
+    src/platform/shell.cpp
+    src/settings/stream_settings.cpp
+    src/ui/logo_frame.cpp
+    src/ui/text_format.cpp
+    src/ui/theme.cpp
+    src/ui/widgets.cpp
     resources/gazeora.rc)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(Gazeora PRIVATE

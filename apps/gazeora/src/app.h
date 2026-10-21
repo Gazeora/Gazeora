@@ -12,6 +12,7 @@
 #include "game_session.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/library/game_library.h"
+#include "settings/stream_settings.h"
 #include "textures.h"
 
 struct ImFont;
@@ -21,6 +22,10 @@ namespace gazeora::app {
 // The Gazeora.exe window contents: sidebar navigation, home, library grid, game
 // details and settings. Owns the game library, the sessions of launched games and the
 // local server that streams their captured frames.
+//
+// The implementation is split by concern: app.cpp (lifetime, frame loop, the stream's logo
+// and VR layout), app_actions.cpp (what buttons do), and one file per page under pages/.
+// The controls and colors the pages draw with live in ui/.
 class App {
 public:
     App(HWND hwnd, ID3D11Device* device, float dpiScale);
@@ -103,6 +108,7 @@ private:
     GameLibrary m_library;
     FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
     std::wstring m_streamError;  // why it isn't running
+    StreamSettings m_settings;   // stream.ini: codec and VR layout
     VrLayout m_vr;
     bool m_logoDirty = true;
     // What the logo frame looks like in the stream, shown under the VR settings.

@@ -1,0 +1,37 @@
+// The launcher's own controls, drawn with ImGui primitives in the theme's colors.
+#pragma once
+
+#include <imgui.h>
+
+#include <string>
+
+namespace gazeora::app {
+
+// Where a label's visible part ends ("Play##id" shows "Play").
+const char* LabelEnd(const char* label);
+
+// UV rectangle that fills a rect of `rectAspect` with a texture of `texAspect`, cropping
+// the overflow (CSS object-fit: cover).
+void CoverUv(float texAspect, float rectAspect, ImVec2& uv0, ImVec2& uv1);
+
+// Draws `text` clipped to `maxWidth`, ending in "..." if it doesn't fit.
+void TextEllipsis(ImDrawList* draw, ImFont* font, ImVec2 pos, ImU32 color, const std::string& text,
+                  float maxWidth);
+
+bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg,
+                  ImFont* font, float rounding, bool enabled = true);
+// Text-only button, e.g. "Back" or "View all".
+bool LinkButton(const char* label, ImFont* font, ImU32 color, ImU32 hoverColor);
+// Primary action: violet fading into cyan, brighter on hover. `gradient` is the
+// horizontal TextureCache gradient.
+bool AccentButton(const char* label, ImVec2 size, ImFont* font, float rounding,
+                  ImTextureID gradient, bool enabled = true);
+bool Toggle(const char* id, bool* value, float scale);
+
+// Section container with a rounded background. Pair with EndCard().
+void BeginCard(const char* id, float scale, float width = 0.0f);
+void EndCard();
+void CardTitle(ImFont* font, const char* text);
+void FieldLabel(ImFont* font, const char* text);
+
+}  // namespace gazeora::app

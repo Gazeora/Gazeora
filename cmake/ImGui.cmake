@@ -20,3 +20,6 @@ target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}/backends
     ${imgui_SOURCE_DIR}/misc/cpp)
 target_link_libraries(imgui PUBLIC d3d11 d3dcompiler dwmapi)
+# ImVec2 arithmetic, for every file that includes imgui.h; defining it per file is easy to
+# get wrong once a file includes another ImGui header first.
+target_compile_definitions(imgui PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
