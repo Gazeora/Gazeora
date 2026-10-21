@@ -1,5 +1,5 @@
-// Benchmark: per-frame CPU cost of the stream path at 1080p. Disabled by default, as it
-// takes seconds and only prints; run with --gtest_also_run_disabled_tests --gtest_filter=*Bench*.
+// Benchmark: per-frame CPU cost of the stream path at 1080p. Built as gazeora_bench, outside
+// ctest, as it takes seconds and only prints; numbers mean something in a Release build only.
 #include <windows.h>
 #include <gtest/gtest.h>
 #include <mfapi.h>
@@ -19,7 +19,7 @@ static double Ms(Clock::time_point a, Clock::time_point b) {
     return std::chrono::duration<double, std::milli>(b - a).count();
 }
 
-TEST(Bench, DISABLED_StreamPath) {
+TEST(Bench, StreamPath) {
     CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     MFStartup(MF_VERSION, MFSTARTUP_LITE);
     const uint32_t W = 1920, H = 1080;

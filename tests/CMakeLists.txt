@@ -49,7 +49,6 @@ gazeora_add_test(gazeora_host_tests
         host/stream/rtp_video_test.cpp
         host/stream/rtsp_message_test.cpp
         host/stream/video_pipeline_test.cpp
-        host/bench_test.cpp
     LIBS gazeora_host_lib)
 
 gazeora_add_test(gazeora_library_tests
@@ -59,3 +58,9 @@ gazeora_add_test(gazeora_library_tests
 gazeora_add_test(gazeora_transport_tests
     SOURCES transport/frame_transport_test.cpp
     LIBS gazeora_hook_core gazeora_host_lib)
+
+# Benchmarks: not registered with ctest, so test runs stay fast and unloaded. Run the
+# executable directly (in CLion, pick the gazeora_bench configuration), in a Release build.
+add_executable(gazeora_bench host/bench_test.cpp)
+target_include_directories(gazeora_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(gazeora_bench PRIVATE gazeora_host_lib GTest::gtest_main)
