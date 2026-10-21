@@ -135,7 +135,45 @@ bool StartProcess(const LaunchSpec& spec, DWORD flags, PROCESS_INFORMATION& pi,
     return true;
 }
 
+// How often HandOffDetector looks for a window. A game closed within this of showing its
+// window could be missed; nobody closes a game that fast.
+constexpr DWORD kWindowPollMs = 100;
+
 }  // namespace
+
+HandOffDetector::HandOffDetector(DWORD pid, HANDLE process)
+    : m_pid(pid), m_process(process), m_startedAt(GetTickCount64()) {
+    m_thread = std::thread([this] { Run(); });
+}
+
+HandOffDetector::~HandOffDetector() {
+    m_stop = true;
+    if (m_thread.joinable()) {
+        m_thread.join();
+    }
+}
+
+void HandOffDetector::Run() {
+    // Past kLauncherHandOffMs an exit is never a hand-off, so there's nothing left to learn.
+    while (!m_stop && GetTickCount64() - m_startedAt <= kLauncherHandOffMs) {
+        if (HasVisibleWindow(m_pid)) {
+            m_showedWindow = true;
+            return;
+        }
+        if (WaitForSingleObject(m_process, kWindowPollMs) != WAIT_TIMEOUT) {
+            return;  // exited (or the handle is unusable)
+        }
+    }
+}
+
+bool HandOffDetector::HandedOff() {
+    ULONGLONG ranFor = GetTickCount64() - m_startedAt;
+    m_stop = true;
+    if (m_thread.joinable()) {
+        m_thread.join();
+    }
+    return !m_showedWindow && ranFor <= kLauncherHandOffMs;
+}
 
 std::wstring LaunchSpec::GameProcessName() const {
     return processName.empty() ? FileName(exePath) : processName;

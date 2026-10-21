@@ -38,6 +38,36 @@ TEST(Launcher, LaunchGamePassesArgumentsAndWorkingDir) {
     EXPECT_EQ(exitCode, 7u);
 }
 
+// A launcher stub: exits at once and never shows a window.
+TEST(HandOffDetector, EarlyExitWithoutAWindowIsAHandOff) {
+    std::wstring command = L"\"" + SystemExe(L"cmd.exe") + L"\" /c exit 0";
+    STARTUPINFOW startup = {sizeof(startup)};
+    PROCESS_INFORMATION info = {};
+    // No console window: Windows reports a console as owned by its client process.
+    ASSERT_TRUE(CreateProcessW(nullptr, command.data(), nullptr, nullptr, FALSE,
+                               CREATE_NO_WINDOW, nullptr, nullptr, &startup, &info));
+    CloseHandle(info.hThread);
+    HandOffDetector detector(info.dwProcessId, info.hProcess);
+    ASSERT_EQ(WaitForSingleObject(info.hProcess, 10000), WAIT_OBJECT_0);
+    EXPECT_FALSE(detector.ShowedWindow());
+    EXPECT_TRUE(detector.HandedOff());
+    CloseHandle(info.hProcess);
+}
+
+// A game: shows a window, so closing it soon after isn't a hand-off. Watched on this
+// process, with a window placed off-screen.
+TEST(HandOffDetector, AProcessThatShowedAWindowWasPlayed) {
+    HandOffDetector detector(GetCurrentProcessId(), GetCurrentProcess());
+    HWND window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"STATIC", L"game",
+                                  WS_POPUP | WS_VISIBLE, -32000, -32000, 16, 16, nullptr, nullptr,
+                                  GetModuleHandleW(nullptr), nullptr);
+    ASSERT_NE(window, nullptr);
+    for (int i = 0; i < 50 && !detector.ShowedWindow(); ++i) Sleep(20);
+    EXPECT_TRUE(detector.ShowedWindow());
+    EXPECT_FALSE(detector.HandedOff());
+    DestroyWindow(window);
+}
+
 TEST(Launcher, LaunchGameReportsMissingExe) {
     LaunchSpec spec;
     spec.exePath = L"C:\\gazeora\\no_such_game.exe";

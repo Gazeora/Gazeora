@@ -388,14 +388,15 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
                     launched.pid);
         }
 
+        gazeora::HandOffDetector handOff(launched.pid, launched.process);
         QueryPerformanceCounter(&start);
         result = RunCaptureLoop(*client, launched.process);
         QueryPerformanceCounter(&end);
-        LONGLONG ms = (end.QuadPart - start.QuadPart) * 1000 / freq.QuadPart;
-        if (g_quit || launched.Running() || ms > LONGLONG(gazeora::kLauncherHandOffMs)) {
+        if (g_quit || launched.Running() || !handOff.HandedOff()) {
             break;
         }
-        // Gone right after starting: it most likely restarted through its launcher.
+        // Gone right after starting, without a window: it most likely restarted through its
+        // launcher.
         printf("The game restarted through its launcher; following it.\n");
         ignorePid = launched.pid;
         waitForGame = true;

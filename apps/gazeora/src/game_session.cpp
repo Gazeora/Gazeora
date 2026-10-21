@@ -117,7 +117,7 @@ void GameSession::Run() {
             }
         }
 
-        ULONGLONG startedAt = GetTickCount64();
+        HandOffDetector handOff(game.pid, game.process);
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             QueryPerformanceCounter(&m_start);  // playtime counts from the real game starting
@@ -127,11 +127,12 @@ void GameSession::Run() {
         if (!Watch(game, captureReady ? client.get() : nullptr)) {
             return;  // the session was stopped; the game keeps running
         }
-        if (GetTickCount64() - startedAt > kLauncherHandOffMs) {
-            break;  // played and closed
+        if (!handOff.HandedOff()) {
+            break;  // played and closed, however briefly: it showed a window
         }
-        // Gone right after starting: most likely it restarted itself through its launcher
-        // (Steam, Ubisoft Connect, EA app...). Follow it to the real game process.
+        // Gone right after starting, without a window: most likely it restarted itself
+        // through its launcher (Steam, Ubisoft Connect, EA app...). Follow it to the real
+        // game process.
         ignorePid = game.pid;
         waitForGame = true;
     }

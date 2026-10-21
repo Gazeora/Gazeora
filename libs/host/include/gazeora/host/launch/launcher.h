@@ -2,8 +2,10 @@
 
 #include <windows.h>
 
+#include <atomic>
 #include <functional>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "gazeora/host/capture/capture_client.h"
@@ -44,6 +46,35 @@ struct LaunchedGame {
     ~LaunchedGame();
 
     bool Running() const { return process && WaitForSingleObject(process, 0) == WAIT_TIMEOUT; }
+};
+
+// Tells a game that handed off to its launcher from one that was played and closed. A
+// launcher stub (Steam's restart, Ubisoft Connect, EA app) exits within kLauncherHandOffMs
+// without ever showing a window; a game shows one, however soon it's closed. Watches the
+// process on a background thread from construction until it exits, shows a window, or
+// kLauncherHandOffMs passes.
+class HandOffDetector {
+public:
+    // `process` is not owned and must stay open while the detector lives.
+    HandOffDetector(DWORD pid, HANDLE process);
+    HandOffDetector(const HandOffDetector&) = delete;
+    HandOffDetector& operator=(const HandOffDetector&) = delete;
+    ~HandOffDetector();
+
+    bool ShowedWindow() const { return m_showedWindow; }
+    // Call once the process has exited: true if it left early without showing a window, so
+    // the real game should start again from its launcher.
+    bool HandedOff();
+
+private:
+    void Run();
+
+    const DWORD m_pid;
+    const HANDLE m_process;
+    const ULONGLONG m_startedAt;
+    std::atomic<bool> m_showedWindow{false};
+    std::atomic<bool> m_stop{false};
+    std::thread m_thread;
 };
 
 // The Steam app id of the game whose exe this is (from steamapps/appmanifest_<id>.acf),
