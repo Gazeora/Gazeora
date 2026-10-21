@@ -267,27 +267,51 @@ block:
 ## Project layout
 
 ```
-common/          Shared-memory protocol between the hook and the host (header only)
-hook/            gazeora_hook.dll
-  core/            API-agnostic: shared channel, hook helpers, pixel conversion, logging
-  d3d8/ ... dxgi/  One folder per graphics API: d3d8, d3d9, d3d10, d3d11, d3d12, dxgi, opengl
-host/            gazeora_host_lib, shared by both front ends
-  launch/          Starting games (directly or through Steam) and injecting the hook
-  capture/         Receiving the hook's frames, GPU scaling, the VR pass and read-back
-  encode/          H.264 / H.265 encoding through Media Foundation
-  stream/          The RTSP server, RTP packetization, RTCP
-src/
-  app/             Gazeora.exe
-  cli/             GazeoraCLI.exe
-  library/         The game library behind both
-tools/           The test app and the stream probe
-tests/           GoogleTest suites, in the same folders as the code they test
-cmake/           Compiler settings, dependency fetching and formatting targets
+libs/                 Libraries, in dependency order
+  common/               Shared-memory protocol between the hook and the host (header only)
+  hook/                 gazeora_hook.dll, injected into the game
+    core/                 API-agnostic: shared channel, hook helpers, pixel conversion, logging
+    d3d8/ ... opengl/     One folder per graphics API: d3d8, d3d9, d3d10, d3d11, d3d12, dxgi, opengl
+  host/                 gazeora_host_lib, shared by both front ends
+    launch/               Starting games (directly or through Steam) and injecting the hook
+    capture/              Receiving the hook's frames, GPU scaling, the VR pass and read-back
+    encode/               The VideoEncoder interface, Media Foundation behind it, BGRA to NV12
+    stream/               The RTSP server and what it's made of (see below)
+  library/              The game library behind both front ends
+apps/
+  gazeora/              Gazeora.exe
+    src/                  App, with pages/ (one file per page), ui/ (theme, widgets),
+                          platform/ (shell dialogs) and settings/ (stream.ini)
+    resources/            Icon and resource script
+  cli/                  GazeoraCLI.exe
+tools/                The test app and the stream probe
+tests/                GoogleTest suites, in the same folders as the code they test
+cmake/                Compiler settings, dependency fetching and formatting targets
 ```
 
-Headers live under each module's `include/gazeora/<module>/`, sources under `src/`, with the same
-subfolders, so `host/src/stream/frame_stream.cpp` implements
-`host/include/gazeora/host/stream/frame_stream.h`.
+Headers live under each library's `include/gazeora/<module>/`, sources under `src/`, with the
+same subfolders, so `libs/host/src/stream/frame_stream.cpp` implements
+`libs/host/include/gazeora/host/stream/frame_stream.h`, included as
+`"gazeora/host/stream/frame_stream.h"`.
+
+### The stream server
+
+`FrameStreamServer` coordinates; each part does one job and most can be tested alone:
+
+| Part | Job |
+|---|---|
+| `FrameMailbox` | Hands frames from the capture thread to the encoder, newest wins |
+| `VideoPipeline` | NV12 conversion, encoding, parameter sets, RTP packetization. Takes the encoder from a factory, so tests use a fake one |
+| `VideoEncoder` | Interface; `CreateVideoEncoder()` returns the Media Foundation one |
+| `RtpPayloadFormat` | Everything that differs between H.264 and H.265, one class per codec |
+| `BitrateController` | The bitrate ladder, driven by reported loss. Pure logic |
+| `RtspRequest`, `RtspResponse`, `RtspReader`, `TransportSpec` | Parsing and building RTSP messages |
+| `RtspConnection` | One player's socket and output queue |
+| `PacketPacer` | Spreads a frame's UDP packets over about 20 ms |
+| `rtcp`, `net`, `StreamLog` | RTCP reports, sockets, the stream log |
+
+RTSP methods are dispatched through a table in `frame_stream.cpp`; supporting another method
+is one handler and one entry.
 
 ## Stream format
 
