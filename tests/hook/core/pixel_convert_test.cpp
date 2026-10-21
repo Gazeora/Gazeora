@@ -115,6 +115,31 @@ TEST(PixelConvert, B5G5R5X1IgnoresTopBit) {
     EXPECT_EQ(Convert(PixelLayout::B5G5R5X1, src), expected);
 }
 
+// The 16-bit layouts convert through precomputed tables; check every value against the
+// bit-replication formula they're built from.
+TEST(PixelConvert, SixteenBitLayoutsMatchTheFormulaForEveryValue) {
+    auto expand = [](uint32_t v, int bits) {
+        return uint8_t((v << (8 - bits)) | (v >> (2 * bits - 8)));
+    };
+    std::vector<uint8_t> src(65536 * 2);
+    for (uint32_t v = 0; v < 65536; ++v) {
+        src[2 * v] = uint8_t(v);
+        src[2 * v + 1] = uint8_t(v >> 8);
+    }
+    std::vector<uint8_t> rgb565 = Convert(PixelLayout::B5G6R5, src);
+    std::vector<uint8_t> rgb555 = Convert(PixelLayout::B5G5R5X1, src);
+    for (uint32_t v = 0; v < 65536; ++v) {
+        const uint8_t* a = &rgb565[4 * v];
+        ASSERT_TRUE(a[0] == expand(v & 0x1F, 5) && a[1] == expand((v >> 5) & 0x3F, 6) &&
+                    a[2] == expand(v >> 11, 5) && a[3] == 255)
+            << "B5G6R5 value " << v;
+        const uint8_t* b = &rgb555[4 * v];
+        ASSERT_TRUE(b[0] == expand(v & 0x1F, 5) && b[1] == expand((v >> 5) & 0x1F, 5) &&
+                    b[2] == expand((v >> 10) & 0x1F, 5) && b[3] == 255)
+            << "B5G5R5X1 value " << v;
+    }
+}
+
 TEST(PixelConvert, ZeroWidthWritesNothing) {
     uint8_t src[4] = {1, 2, 3, 4};
     uint8_t dst[4] = {9, 9, 9, 9};

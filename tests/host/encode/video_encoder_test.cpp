@@ -27,8 +27,8 @@ namespace {
 TEST(BgraToNv12Test, MapsColorsToStudioRangeBt709) {
     // 2x2 of one color: Y for each pixel, then one U/V pair.
     auto convert = [](uint8_t b, uint8_t g, uint8_t r) {
-        std::vector<uint8_t> bgra;
-        for (int i = 0; i < 4; ++i) bgra.insert(bgra.end(), {b, g, r, 255});
+        // Built up front: GCC 13 at -O3 warns (falsely) about insert() of an initializer list.
+        std::vector<uint8_t> bgra = {b, g, r, 255, b, g, r, 255, b, g, r, 255, b, g, r, 255};
         std::vector<uint8_t> nv12;
         BgraToNv12(bgra.data(), 2, 2, 2, nv12);
         EXPECT_EQ(nv12.size(), 6u);
