@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/launch/injector.h"
 
 namespace gazeora {
@@ -28,16 +29,6 @@ std::wstring FolderOf(const std::wstring& path) {
 std::wstring FileName(const std::wstring& path) {
     size_t slash = path.find_last_of(L"\\/");
     return slash == std::wstring::npos ? path : path.substr(slash + 1);
-}
-
-std::wstring Utf8ToWide(const std::string& text) {
-    if (text.empty()) {
-        return {};
-    }
-    int chars = MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0);
-    std::wstring result(chars, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), &result[0], chars);
-    return result;
 }
 
 // The quoted tokens of one line of a Steam .acf/.vdf file: "key"  "value".
@@ -212,8 +203,8 @@ std::wstring FindSteamAppId(const std::wstring& exePath) {
                 dir = tokens[1];
             }
         }
-        if (!appId.empty() && _wcsicmp(Utf8ToWide(dir).c_str(), installDir.c_str()) == 0) {
-            result = Utf8ToWide(appId);
+        if (!appId.empty() && _wcsicmp(Utf8::ToWide(dir).c_str(), installDir.c_str()) == 0) {
+            result = Utf8::ToWide(appId);
         }
     } while (result.empty() && FindNextFileW(find, &found));
     FindClose(find);
