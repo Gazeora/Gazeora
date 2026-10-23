@@ -8,17 +8,18 @@
 
 #include "gazeora/common/shared.h"
 #include "gazeora/host/stream/frame_stream.h"
-#include "gazeora/library/game_library.h"
+#include "gazeora/common/text/utf8.h"
+#include "gazeora/library/platform/system_clock.h"
 
 namespace gazeora::app {
 
-std::string U8(const std::wstring& text) { return WideToUtf8(text); }
+std::string U8(const std::wstring& text) { return Utf8::FromWide(text); }
 
 std::string RelativeTime(int64_t when) {
     if (when <= 0) {
         return "Never played";
     }
-    int64_t ago = UnixNow() - when;
+    int64_t ago = SystemClock().NowUnixSeconds() - when;
     char text[64];
     if (ago < 60) {
         return "Just now";

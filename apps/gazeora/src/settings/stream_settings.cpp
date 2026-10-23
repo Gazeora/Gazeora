@@ -7,7 +7,7 @@
 #include <cwchar>
 #include <string>
 
-#include "gazeora/library/game_library.h"
+#include "gazeora/library/platform/library_location.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "platform/shell.h"
 
@@ -16,7 +16,7 @@ namespace gazeora::app {
 namespace {
 
 std::wstring NextToLibrary(const wchar_t* name) {
-    std::wstring library = GameLibrary::DefaultPath();
+    std::wstring library = LibraryLocation::DefaultPath();
     return library.substr(0, library.find_last_of(L"\\/") + 1) + name;
 }
 

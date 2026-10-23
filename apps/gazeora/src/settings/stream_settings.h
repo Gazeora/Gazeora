@@ -15,7 +15,7 @@ namespace gazeora::app {
 
 class StreamSettings {
 public:
-    // The default location: next to GameLibrary::DefaultPath().
+    // The default location: next to LibraryLocation::DefaultPath().
     StreamSettings();
     explicit StreamSettings(std::wstring path) : m_path(std::move(path)) {}
 

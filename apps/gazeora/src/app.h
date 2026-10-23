@@ -14,7 +14,8 @@
 #include "game_session.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
-#include "gazeora/library/game_library.h"
+#include "gazeora/library/game_library_services.h"
+#include "gazeora/library/platform/library_location.h"
 #include "settings/stream_settings.h"
 #include "textures.h"
 
@@ -123,7 +124,8 @@ private:
     float m_scale;
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     TextureCache m_textures;
-    GameLibrary m_library;
+    GameLibraryServices m_libraryServices{LibraryLocation::DefaultPath()};
+    GameLibrary& m_library = m_libraryServices.Library();
     FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
     std::wstring m_streamError;  // why it isn't running
     StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout

@@ -36,7 +36,7 @@ void App::AddGamePaths(const std::vector<std::wstring>& paths) {
     for (const std::wstring& path : paths) {
         Game game;
         if (EndsWithI(path, L".lnk")) {
-            if (!ResolveShortcut(path, game)) {
+            if (!m_libraryServices.Shortcuts().Resolve(path, game)) {
                 ShowToast("Skipped a shortcut that doesn't point at a program", true);
                 continue;
             }
@@ -52,7 +52,7 @@ void App::AddGamePaths(const std::vector<std::wstring>& paths) {
                                       existing.arguments == game.arguments);
         }
         if (duplicate) {
-            ShowToast(U8(DefaultGameName(game.exePath)) + " is already in your library");
+            ShowToast(U8(m_libraryServices.Names().NameFor(game.exePath)) + " is already in your library");
             continue;
         }
         lastAdded = m_library.Add(game);
@@ -81,9 +81,9 @@ void App::Launch(uint32_t gameId, bool capture) {
         ShowToast(U8(game->name) + " is already running");
         return;
     }
-    m_sessions.push_back(std::make_unique<GameSession>(gameId, ToLaunchSpec(*game), capture,
+    m_sessions.push_back(std::make_unique<GameSession>(gameId, m_libraryServices.LaunchSpecs().Create(*game), capture,
                                                        &m_stream));
-    game->lastPlayed = UnixNow();
+    game->lastPlayed = m_libraryServices.Clock().NowUnixSeconds();
     SaveLibrary();
     ShowToast("Launching " + U8(game->name) + (capture ? " with capture" : ""));
 }
