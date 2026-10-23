@@ -2,6 +2,7 @@
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/rtp_video.h"
 #include "gazeora/host/stream/ts_muxer.h"
+#include "host/stream/software_only_encoder.h"
 
 #include <gtest/gtest.h>
 #include <ws2tcpip.h>
@@ -215,7 +216,7 @@ protected:
         return bgra;
     }
 
-    FrameStreamServer server;
+    FrameStreamServer server{SoftwareOnlyEncoder::Create};
     std::string base;
     SOCKET rtsp = INVALID_SOCKET;
     SOCKET rtp = INVALID_SOCKET;
@@ -586,7 +587,7 @@ TEST_F(FrameStreamTest, ChangingTheCodecDisconnectsPlayers) {
 }
 
 TEST_F(FrameStreamTest, SecondServerOnSamePortFails) {
-    FrameStreamServer other;
+    FrameStreamServer other{SoftwareOnlyEncoder::Create};
     other.SetDiscoveryPort(0);
     std::wstring error;
     EXPECT_FALSE(other.Start(server.Port(), false, error));
