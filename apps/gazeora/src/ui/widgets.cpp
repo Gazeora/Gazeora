@@ -133,12 +133,12 @@ bool Toggle(const char* id, bool* value, float scale) {
 // Section container with a rounded background. Pair with EndCard().
 void BeginCard(const char* id, float scale, float width) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kCardBg);
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f * scale);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(22.0f * scale, 20.0f * scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f * scale);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20.0f * scale, 16.0f * scale));
     ImGui::BeginChild(id, ImVec2(width, 0.0f),
                       ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding,
                       ImGuiWindowFlags_NoScrollbar);
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f * scale, 8.0f * scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f * scale, 6.0f * scale));
 }
 
 void EndCard() {
@@ -161,6 +161,20 @@ void FieldLabel(ImFont* font, const char* text) {
     ImGui::TextUnformatted(text);
     ImGui::PopStyleColor();
     ImGui::PopFont();
+}
+
+void HelpMarker(const char* text, float wrapWidth) {
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, kTextFaint);
+    ImGui::TextUnformatted(ICON_INFO);
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(wrapWidth);
+        ImGui::TextUnformatted(text);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
 }
 
 }  // namespace gazeora::app

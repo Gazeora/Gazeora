@@ -21,17 +21,23 @@ public:
 
     void Release();
 
-    // True if the ring exists with this size and format, and the host is reading it.
-    bool Matches(UINT width, UINT height, DXGI_FORMAT format) const;
+    // True if the ring exists with this size and format, with depth slots or without, and
+    // the host is reading it.
+    bool Matches(UINT width, UINT height, DXGI_FORMAT format, bool depth = false) const;
 
-    // Creates the textures and fences on `device` and publishes them to the host.
+    // Creates the textures and fences on `device` and publishes them to the host; with
+    // `depth`, the depth slots too (shared.h).
     bool Create(ID3D11Device5* device, UINT width, UINT height, DXGI_FORMAT format,
-                GraphicsApi api);
+                GraphicsApi api, bool depth = false);
 
     // Announces that `frame` is about to be written into Slot(frame). False means skip it.
     bool Claim(LONG64 frame) const;
 
     ID3D11Texture2D* Slot(LONG64 frame) const { return m_slots[frame % kFrameSlots].Get(); }
+    // nullptr without depth slots.
+    ID3D11Texture2D* DepthSlot(LONG64 frame) const {
+        return m_depthSlots[frame % kFrameSlots].Get();
+    }
 
     // NT handles owned by the ring, for APIs that import the slots and the frame fence
     // and write them directly (OpenGL, Vulkan).
@@ -53,6 +59,7 @@ public:
 
 private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_slots[kFrameSlots];
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthSlots[kFrameSlots];
     Microsoft::WRL::ComPtr<ID3D11Fence> m_frameFence;
     Microsoft::WRL::ComPtr<ID3D11Fence> m_hostFence;
     ExportedHandles m_handles;

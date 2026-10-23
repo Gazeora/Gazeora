@@ -36,6 +36,8 @@ SharedHeader* Shared() { return g_shared; }
 
 bool CaptureEnabled() { return g_shared && g_shared->captureEnabled; }
 
+bool CaptureDepth() { return g_shared && g_shared->captureEnabled && g_shared->captureDepth; }
+
 void SetHookState(HookState state) {
     if (g_shared) {
         g_shared->hookState = state;
@@ -46,6 +48,10 @@ bool LaunchedByHost() { return g_shared && (g_shared->hostFlags & kHostLaunchedG
 
 void ExportedHandles::Close() {
     for (HANDLE& h : slots) {
+        if (h) CloseHandle(h);
+        h = nullptr;
+    }
+    for (HANDLE& h : depthSlots) {
         if (h) CloseHandle(h);
         h = nullptr;
     }
@@ -64,6 +70,8 @@ void PublishResources(const ExportedHandles& handles, UINT width, UINT height, D
     g_shared->adapterLuid = adapterLuid;
     for (UINT i = 0; i < kFrameSlots; ++i) {
         g_shared->slotHandles[i] = reinterpret_cast<uint64_t>(handles.slots[i]);
+        g_shared->depthSlotHandles[i] = reinterpret_cast<uint64_t>(handles.depthSlots[i]);
+        g_shared->depthSlots[i].frame = 0;
     }
     g_shared->frameFenceHandle = reinterpret_cast<uint64_t>(handles.frameFence);
     g_shared->hostFenceHandle = reinterpret_cast<uint64_t>(handles.hostFence);
@@ -93,6 +101,14 @@ bool ClaimSlot(LONG64 frame, UINT64 hostCompleted) {
 }
 
 void CountSkippedFrame() { InterlockedIncrement64(&g_shared->skippedFrames); }
+
+void PublishDepth(LONG64 frame, UINT width, UINT height, DepthEncoding encoding) {
+    DepthSlotInfo& slot = g_shared->depthSlots[frame % kFrameSlots];
+    slot.width = width;
+    slot.height = height;
+    slot.encoding = encoding;
+    InterlockedExchange64(&slot.frame, frame);
+}
 
 void FramePublished(LONG64 frame, LONGLONG presentQpc) {
     InterlockedExchange64(&g_shared->lastPresentQpc, presentQpc);

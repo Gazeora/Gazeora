@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "gazeora/host/encode/color_convert.h"
+#include "gazeora/host/stream/stream_view_info.h"
 
 namespace gazeora {
 
@@ -47,7 +48,7 @@ void VideoPipeline::RequestKeyFrame() {
     }
 }
 
-bool VideoPipeline::Encode(const Picture& picture, const PacketSink& sink, bool& fmtpChanged,
+bool VideoPipeline::Encode(const Picture& picture, const FrameSink& sink, bool& fmtpChanged,
                            std::wstring& error) {
     fmtpChanged = false;
     const VideoEncoder::Settings& size = m_encoder->Current();
@@ -69,11 +70,24 @@ bool VideoPipeline::Encode(const Picture& picture, const PacketSink& sink, bool&
         if (keyFrame) {
             m_parameterSets.PrependTo(m_nalUnits);
         }
+        // How to show it, just before the picture itself.
+        if (!m_viewInfo.empty()) {
+            auto picture = std::find_if(
+                m_nalUnits.begin(), m_nalUnits.end(),
+                [&](const std::string& nal) { return IsPictureNal(m_config.codec, nal); });
+            m_nalUnits.insert(picture, ViewInfoNal(m_config.codec, m_viewInfo));
+        }
         // Back to the 90 kHz clock, rounding up so it lands on the captured value.
         uint32_t timestamp = uint32_t((uint64_t(frame.time) * 9 + 999) / 1000);
         m_format->Packetize(m_nalUnits, timestamp, m_config.ssrc, m_config.maxPacketSize, m_seq,
                             m_packets);
-        sink(m_packets, keyFrame);
+        m_annexB.clear();
+        for (const std::string& nal : m_nalUnits) {
+            m_annexB.append("\0\0\0\1", 4);
+            m_annexB += nal;
+        }
+        sink(EncodedFrame{m_packets, m_annexB, timestamp, keyFrame, m_config.codec, size.width,
+                          size.height});
     }
     return true;
 }

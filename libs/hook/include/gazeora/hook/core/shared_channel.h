@@ -19,14 +19,18 @@ bool OpenSharedChannel();
 SharedHeader* Shared();
 
 bool CaptureEnabled();
+// Whether the host wants the depth buffer too (3D from depth). Only D3D11 and D3D12 have it.
+bool CaptureDepth();
 void SetHookState(HookState state);
 
 // True if the host started the game and injected before any game code ran.
 bool LaunchedByHost();
 
-// NT handles for one set of capture resources: kFrameSlots textures, frame fence, host fence.
+// NT handles for one set of capture resources: kFrameSlots textures, frame fence, host fence,
+// and the depth slots when there are any.
 struct ExportedHandles {
     HANDLE slots[kFrameSlots] = {};
+    HANDLE depthSlots[kFrameSlots] = {};
     HANDLE frameFence = nullptr;
     HANDLE hostFence = nullptr;
 
@@ -56,6 +60,10 @@ bool ClaimSlot(LONG64 frame, UINT64 hostCompleted);
 
 // Records a skipped frame (e.g. the backend's own previous copy is still running).
 void CountSkippedFrame();
+
+// Says what the depth slot of `frame` holds; call before FramePublished. Frames without it
+// have no depth (DepthSlotInfo::frame stays behind).
+void PublishDepth(LONG64 frame, UINT width, UINT height, DepthEncoding encoding);
 
 // Call after the GPU commands that copy `frame` and signal the frame fence are queued.
 void FramePublished(LONG64 frame, LONGLONG presentQpc);

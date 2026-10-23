@@ -17,6 +17,39 @@ std::string HevcNal(uint8_t type, size_t size, char fill = 'x') {
     return std::string(1, char(type << 1)) + '\x01' + std::string(size - 2, fill);
 }
 
+// SplitAnnexB checks 16 bytes at a time for zeros; it must split exactly as testing every
+// byte does, wherever start codes fall relative to those 16-byte steps.
+TEST(RtpH264Test, SplitAnnexBMatchesAByteByByteScan) {
+    auto reference = [](const std::string& s) {
+        std::vector<std::string> nals;
+        size_t start = std::string::npos;
+        for (size_t i = 0; i + 2 < s.size(); ++i) {
+            if (s[i] == 0 && s[i + 1] == 0 && s[i + 2] == 1) {
+                if (start != std::string::npos) {
+                    size_t end = i > start && s[i - 1] == 0 ? i - 1 : i;
+                    nals.push_back(s.substr(start, end - start));
+                }
+                start = i + 3;
+                i += 2;
+            }
+        }
+        if (start != std::string::npos && start < s.size()) nals.push_back(s.substr(start));
+        return nals;
+    };
+    uint32_t seed = 5;
+    std::vector<std::string> nals;
+    for (int round = 0; round < 2000; ++round) {
+        // Mostly zeros and ones, so start codes and near misses turn up everywhere.
+        std::string stream(size_t(round % 97), 0);
+        for (char& c : stream) {
+            seed = seed * 1664525u + 1013904223u;
+            c = char((seed >> 28) < 9 ? 0 : (seed >> 28) < 13 ? 1 : seed >> 24);
+        }
+        SplitAnnexB(stream, nals);
+        ASSERT_EQ(nals, reference(stream)) << "round " << round;
+    }
+}
+
 TEST(RtpH264Test, SplitsAnnexBWithBothStartCodeLengths) {
     std::string stream = std::string("\0\0\0\1", 4) +
                          "\x67"

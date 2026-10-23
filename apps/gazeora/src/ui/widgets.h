@@ -33,5 +33,7 @@ void BeginCard(const char* id, float scale, float width = 0.0f);
 void EndCard();
 void CardTitle(ImFont* font, const char* text);
 void FieldLabel(ImFont* font, const char* text);
+// A faint info icon on the current line; hovering it shows `text`, wrapped at `wrapWidth`.
+void HelpMarker(const char* text, float wrapWidth);
 
 }  // namespace gazeora::app

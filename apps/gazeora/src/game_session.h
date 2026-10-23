@@ -43,6 +43,8 @@ public:
         uint32_t api = 0;
         int64_t skippedFrames = 0;
         std::wstring streamError;  // why frames can't be streamed, if they can't
+        bool stereoWanted = false;  // 3D is on (VrLayout::stereo)
+        bool stereo = false;        // and the last frame streamed was in 3D
     };
 
     // `stream` must outlive the session; null disables streaming.

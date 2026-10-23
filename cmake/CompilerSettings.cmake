@@ -21,3 +21,11 @@ if(NOT MSVC)
     # structs (e.g. ID3D12Resource::GetDesc), which crashes at runtime.
     add_compile_definitions(WIDL_EXPLICIT_AGGREGATE_RETURNS)
 endif()
+
+# Release already builds with -O3 (CMake's default for GCC); RelWithDebInfo gets it too, so
+# profiling builds run the same code. Debug stays -O0 for stepping through. MSVC's /O2 is its
+# highest level.
+if(NOT MSVC)
+    string(REPLACE "-O2" "-O3" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+endif()

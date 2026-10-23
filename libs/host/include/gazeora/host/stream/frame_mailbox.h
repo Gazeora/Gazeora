@@ -14,6 +14,7 @@ struct Picture {
     uint32_t width = 0;
     uint32_t height = 0;
     uint64_t clock = 0;  // 90 kHz capture time (live frames only)
+    bool stereo = false;  // two views side by side (TextureReader::Stereo)
 
     bool Complete() const { return bgra.size() >= size_t(width) * height * 4; }
 };
@@ -29,7 +30,8 @@ public:
     ~FrameMailbox();
 
     // Producer side. `bgra` gets an older buffer back, for reuse.
-    void PostLive(uint32_t width, uint32_t height, uint64_t clock, std::vector<uint8_t>& bgra);
+    void PostLive(uint32_t width, uint32_t height, uint64_t clock, std::vector<uint8_t>& bgra,
+                  bool stereo = false);
     void PostIdle(uint32_t width, uint32_t height, std::vector<uint8_t> bgra);
     // Wakes the consumer without a frame, e.g. to stop.
     void Wake();
@@ -37,6 +39,8 @@ public:
     // Consumer side. Waits up to `timeoutMs` for something to arrive, then takes it: the
     // live frame into `live` (true if there was one), a new idle picture into `idle`.
     bool Take(DWORD timeoutMs, Picture& live, Picture& idle);
+    // Hands the last idle picture out again on the next Take, for a new consumer.
+    void RepostIdle();
 
 private:
     // A Win32 event rather than a condition variable: MinGW's wait_for(33 ms) takes about 47,

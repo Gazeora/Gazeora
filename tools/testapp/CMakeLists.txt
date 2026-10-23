@@ -8,7 +8,8 @@ add_executable(gazeora_testapp
     src/render_d3d12.cpp
     src/render_opengl.cpp)
 target_include_directories(gazeora_testapp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(gazeora_testapp PRIVATE d3d9 d3d10 d3d11 d3d12 dxgi opengl32 gdi32)
+target_link_libraries(gazeora_testapp PRIVATE d3d9 d3d10 d3d11 d3d12 d3dcompiler dxgi opengl32
+    gdi32)
 
 # The Windows SDK dropped d3d8.h; MinGW still ships it.
 include(CheckIncludeFileCXX)

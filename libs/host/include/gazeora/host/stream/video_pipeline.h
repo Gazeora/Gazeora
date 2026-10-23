@@ -13,14 +13,24 @@
 
 namespace gazeora {
 
-// BGRA8 pictures in, RTP packets out: NV12 conversion, encoding, parameter sets in front
-// of every key frame, packetization. The encoder comes from a factory, so tests (and other
-// encoder back ends) can supply their own. Use from one thread.
+// BGRA8 pictures in, encoded frames out: NV12 conversion, encoding, parameter sets in front
+// of every key frame, RTP packetization. The encoder comes from a factory, so tests (and
+// other encoder back ends) can supply their own. Use from one thread.
 class VideoPipeline {
 public:
     using EncoderFactory = std::function<std::unique_ptr<VideoEncoder>()>;
-    // One encoded frame's packets, and whether a player can start decoding from it.
-    using PacketSink = std::function<void(const std::vector<std::string>& packets, bool keyFrame)>;
+
+    // One encoded frame, both as RTP packets (RTSP) and as its access unit (everything else).
+    struct EncodedFrame {
+        const std::vector<std::string>& packets;
+        const std::string& annexB;  // NAL units with start codes, parameter sets included
+        uint32_t timestamp;         // 90 kHz
+        bool keyFrame;              // a player can start decoding from it
+        VideoCodec codec;
+        uint32_t width;
+        uint32_t height;
+    };
+    using FrameSink = std::function<void(const EncodedFrame& frame)>;
 
     struct Config {
         VideoCodec codec = VideoCodec::H264;
@@ -39,10 +49,12 @@ public:
     bool Prepare(const Config& config, uint32_t width, uint32_t height, bool& reopened,
                  std::wstring& error);
     void RequestKeyFrame();
-    // Encodes `picture` and hands each finished frame's packets to `sink`. `fmtpChanged` is
-    // set when the parameter sets changed, so the SDP should be updated (Fmtp()). On failure
-    // the encoder is closed and reopened by the next Prepare.
-    bool Encode(const Picture& picture, const PacketSink& sink, bool& fmtpChanged,
+    // The SEI message frames carry from now on (stream_view_info.h); empty for none.
+    void SetViewInfo(std::string text) { m_viewInfo = std::move(text); }
+    // Encodes `picture` and hands each finished frame to `sink`. `fmtpChanged` is set when
+    // the parameter sets changed, so the SDP should be updated (Fmtp()). On failure the
+    // encoder is closed and reopened by the next Prepare.
+    bool Encode(const Picture& picture, const FrameSink& sink, bool& fmtpChanged,
                 std::wstring& error);
     void Close();
 
@@ -63,6 +75,8 @@ private:
     std::vector<VideoEncoder::Frame> m_encoded;
     std::vector<std::string> m_nalUnits;
     std::vector<std::string> m_packets;
+    std::string m_annexB;
+    std::string m_viewInfo;
 };
 
 }  // namespace gazeora

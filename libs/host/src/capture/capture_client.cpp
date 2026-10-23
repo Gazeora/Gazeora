@@ -79,6 +79,10 @@ void CaptureClient::SetCaptureEnabled(bool enabled) {
     InterlockedExchange(&m_shared->captureEnabled, enabled ? 1 : 0);
 }
 
+void CaptureClient::SetCaptureDepth(bool depth) {
+    InterlockedExchange(&m_shared->captureDepth, depth ? 1 : 0);
+}
+
 bool CaptureClient::CreateDeviceForAdapter(const LUID& luid) {
     m_device.Reset();
     m_context.Reset();
@@ -127,9 +131,12 @@ HANDLE CaptureClient::DuplicateFromGame(uint64_t handle) {
 
 void CaptureClient::ReleaseResources() {
     for (auto& slot : m_slots) slot.Reset();
+    for (auto& slot : m_depthSlots) slot.Reset();
     m_frameFence.Reset();
     m_hostFence.Reset();
     m_frame.Reset();
+    m_depthFrame.Reset();
+    m_depth = DepthFrame();
     m_openedSeq = 0;
 }
 
@@ -145,9 +152,13 @@ bool CaptureClient::OpenResources(const SharedHeader& snapshot) {
 
     // Duplicate everything first, then confirm the hook didn't replace the resources
     // meanwhile (it closes the old handles, and the values could be reused).
-    HANDLE handles[kFrameSlots + 2] = {};
+    HANDLE handles[2 * kFrameSlots + 2] = {};
+    HANDLE* depthHandles = handles + kFrameSlots + 2;
     for (UINT i = 0; i < kFrameSlots; ++i) {
         handles[i] = DuplicateFromGame(snapshot.slotHandles[i]);
+        if (snapshot.depthSlotHandles[i]) {
+            depthHandles[i] = DuplicateFromGame(snapshot.depthSlotHandles[i]);
+        }
     }
     handles[kFrameSlots] = DuplicateFromGame(snapshot.frameFenceHandle);
     handles[kFrameSlots + 1] = DuplicateFromGame(snapshot.hostFenceHandle);
@@ -156,6 +167,12 @@ bool CaptureClient::OpenResources(const SharedHeader& snapshot) {
     for (UINT i = 0; ok && i < kFrameSlots; ++i) {
         ok = handles[i] &&
              SUCCEEDED(m_device->OpenSharedResource1(handles[i], IID_PPV_ARGS(&m_slots[i])));
+        // Without depth the frames still go out, in 2D.
+        if (ok && depthHandles[i] &&
+            FAILED(m_device->OpenSharedResource1(depthHandles[i],
+                                                 IID_PPV_ARGS(&m_depthSlots[i])))) {
+            m_depthSlots[i].Reset();
+        }
     }
     ok = ok && handles[kFrameSlots] &&
          SUCCEEDED(m_device->OpenSharedFence(handles[kFrameSlots], IID_PPV_ARGS(&m_frameFence)));
@@ -174,6 +191,15 @@ bool CaptureClient::OpenResources(const SharedHeader& snapshot) {
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     if (FAILED(m_device->CreateTexture2D(&desc, nullptr, &m_frame))) {
         return false;
+    }
+    if (m_depthSlots[0] && m_depthSlots[1] && m_depthSlots[2]) {
+        D3D11_TEXTURE2D_DESC depthDesc;
+        m_depthSlots[0]->GetDesc(&depthDesc);
+        depthDesc.MiscFlags = 0;
+        depthDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if (FAILED(m_device->CreateTexture2D(&depthDesc, nullptr, &m_depthFrame))) {
+            m_depthFrame.Reset();
+        }
     }
     printf("Attached to %s game frames %ux%u, DXGI format %u\n", GraphicsApiName(snapshot.api),
            desc.Width, desc.Height, desc.Format);
@@ -230,6 +256,16 @@ CaptureClient::WaitResult CaptureClient::WaitForFrame(DWORD timeoutMs) {
     // All GPU-side: wait for the hook's copy, copy the slot out, tell the hook we're done.
     m_context->Wait(m_frameFence.Get(), UINT64(frame));
     m_context->CopyResource(m_frame.Get(), m_slots[frame % kFrameSlots].Get());
+    // The depth slot holds this frame's depth only if the hook says so.
+    const DepthSlotInfo& depth = m_shared->depthSlots[frame % kFrameSlots];
+    m_depth = DepthFrame();
+    if (m_depthFrame && depth.frame == frame && depth.encoding != kDepthNone) {
+        m_context->CopyResource(m_depthFrame.Get(), m_depthSlots[frame % kFrameSlots].Get());
+        m_depth.texture = m_depthFrame.Get();
+        m_depth.width = depth.width;
+        m_depth.height = depth.height;
+        m_depth.encoding = DepthEncoding(depth.encoding);
+    }
     m_context->Signal(m_hostFence.Get(), UINT64(frame));
     m_context->Flush();
     m_lastFrame = frame;

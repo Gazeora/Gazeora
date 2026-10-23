@@ -24,6 +24,53 @@ using Microsoft::WRL::ComPtr;
 namespace gazeora {
 namespace {
 
+// The conversion as plain per-pixel arithmetic. BgraToNv12 works on many pixels at a time and
+// must give exactly these bytes.
+std::vector<uint8_t> ReferenceNv12(const uint8_t* bgra, uint32_t stride, uint32_t width,
+                                   uint32_t height) {
+    std::vector<uint8_t> nv12(size_t(width) * height * 3 / 2);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            const uint8_t* p = bgra + (size_t(y) * stride + x) * 4;
+            nv12[size_t(y) * width + x] =
+                uint8_t(16 + ((47 * p[2] + 157 * p[1] + 16 * p[0] + 128) >> 8));
+        }
+    }
+    uint8_t* uv = nv12.data() + size_t(width) * height;
+    for (uint32_t y = 0; y < height; y += 2) {
+        for (uint32_t x = 0; x < width; x += 2) {
+            int sum[3] = {};
+            for (uint32_t dy = 0; dy < 2; ++dy) {
+                for (uint32_t dx = 0; dx < 2; ++dx) {
+                    const uint8_t* p = bgra + (size_t(y + dy) * stride + x + dx) * 4;
+                    for (int c = 0; c < 3; ++c) sum[c] += p[c];
+                }
+            }
+            int b = sum[0], g = sum[1], r = sum[2];
+            uv[size_t(y / 2) * width + x] = uint8_t(128 + ((-26 * r - 87 * g + 112 * b + 512) >> 10));
+            uv[size_t(y / 2) * width + x + 1] =
+                uint8_t(128 + ((112 * r - 102 * g - 10 * b + 512) >> 10));
+        }
+    }
+    return nv12;
+}
+
+TEST(BgraToNv12Test, MatchesPerPixelArithmeticAtEveryWidth) {
+    // Even widths from 2 to 70 cover every remainder of the many-pixels-at-a-time loops;
+    // the stride leaves padding at the end of each source row.
+    std::vector<uint8_t> bgra(80 * 6 * 4);
+    uint32_t seed = 11;
+    for (uint8_t& b : bgra) b = uint8_t((seed = seed * 1664525u + 1013904223u) >> 24);
+    std::vector<uint8_t> nv12;
+    for (uint32_t width = 2; width <= 70; width += 2) {
+        for (uint32_t stride : {width, width + 3}) {
+            BgraToNv12(bgra.data(), stride, width, 6, nv12);
+            ASSERT_EQ(nv12, ReferenceNv12(bgra.data(), stride, width, 6))
+                << "width " << width << ", stride " << stride;
+        }
+    }
+}
+
 TEST(BgraToNv12Test, MapsColorsToStudioRangeBt709) {
     // 2x2 of one color: Y for each pixel, then one U/V pair.
     auto convert = [](uint8_t b, uint8_t g, uint8_t r) {

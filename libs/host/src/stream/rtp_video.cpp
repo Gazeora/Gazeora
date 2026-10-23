@@ -1,5 +1,10 @@
 #include "gazeora/host/stream/rtp_video.h"
 
+#include <emmintrin.h>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #include <algorithm>
 #include <cstdio>
 
@@ -236,21 +241,51 @@ void RtpPayloadFormat::Packetize(const std::vector<std::string>& nalUnits, uint3
     }
 }
 
+namespace {
+
+// The position of the first zero byte in [from, end), or `end`. Start codes begin with zeros,
+// which are rare in coded slices, so this skips 16 bytes per step with SSE2.
+size_t FindZero(const char* data, size_t from, size_t end) {
+    const __m128i zero = _mm_setzero_si128();
+    for (; from + 16 <= end; from += 16) {
+        __m128i bytes = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data + from));
+        unsigned mask = unsigned(_mm_movemask_epi8(_mm_cmpeq_epi8(bytes, zero)));
+        if (mask) {
+#ifdef _MSC_VER
+            unsigned long bit;
+            _BitScanForward(&bit, mask);
+            return from + bit;
+#else
+            return from + unsigned(__builtin_ctz(mask));
+#endif
+        }
+    }
+    for (; from < end && data[from] != 0; ++from) {
+    }
+    return from;
+}
+
+}  // namespace
+
 void SplitAnnexB(const std::string& annexB, std::vector<std::string>& nalUnits) {
     nalUnits.clear();
     size_t start = std::string::npos;
-    for (size_t i = 0; i + 2 < annexB.size(); ++i) {
-        if (annexB[i] == 0 && annexB[i + 1] == 0 && annexB[i + 2] == 1) {
+    const size_t size = annexB.size();
+    for (size_t i = FindZero(annexB.data(), 0, size); i + 2 < size;
+         i = FindZero(annexB.data(), i, size)) {
+        if (annexB[i + 1] == 0 && annexB[i + 2] == 1) {
             if (start != std::string::npos) {
                 // A four-byte start code leaves a zero behind the previous NAL unit.
                 size_t end = i > start && annexB[i - 1] == 0 ? i - 1 : i;
                 nalUnits.push_back(annexB.substr(start, end - start));
             }
             start = i + 3;
-            i += 2;
+            i += 3;
+        } else {
+            ++i;
         }
     }
-    if (start != std::string::npos && start < annexB.size()) {
+    if (start != std::string::npos && start < size) {
         nalUnits.push_back(annexB.substr(start));
     }
 }

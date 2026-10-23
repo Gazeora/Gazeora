@@ -3,6 +3,7 @@
 #include <winsock2.h>  // includes windows.h
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <list>
 #include <map>
@@ -15,9 +16,13 @@
 #include "gazeora/host/capture/vr_layout.h"
 #include "gazeora/host/encode/video_codec.h"
 #include "gazeora/host/stream/bitrate_controller.h"
+#include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_mailbox.h"
+#include "gazeora/host/stream/frame_output.h"
 #include "gazeora/host/stream/net.h"
 #include "gazeora/host/stream/stream_log.h"
+#include "gazeora/host/stream/stream_overlay.h"
+#include "gazeora/host/stream/stream_protocol.h"
 #include "gazeora/host/stream/video_pipeline.h"
 
 namespace gazeora {
@@ -26,19 +31,23 @@ class RtspConnection;
 class PacketPacer;
 struct RtspRequest;
 
-// Streams captured frames to players on the local network: an RTSP server (TCP) that
-// players such as VLC, ffplay or OBS open at rtsp://<this PC>:<port>/, and H.264 or H.265
-// over RTP (RFC 6184, RFC 7798) to every player that pressed play. Over UDP by default, where
-// a lost packet smears the picture until the next key frame, at most a second later. Players
-// that ask for it get RTP interleaved in the RTSP connection instead (RFC 2326 10.12): nothing
-// is lost, and a player that falls behind skips frames up to the next key frame. Frames are
-// pushed from the capture thread and encoded on the server's own thread; frames arriving
-// faster than they can be encoded are dropped, newest wins. While no frame has been pushed
-// for a second, the idle frame (the logo) is streamed instead.
+// Streams captured frames to players, over one protocol at a time (stream_protocol.h):
+//  - RTSP: a server (TCP) that players such as VLC, ffplay or OBS open at
+//    rtsp://<this PC>:<port>/, and H.264 or H.265 over RTP (RFC 6184, RFC 7798) to every
+//    player that pressed play. Over UDP, a lost packet smears the picture until the next key
+//    frame, at most a second later. Interleaved in the RTSP connection (RFC 2326 10.12),
+//    nothing is lost, and a player that falls behind skips frames up to the next key frame.
+//    The protocol picks which of the two players may set up; the other is refused.
+//  - UDP, HTTP and USB: a FrameOutput each (frame_output.h).
+// Whatever the protocol, the PC answers the Android app's search for it (discovery.h).
+// Frames are pushed from the capture thread and encoded on the server's own thread; frames
+// arriving faster than they can be encoded are dropped, newest wins. While no frame has been
+// pushed for a second, the idle frame (the logo) is streamed instead.
 //
 // The server coordinates; the work is done by its parts: FrameMailbox (frames in),
 // VideoPipeline (encoding, RTP), BitrateController (adapting to loss), RtspConnection (one
-// per player), PacketPacer (spreading UDP packets) and StreamLog.
+// per RTSP player), FrameOutput (the other protocols), PacketPacer (spreading UDP packets),
+// DiscoveryResponder and StreamLog.
 class FrameStreamServer {
 public:
     // Frames should be scaled down to fit before they're pushed (TextureReader::SetMaxSize):
@@ -52,16 +61,31 @@ public:
     FrameStreamServer& operator=(const FrameStreamServer&) = delete;
     ~FrameStreamServer();
 
-    // Starts listening on `port` (0 picks a free one), on every network interface when
-    // `lan` is set and on 127.0.0.1 only otherwise.
+    // Starts the protocol (SetProtocol), listening on `port` (0 picks a free one) if it has
+    // one, on every network interface when `lan` is set and on 127.0.0.1 only otherwise.
     bool Start(uint16_t port, bool lan, std::wstring& error);
     void Stop();
 
-    bool Running() const { return m_port != 0; }
-    uint16_t Port() const { return m_port; }
-    // rtsp:// URLs players can open: one per network address of this PC, 127.0.0.1 when
-    // it has none (or the server is loopback only). Empty when not running.
+    // The protocol the next Start runs; RTSP over TCP unless set. Stop and Start again to
+    // switch while running: players watching are disconnected.
+    void SetProtocol(StreamProtocol protocol) { m_protocol = protocol; }
+    StreamProtocol Protocol() const { return m_protocol; }
+    // Where the discovery responder listens: kDiscoveryPort unless set before Start (0 picks
+    // a free port, for tests). Its port while running, 0 if it couldn't start.
+    void SetDiscoveryPort(uint16_t port) { m_discoveryPort = port; }
+    uint16_t DiscoveryPort() const { return m_discovery.Port(); }
+
+    bool Running() const { return m_running; }
+    uint16_t Port() const { return m_port; }  // 0 for USB, which has none
+    // What players open to watch: one URL per network address of this PC, 127.0.0.1 when it
+    // has none (or the server is loopback only). Empty when not running, and for USB.
     std::vector<std::wstring> Urls();
+    // How the USB connection stands; empty for the other protocols.
+    std::wstring Status() const;
+    // Whether a phone on USB waits for the driver Gazeora installs.
+    bool NeedsUsbDriver() const;
+    // The phones on USB it can't switch to accessory mode without that driver on them.
+    std::vector<UsbPhone> PhonesNeedingUsbDriver() const;
     // Players currently receiving the stream.
     int Viewers() const { return m_viewers; }
     // False while nobody watches; frames pushed then are wasted work.
@@ -83,14 +107,27 @@ public:
     VideoCodec Codec() const;                     // the one players get
     bool CodecAvailable(VideoCodec codec) const;  // known once the server has started
 
+    // The bitrate at full quality, for H.264, in bits/s (H.265 gets 70% of it, for about the
+    // same picture). The stream steps down from it while players report loss. Applies from the
+    // next frame.
+    static constexpr uint32_t kDefaultMaxBitrate = 20000000;
+    void SetMaxBitrate(uint32_t bitrate) { m_maxBitrate = bitrate; }
+    uint32_t MaxBitrate() const { return m_maxBitrate; }
+
     // The layout frames should be pushed in. The server only stores it: whoever reads the
     // frames back applies it (TextureReader::SetVrLayout), once per frame.
     void SetVrLayout(const VrLayout& vr);
     VrLayout GetVrLayout();
 
-    // Hands over one tightly packed BGRA8 frame. `bgra` is swapped with an older buffer,
-    // so the caller can reuse it for the next frame without reallocating.
-    void PushFrame(uint32_t width, uint32_t height, std::vector<uint8_t>& bgra);
+    // The streaming details drawn into every frame streamed, live or idle (stream_overlay.h).
+    void SetOverlay(const OverlaySettings& overlay);
+    OverlaySettings GetOverlay();
+
+    // Hands over one tightly packed BGRA8 frame; `stereo` when it holds two views side by
+    // side (TextureReader::Stereo). `bgra` is swapped with an older buffer, so the caller can
+    // reuse it for the next frame without reallocating.
+    void PushFrame(uint32_t width, uint32_t height, std::vector<uint8_t>& bgra,
+                   bool stereo = false);
     // The BGRA8 picture streamed while there are no live frames.
     void SetIdleFrame(uint32_t width, uint32_t height, std::vector<uint8_t> bgra);
 
@@ -151,13 +188,29 @@ private:
     void HeardFrom(const sockaddr_in& from, uint64_t now);  // a UDP player's report
     void AdaptQuality(uint64_t now);
     uint32_t BitrateAt(int step) const;  // on the ladder, for the codec in use
-    // Encodes one picture and streams it. False if it couldn't be.
-    bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, PacketPacer& pacer);
+    // Encodes one picture and streams it, or only encodes it when !send (for the parameter
+    // sets). False if it couldn't be.
+    bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, PacketPacer& pacer,
+                       bool send);
+    // `picture` with the overlay drawn on, when it's on: drawn in `target`, a copy unless it's
+    // `picture` itself. `picture` as it is otherwise.
+    const Picture* DrawOverlay(const Picture& picture, Picture& target, OverlayRenderer& renderer,
+                               float frameRate);
     void SetLastError(const std::wstring& error);
+    bool StartRtsp(in_addr address, uint16_t port, std::wstring& error);
+    // The discovery reply (discovery.h).
+    std::string Describe();
 
     VideoPipeline::EncoderFactory m_encoderFactory;
     net::WinsockRuntime m_winsock;
     bool m_lan = false;
+    std::atomic<StreamProtocol> m_protocol{StreamProtocol::RtspTcp};
+    std::atomic<StreamProtocol> m_runningProtocol{StreamProtocol::RtspTcp};  // as started
+    std::atomic<bool> m_running{false};
+    // The protocol's output when it isn't RTSP. Set while stopped only.
+    std::unique_ptr<FrameOutput> m_output;
+    DiscoveryResponder m_discovery{m_log};
+    uint16_t m_discoveryPort = kDiscoveryPort;
     net::Socket m_listen;
     net::Socket m_rtp;
     net::Socket m_rtcp;  // bound so players' RTCP reports have somewhere to go
@@ -175,6 +228,7 @@ private:
     BitrateController m_bitrate;
     std::atomic<bool> m_keyFrameWanted{false};  // a player just started: send one now
     std::atomic<VideoCodec> m_requestedCodec{VideoCodec::H264};
+    std::atomic<uint32_t> m_maxBitrate{kDefaultMaxBitrate};
     std::atomic<bool> m_h265Available{false};
     // Bumped when the codec players get changes; their connections close on seeing it.
     std::atomic<uint32_t> m_codecGeneration{0};
@@ -197,9 +251,16 @@ private:
     std::wstring m_encoderName;
     // SDP fmtp parameters by codec, from the encoder's parameter sets.
     std::string m_fmtp[2] = {"packetization-mode=1", ""};
+    std::condition_variable m_fmtpChanged;  // with m_statusMutex
+    // A DESCRIBE came before anything was encoded: encode the idle frame for its parameter
+    // sets even with no viewers.
+    std::atomic<bool> m_parameterSetsWanted{false};
 
     std::mutex m_vrMutex;
     VrLayout m_vr;
+
+    std::mutex m_overlayMutex;
+    OverlaySettings m_overlay;
 
     std::mutex m_urlsMutex;
     std::vector<std::wstring> m_urls;

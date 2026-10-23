@@ -5,8 +5,10 @@
 #include <ws2tcpip.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <deque>
 #include <random>
 #include <utility>
 
@@ -15,6 +17,7 @@
 #include "gazeora/host/stream/rtp_video.h"
 #include "gazeora/host/stream/rtsp_connection.h"
 #include "gazeora/host/stream/rtsp_message.h"
+#include "gazeora/host/stream/stream_view_info.h"
 
 // Missing from older MinGW headers.
 #ifndef SIO_UDP_CONNRESET
@@ -34,9 +37,9 @@ constexpr uint32_t kFrameRate = 30;
 // quality at these bitrates.
 constexpr uint32_t kKeyFrameInterval = 30;
 // Interleaved players: a frame is skipped while this much is still queued for the player,
-// about a quarter second at the full bitrate. The socket's own buffer is kept small too, so
-// what's queued stays where it can be counted.
-constexpr size_t kTcpBacklogBytes = 256 * 1024;
+// about a fifth of a second at the default full bitrate. The socket's own buffer is kept small
+// too, so what's queued stays where it can be counted.
+constexpr size_t kTcpBacklogBytes = 512 * 1024;
 constexpr int kTcpSendBufferBytes = 128 * 1024;
 // A UDP player without a receiver report for this long is noted in the log. VLC sends one
 // every few seconds, so a player that stops has most likely stopped receiving.
@@ -49,6 +52,9 @@ constexpr size_t kRtpHeaderSize = 12;
 // slower than 30 fps. A repeated still picture costs next to nothing.
 constexpr uint64_t kLiveTimeoutMs = 1000;
 constexpr uint64_t kIdleIntervalMs = 1000 / kFrameRate;
+// How long a DESCRIBE waits for the encoder's first parameter sets. Players that can't take
+// them in-band (ExoPlayer) need them in the SDP.
+constexpr auto kParameterSetsWait = std::chrono::seconds(2);
 // Players send a keepalive within the session timeout; a silent one is dropped.
 constexpr int kSessionTimeoutSeconds = 60;
 constexpr uint64_t kReceiveTimeoutMs = (kSessionTimeoutSeconds + 5) * 1000;
@@ -97,6 +103,21 @@ private:
     bool m_mediaFoundation;
 };
 
+// Frames streamed per second, over the last two (one wobbles by a frame), for the overlay.
+class FrameRateCounter {
+public:
+    void Add(uint64_t now) { m_times.push_back(now); }
+    float PerSecond(uint64_t now) {
+        while (!m_times.empty() && now - m_times.front() >= 2000) {
+            m_times.pop_front();
+        }
+        return m_times.size() / 2.0f;
+    }
+
+private:
+    std::deque<uint64_t> m_times;
+};
+
 }  // namespace
 
 FrameStreamServer::FrameStreamServer(VideoPipeline::EncoderFactory encoderFactory)
@@ -118,10 +139,43 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     in_addr bindAddress;
     bindAddress.s_addr = htonl(lan ? INADDR_ANY : INADDR_LOOPBACK);
 
+    const StreamProtocol protocol = m_protocol;
+    m_runningProtocol = protocol;
+    m_output = CreateFrameOutput(protocol, m_log);
+    if (m_output) {
+        if (!m_output->Start(bindAddress, port, error)) {
+            Stop();
+            return false;
+        }
+        m_port = m_output->Port();
+    } else if (!StartRtsp(bindAddress, port, error)) {
+        Stop();
+        return false;
+    }
+
+    m_ssrc = std::random_device()();
+    m_h265Available = VideoEncoder::Available(VideoCodec::H265);
+    m_stopping = false;
+    std::wstring discoveryError;
+    if (!m_discovery.Start(bindAddress, m_discoveryPort, [this] { return Describe(); },
+                           discoveryError)) {
+        m_log.Write("the Android app can't search for this PC: %ls", discoveryError.c_str());
+    }
+    m_log.Write("streaming over %s", ProtocolName(protocol));
+    m_running = true;
+    // The idle frame set before a restart (a protocol change) still stands.
+    m_mailbox.RepostIdle();
+    m_encodeThread = std::thread([this] { EncodeLoop(); });
+    if (!m_output) {
+        m_acceptThread = std::thread([this] { AcceptLoop(); });
+    }
+    return true;
+}
+
+bool FrameStreamServer::StartRtsp(in_addr bindAddress, uint16_t port, std::wstring& error) {
     m_listen.Reset(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     if (!m_listen) {
         error = L"socket failed (error " + std::to_wstring(WSAGetLastError()) + L")";
-        Stop();
         return false;
     }
     // Don't let another program take the port over from under us.
@@ -142,7 +196,6 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
         error = code == WSAEADDRINUSE ? L"port " + std::to_wstring(port) + L" is already in use"
                                       : L"cannot listen on port " + std::to_wstring(port) +
                                             L" (error " + std::to_wstring(code) + L")";
-        Stop();
         return false;
     }
     uint16_t rtspPort = ntohs(address.sin_port);
@@ -154,7 +207,6 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     }
     if (!m_rtcp) {
         error = L"cannot open the UDP ports (error " + std::to_wstring(WSAGetLastError()) + L")";
-        Stop();
         return false;
     }
     m_rtp.SetSendBuffer(kSendBufferBytes);
@@ -166,14 +218,9 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     WSAIoctl(m_rtcp.Get(), SIO_UDP_CONNRESET, &reportResets, sizeof(reportResets), nullptr, 0,
              &returned, nullptr, nullptr);
 
-    m_ssrc = std::random_device()();
-    m_h265Available = VideoEncoder::Available(VideoCodec::H265);
-    m_stopping = false;
     m_port = rtspPort;
     m_log.Write("listening on port %u, RTP from UDP %u, RTCP %u", rtspPort, m_rtpPort,
                 m_rtcpPort);
-    m_encodeThread = std::thread([this] { EncodeLoop(); });
-    m_acceptThread = std::thread([this] { AcceptLoop(); });
     return true;
 }
 
@@ -187,10 +234,16 @@ void FrameStreamServer::Stop() {
         m_encodeThread.join();
     }
     ReapConnections(true);
+    m_discovery.Stop();
+    if (m_output) {
+        m_output->Stop();
+        m_output.reset();
+    }
     m_listen.Reset();
     m_rtp.Reset();
     m_rtcp.Reset();
     m_winsock.Shutdown();
+    m_running = false;
     m_port = 0;
     {
         std::lock_guard<std::mutex> lock(m_sessionsMutex);
@@ -203,8 +256,8 @@ void FrameStreamServer::Stop() {
 
 std::vector<std::wstring> FrameStreamServer::Urls() {
     uint16_t port = m_port;
-    if (!port) {
-        return {};
+    if (!m_running || !port) {
+        return {};  // USB has no port
     }
     std::lock_guard<std::mutex> lock(m_urlsMutex);
     uint64_t now = GetTickCount64();
@@ -219,11 +272,53 @@ std::vector<std::wstring> FrameStreamServer::Urls() {
         }
         m_urls.clear();
         for (const auto& address : addresses) {
-            m_urls.push_back(L"rtsp://" + address + L":" + std::to_wstring(port) + L"/");
+            m_urls.push_back(m_output ? m_output->Url(address)
+                                      : L"rtsp://" + address + L":" + std::to_wstring(port) + L"/");
         }
         m_urlsAtMs = now;
     }
     return m_urls;
+}
+
+std::wstring FrameStreamServer::Status() const {
+    return m_running && m_output ? m_output->Status() : std::wstring();
+}
+
+bool FrameStreamServer::NeedsUsbDriver() const {
+    return m_running && m_output && m_output->NeedsUsbDriver();
+}
+
+std::vector<UsbPhone> FrameStreamServer::PhonesNeedingUsbDriver() const {
+    return m_running && m_output ? m_output->PhonesNeedingDriver() : std::vector<UsbPhone>();
+}
+
+std::string FrameStreamServer::Describe() {
+    std::string name = "Gazeora";
+    wchar_t computer[256];
+    DWORD size = 256;
+    if (GetComputerNameExW(ComputerNameDnsHostname, computer, &size)) {
+        char utf8[1024];
+        int length = WideCharToMultiByte(CP_UTF8, 0, computer, int(size), utf8, sizeof(utf8),
+                                         nullptr, nullptr);
+        if (length > 0) {
+            name.assign(utf8, size_t(length));
+        }
+    }
+    const StreamProtocol protocol = m_runningProtocol;
+    return std::string("{\"service\":\"gazeora\",\"version\":1,\"name\":") + JsonString(name) +
+           ",\"protocol\":\"" + ProtocolId(protocol) + "\",\"port\":" + std::to_string(m_port) +
+           ",\"path\":\"" + (protocol == StreamProtocol::Http ? "/stream.ts" : "/") +
+           "\",\"codec\":\"" + (Codec() == VideoCodec::H265 ? "h265" : "h264") + "\"}";
+}
+
+void FrameStreamServer::SetOverlay(const OverlaySettings& overlay) {
+    std::lock_guard<std::mutex> lock(m_overlayMutex);
+    m_overlay = overlay;
+}
+
+OverlaySettings FrameStreamServer::GetOverlay() {
+    std::lock_guard<std::mutex> lock(m_overlayMutex);
+    return m_overlay;
 }
 
 void FrameStreamServer::SetVrLayout(const VrLayout& vr) {
@@ -251,8 +346,9 @@ std::wstring FrameStreamServer::EncoderName() {
     return m_encoderName;
 }
 
-void FrameStreamServer::PushFrame(uint32_t width, uint32_t height, std::vector<uint8_t>& bgra) {
-    m_mailbox.PostLive(width, height, RtpClock64(), bgra);
+void FrameStreamServer::PushFrame(uint32_t width, uint32_t height, std::vector<uint8_t>& bgra,
+                                  bool stereo) {
+    m_mailbox.PostLive(width, height, RtpClock64(), bgra, stereo);
 }
 
 void FrameStreamServer::SetIdleFrame(uint32_t width, uint32_t height, std::vector<uint8_t> bgra) {
@@ -457,7 +553,15 @@ bool FrameStreamServer::OnDescribe(RequestContext& context) {
     const VideoCodec codec = Codec();
     std::string fmtp;
     {
-        std::lock_guard<std::mutex> lock(m_statusMutex);
+        std::unique_lock<std::mutex> lock(m_statusMutex);
+        auto hasParameterSets = [&] {
+            return m_fmtp[int(codec)].find("sprop-") != std::string::npos;
+        };
+        if (!hasParameterSets()) {
+            m_parameterSetsWanted = true;
+            m_fmtpChanged.wait_for(lock, kParameterSetsWait, hasParameterSets);
+            m_parameterSetsWanted = false;
+        }
         fmtp = m_fmtp[int(codec)];
     }
     std::string sdp = "v=0\r\no=- " + std::to_string(m_ssrc) + " 1 IN IP4 " + ip +
@@ -481,6 +585,13 @@ bool FrameStreamServer::OnSetup(RequestContext& context) {
     // unicast when it's refused.
     TransportSpec transport;
     if (!TransportSpec::Parse(context.request.Header("Transport"), transport)) {
+        return connection.Send(
+            RtspResponse("461 Unsupported Transport", context.request).Serialize());
+    }
+    // Only the transport the protocol names. Players such as VLC try the other on a 461.
+    if (transport.interleaved != (m_runningProtocol == StreamProtocol::RtspTcp)) {
+        m_log.Write("%s asked for RTP over %s; the stream is %s", connection.Peer().c_str(),
+                    transport.interleaved ? "TCP" : "UDP", ProtocolName(m_runningProtocol));
         return connection.Send(
             RtspResponse("461 Unsupported Transport", context.request).Serialize());
     }
@@ -635,6 +746,9 @@ void FrameStreamServer::SendPackets(const std::vector<std::string>& packets, boo
 }
 
 void FrameStreamServer::ReadReceiverReports(uint64_t now) {
+    if (!m_rtcp) {
+        return;  // not RTSP
+    }
     uint8_t packet[1500];
     sockaddr_in from;
     int fromLength = sizeof(from);
@@ -653,6 +767,10 @@ void FrameStreamServer::ReadReceiverReports(uint64_t now) {
             m_log.Write("%s reports %.1f%% lost lately, %d in all, jitter %u ms",
                         net::AddressText(from).c_str(), report.fractionLost * 100.0,
                         report.cumulativeLost, report.jitter / 90);
+            HeardFrom(from, now);
+        }
+        if (AsksForKeyFrame(packet, size_t(got), m_ssrc)) {
+            m_keyFrameWanted = true;  // it lost part of a frame: the next one starts over
             HeardFrom(from, now);
         }
         fromLength = sizeof(from);
@@ -686,8 +804,8 @@ void FrameStreamServer::HeardFrom(const sockaddr_in& from, uint64_t now) {
 }
 
 uint32_t FrameStreamServer::BitrateAt(int step) const {
-    return BitrateController::BitrateAt(step,
-                                        Codec() == VideoCodec::H265 ? kH265BitratePercent : 100);
+    uint32_t top = m_maxBitrate / 100 * (Codec() == VideoCodec::H265 ? kH265BitratePercent : 100);
+    return BitrateController::BitrateAt(step, top);
 }
 
 uint32_t FrameStreamServer::Bitrate() const { return BitrateAt(m_bitrate.Step()); }
@@ -720,7 +838,7 @@ void FrameStreamServer::AdaptQuality(uint64_t now) {
 }
 
 bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& picture,
-                                      PacketPacer& pacer) {
+                                      PacketPacer& pacer, bool send) {
     VideoPipeline::Config config;
     config.codec = Codec();
     config.fps = kFrameRate;
@@ -756,17 +874,26 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     if (m_keyFrameWanted.exchange(false)) {
         pipeline.RequestKeyFrame();
     }
+    pipeline.SetViewInfo(ViewInfoText(GetVrLayout(), picture.stereo));
 
     bool fmtpChanged = false;
     bool ok = pipeline.Encode(
         picture,
-        [&](const std::vector<std::string>& packets, bool keyFrame) {
-            SendPackets(packets, keyFrame, pacer);
+        [&](const VideoPipeline::EncodedFrame& frame) {
+            if (!send) {
+                return;
+            }
+            if (m_output) {
+                m_output->Send(frame, m_bitrate, GetTickCount64());
+            } else {
+                SendPackets(frame.packets, frame.keyFrame, pacer);
+            }
         },
         fmtpChanged, error);
     if (fmtpChanged) {
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_fmtp[int(pipeline.Codec())] = pipeline.Fmtp();
+        m_fmtpChanged.notify_all();
     }
     SetLastError(ok ? std::wstring() : error);
     if (!ok) {
@@ -784,7 +911,11 @@ void FrameStreamServer::EncodeLoop() {
     PacketPacer pacer;
     VideoPipeline pipeline(m_encoderFactory);
     Picture live, idle;
+    Picture overlaid;  // the idle picture with the overlay drawn on
+    OverlayRenderer overlay;
+    FrameRateCounter frameRate;
     uint64_t lastLiveMs = 0;
+    bool probed = false;  // the idle frame was encoded with no one watching
     uint64_t nextIdleMs = 0;  // on the 90 kHz clock's millisecond scale; GetTickCount64 is too
                               // coarse for 33 ms
 
@@ -798,6 +929,12 @@ void FrameStreamServer::EncodeLoop() {
         }
 
         uint64_t now = GetTickCount64();
+        if (m_output) {
+            m_viewers = m_output->Viewers();
+            if (m_output->TakeKeyFrameRequest()) {
+                m_keyFrameWanted = true;
+            }
+        }
         ReadReceiverReports(now);
         AdaptQuality(now);
 
@@ -808,7 +945,8 @@ void FrameStreamServer::EncodeLoop() {
             source = &live;
             lastLiveMs = now;
             nextIdleMs = clockMs + kIdleIntervalMs;
-        } else if (!idle.bgra.empty() && m_viewers > 0 && now - lastLiveMs >= kLiveTimeoutMs) {
+        } else if (!idle.bgra.empty() && (m_viewers > 0 || m_parameterSetsWanted) &&
+                   now - lastLiveMs >= kLiveTimeoutMs) {
             if (clockMs >= nextIdleMs) {
                 source = &idle;
                 idle.clock = RtpClock64();
@@ -821,10 +959,60 @@ void FrameStreamServer::EncodeLoop() {
             nextIdleMs = clockMs + kIdleIntervalMs;  // nothing to repeat: don't spin
         }
         if (source && source->Complete()) {
-            StreamPicture(pipeline, *source, pacer);
+            // The idle frame with no one watching is only for a DESCRIBE's parameter sets: it
+            // isn't sent, and the first player gets a fresh encoder, so its first frame is a
+            // key frame rather than one still in the encoder.
+            bool probe = source == &idle && m_viewers == 0;
+            if (probed && !probe) {
+                pipeline.Close();
+                probed = false;
+            }
+            if (!probe) {
+                frameRate.Add(now);
+                source = DrawOverlay(*source, source == &idle ? overlaid : live, overlay,
+                                     frameRate.PerSecond(now));
+            }
+            StreamPicture(pipeline, *source, pacer, !probe);
+            probed |= probe;
         }
     }
     pipeline.Close();
+}
+
+const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& target,
+                                              OverlayRenderer& renderer, float frameRate) {
+    OverlaySettings settings = GetOverlay();
+    if (!settings.enabled) {
+        return &picture;
+    }
+    OverlayStats stats;
+    stats.protocol = ProtocolName(m_runningProtocol);
+    stats.viewers = m_viewers;
+    stats.codec = CodecName(Codec());
+    stats.width = picture.width & ~1u;  // as encoded
+    stats.height = picture.height & ~1u;
+    stats.frameRate = frameRate;
+    stats.bitrate = Bitrate();
+    stats.loss = PacketLoss();
+    stats.encoder = EncoderName();
+    GetLocalTime(&stats.time);
+    std::vector<std::wstring> lines = OverlayLines(settings, stats);
+    if (lines.empty()) {
+        return &picture;
+    }
+    // The idle picture is reused frame after frame: draw on a copy of it.
+    if (&target != &picture) {
+        target.bgra.assign(picture.bgra.begin(), picture.bgra.end());
+        target.width = picture.width;
+        target.height = picture.height;
+        target.clock = picture.clock;
+        target.stereo = picture.stereo;
+    }
+    OverlayLayout layout = GetVrLayout().WarpOnPc() ? OverlayLayout::VrEyes
+                           : picture.stereo         ? OverlayLayout::Pair
+                                                    : OverlayLayout::Flat;
+    renderer.Draw(lines, settings, layout, target);
+    return &target;
 }
 
 }  // namespace gazeora

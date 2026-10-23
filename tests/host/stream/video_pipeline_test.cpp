@@ -78,8 +78,9 @@ protected:
         std::wstring error;
         EXPECT_TRUE(pipeline.Encode(
             picture,
-            [&](const std::vector<std::string>& packets, bool key) {
-                sent.emplace_back(packets.size(), key);
+            [&](const VideoPipeline::EncodedFrame& frame) {
+                sent.emplace_back(frame.packets.size(), frame.keyFrame);
+                lastAnnexB = frame.annexB;
             },
             fmtpChanged, error));
         lastFmtpChanged = fmtpChanged;
@@ -91,6 +92,7 @@ protected:
     VideoPipeline::Config config;
     Picture picture;
     bool lastFmtpChanged = false;
+    std::string lastAnnexB;  // the last frame's access unit
 };
 
 TEST_F(VideoPipelineTest, OpensOnceAndOnlyReopensForANewSize) {
@@ -127,11 +129,42 @@ TEST_F(VideoPipelineTest, MarksKeyFramesAndPublishesParameterSets) {
     EXPECT_GT(first[0].first, 2u) << "the 3 KB IDR slice is fragmented";
     EXPECT_TRUE(lastFmtpChanged);
     EXPECT_NE(pipeline.Fmtp().find("sprop-parameter-sets="), std::string::npos);
+    // The access unit for the protocols without RTP: SPS, PPS and the slice, start codes in
+    // front of each.
+    ASSERT_GT(lastAnnexB.size(), 12u);
+    EXPECT_EQ(lastAnnexB.substr(0, 5), std::string("\0\0\0\1\x67", 5));
+    EXPECT_NE(lastAnnexB.find(std::string("\0\0\0\1\x68", 5)), std::string::npos);
+    EXPECT_NE(lastAnnexB.find(std::string("\0\0\0\1\x65", 5)), std::string::npos);
 
     auto second = EncodeOnce();
     ASSERT_EQ(second.size(), 1u);
     EXPECT_FALSE(second[0].second);
     EXPECT_FALSE(lastFmtpChanged);
+}
+
+TEST_F(VideoPipelineTest, PutsTheViewInfoJustBeforeThePicture) {
+    bool reopened = false;
+    std::wstring error;
+    ASSERT_TRUE(pipeline.Prepare(config, 64, 32, reopened, error));
+    pipeline.SetViewInfo("vr=1 pair=1");
+    const std::string sei("\0\0\0\1\x06\x05", 6);
+
+    EncodeOnce();
+    size_t pps = lastAnnexB.find(std::string("\0\0\0\1\x68", 5));
+    size_t at = lastAnnexB.find(sei);
+    size_t idr = lastAnnexB.find(std::string("\0\0\0\1\x65", 5));
+    ASSERT_NE(at, std::string::npos);
+    EXPECT_LT(pps, at) << "after the parameter sets";
+    EXPECT_LT(at, idr) << "before the slice";
+    EXPECT_NE(lastAnnexB.find("GazeoraViewInfo1vr=1 pair=1"), std::string::npos);
+
+    EncodeOnce();  // every frame has it
+    EXPECT_EQ(lastAnnexB.find(sei), 0u);
+    EXPECT_NE(lastAnnexB.find(std::string("\0\0\0\1\x41", 5)), std::string::npos);
+
+    pipeline.SetViewInfo("");
+    EncodeOnce();
+    EXPECT_EQ(lastAnnexB.find(sei), std::string::npos);
 }
 
 TEST_F(VideoPipelineTest, ForwardsKeyFrameRequests) {

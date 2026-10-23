@@ -11,6 +11,7 @@
 #include "gazeora/hook/core/log.h"
 #include "gazeora/hook/d3d10/d3d10_capture.h"
 #include "gazeora/hook/d3d11/d3d11_capture.h"
+#include "gazeora/hook/d3d11/d3d11_depth.h"
 #include "gazeora/hook/d3d12/d3d12_capture.h"
 
 using Microsoft::WRL::ComPtr;
@@ -160,6 +161,8 @@ bool Install() {
                     &HookPresent1, &g_origPresent1)) {
         return false;
     }
+    // Without them, D3D11 games are captured in 2D only.
+    d3d11::InstallDepthHooks(device.Get());
     return true;
 }
 

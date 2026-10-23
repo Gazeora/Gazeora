@@ -7,15 +7,8 @@
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
 # D3D11 tests run on WARP, so no GPU is needed.
 
-include(FetchContent)
-FetchContent_Declare(googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.tar.gz
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
-include(GoogleTest)
+include(FetchGoogleTest)
+include(GoogleTest)  # CMake's own: gtest_discover_tests
 
 function(gazeora_add_test name)
     cmake_parse_arguments(ARG "" "" "SOURCES;LIBS" ${ARGN})
@@ -29,6 +22,7 @@ gazeora_add_test(gazeora_hook_tests
     SOURCES
         hook/fake_host.cpp
         hook/core/capture_target_test.cpp
+        hook/core/depth_picker_test.cpp
         hook/core/hook_util_test.cpp
         hook/core/pixel_convert_test.cpp
         hook/core/shared_channel_test.cpp
@@ -48,6 +42,9 @@ gazeora_add_test(gazeora_host_tests
         host/stream/rtcp_test.cpp
         host/stream/rtp_video_test.cpp
         host/stream/rtsp_message_test.cpp
+        host/stream/stream_formats_test.cpp
+        host/stream/stream_overlay_test.cpp
+        host/stream/stream_view_info_test.cpp
         host/stream/video_pipeline_test.cpp
     LIBS gazeora_host_lib)
 
@@ -59,8 +56,3 @@ gazeora_add_test(gazeora_transport_tests
     SOURCES transport/frame_transport_test.cpp
     LIBS gazeora_hook_core gazeora_host_lib)
 
-# Benchmarks: not registered with ctest, so test runs stay fast and unloaded. Run the
-# executable directly (in CLion, pick the gazeora_bench configuration), in a Release build.
-add_executable(gazeora_bench host/bench_test.cpp)
-target_include_directories(gazeora_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(gazeora_bench PRIVATE gazeora_host_lib GTest::gtest_main)

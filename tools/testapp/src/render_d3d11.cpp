@@ -1,8 +1,10 @@
 #include <d3d11_1.h>
+#include <d3dcompiler.h>
 #include <dxgi1_2.h>
 #include <wrl/client.h>
 
 #include <cstdio>
+#include <cstring>
 
 #include "testapp/app.h"
 
@@ -47,10 +49,71 @@ int RunD3D11(HWND hwnd) {
     ComPtr<ID3D11DeviceContext1> context1;
     context.As(&context1);
 
+    // The 3D scene, with a depth buffer the way older games have it: 24-bit, 0 near and 1 far,
+    // and not readable by shaders.
+    D3D11_TEXTURE2D_DESC dd = {};
+    dd.Width = kWidth;
+    dd.Height = kHeight;
+    dd.MipLevels = 1;
+    dd.ArraySize = 1;
+    dd.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dd.SampleDesc.Count = 1;
+    dd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    ComPtr<ID3D11Texture2D> depth;
+    ComPtr<ID3D11DepthStencilView> dsv;
+    ComPtr<ID3DBlob> vsCode, psCode;
+    ComPtr<ID3D11VertexShader> vs;
+    ComPtr<ID3D11PixelShader> ps;
+    D3D11_DEPTH_STENCIL_DESC ds = {};
+    ds.DepthEnable = TRUE;
+    ds.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    ds.DepthFunc = D3D11_COMPARISON_LESS;
+    ComPtr<ID3D11DepthStencilState> depthState;
+    D3D11_RASTERIZER_DESC rd = {};
+    rd.FillMode = D3D11_FILL_SOLID;
+    rd.CullMode = D3D11_CULL_NONE;
+    rd.DepthClipEnable = TRUE;
+    ComPtr<ID3D11RasterizerState> rasterizer;
+    D3D11_BUFFER_DESC cd = {};
+    cd.ByteWidth = sizeof(SceneConstants);
+    cd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    ComPtr<ID3D11Buffer> constants;
+    if (FAILED(device->CreateTexture2D(&dd, nullptr, &depth)) ||
+        FAILED(device->CreateDepthStencilView(depth.Get(), nullptr, &dsv)) ||
+        FAILED(D3DCompile(kSceneShader, strlen(kSceneShader), nullptr, nullptr, nullptr, "vs",
+                          "vs_4_0", 0, 0, &vsCode, nullptr)) ||
+        FAILED(D3DCompile(kSceneShader, strlen(kSceneShader), nullptr, nullptr, nullptr, "ps",
+                          "ps_4_0", 0, 0, &psCode, nullptr)) ||
+        FAILED(device->CreateVertexShader(vsCode->GetBufferPointer(), vsCode->GetBufferSize(),
+                                          nullptr, &vs)) ||
+        FAILED(device->CreatePixelShader(psCode->GetBufferPointer(), psCode->GetBufferSize(),
+                                         nullptr, &ps)) ||
+        FAILED(device->CreateDepthStencilState(&ds, &depthState)) ||
+        FAILED(device->CreateRasterizerState(&rd, &rasterizer)) ||
+        FAILED(device->CreateBuffer(&cd, nullptr, &constants))) {
+        fprintf(stderr, "creating the 3D scene failed\n");
+        return 1;
+    }
+    D3D11_VIEWPORT viewport = {0, 0, float(kWidth), float(kHeight), 0, 1};
+
     Clock clock;
     while (PumpMessages()) {
-        Scene scene = SceneAt(clock.Seconds());
+        float t = clock.Seconds();
+        Scene scene = SceneAt(t);
         context->ClearRenderTargetView(rtv.Get(), scene.background);
+        context->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+        SceneConstants values = {t, 0.0f, float(kWidth) / kHeight, 0.0f};
+        context->UpdateSubresource(constants.Get(), 0, nullptr, &values, 0, 0);
+        context->OMSetRenderTargets(1, rtv.GetAddressOf(), dsv.Get());
+        context->OMSetDepthStencilState(depthState.Get(), 0);
+        context->RSSetState(rasterizer.Get());
+        context->RSSetViewports(1, &viewport);
+        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        context->VSSetShader(vs.Get(), nullptr, 0);
+        context->VSSetConstantBuffers(0, 1, constants.GetAddressOf());
+        context->PSSetShader(ps.Get(), nullptr, 0);
+        context->DrawInstanced(4, kSceneInstances, 0, 0);
+        // A HUD-like square on top, drawn without depth.
         if (context1) {
             context1->ClearView(rtv.Get(), kWhite, &scene.square, 1);
         }

@@ -53,6 +53,36 @@ Scene SceneAt(float t) {
     return s;
 }
 
+const char kSceneShader[] = R"(
+cbuffer Scene : register(b0) { float time; float reversed; float aspect; float unused; };
+struct Vertex { float4 position : SV_Position; float3 color : COLOR; float2 cell : TEXCOORD; };
+Vertex vs(uint id : SV_VertexID, uint instance : SV_InstanceID) {
+    float2 corner = float2(id & 1, id >> 1);
+    float3 p;
+    Vertex v;
+    if (instance == 0) {  // the floor, from just ahead to far away
+        p = float3(lerp(-12, 12, corner.x), -1, lerp(1.5, 60, corner.y));
+        v.color = float3(0.3, 0.7, 0.4);
+        v.cell = float2(p.x, p.z);
+    } else {              // a card standing on it, swaying
+        float z = 1 + instance * 2.5;
+        float x = sin(time * 0.7 + instance * 1.7) * 2.5;
+        p = float3(x + corner.x - 0.5, -1 + corner.y * 1.6, z);
+        v.color = float3(0.9, 0.5 + 0.1 * instance, 0.2);
+        v.cell = corner * 4;
+    }
+    // 60 degrees up and down; near plane 0.1. Reversed depth uses an infinite far plane.
+    const float f = 1.732, near = 0.1, far = 100;
+    float depth = reversed > 0 ? near : (p.z - near) * far / (far - near);
+    v.position = float4(p.x * f / aspect, p.y * f, depth, p.z);
+    return v;
+}
+float4 ps(Vertex v) : SV_Target {
+    bool light = (int(floor(v.cell.x)) + int(floor(v.cell.y))) & 1;
+    return float4(v.color * (light ? 1.0 : 0.55), 1);
+}
+)";
+
 Clock::Clock() {
     QueryPerformanceFrequency(&m_freq);
     QueryPerformanceCounter(&m_start);

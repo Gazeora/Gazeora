@@ -7,6 +7,9 @@ namespace gazeora {
 namespace {
 constexpr uint64_t kSeconds1601To1900 = 9435484800ull;
 constexpr uint8_t kReceiverReport = 201;
+constexpr uint8_t kPayloadFeedback = 206;
+constexpr uint8_t kPictureLoss = 1;  // feedback message types
+constexpr uint8_t kFullIntraRequest = 4;
 
 uint32_t Get32(const uint8_t* p) { return uint32_t(p[0]) << 24 | p[1] << 16 | p[2] << 8 | p[3]; }
 }  // namespace
@@ -72,6 +75,24 @@ std::vector<ReceptionReport> ParseReceiverReports(const uint8_t* packet, size_t 
         at += length;
     }
     return reports;
+}
+
+bool AsksForKeyFrame(const uint8_t* packet, size_t size, uint32_t ssrc) {
+    for (size_t at = 0; at + 12 <= size;) {
+        size_t length = ((size_t(packet[at + 2]) << 8 | packet[at + 3]) + 1) * 4;
+        uint8_t type = packet[at] & 0x1F;
+        if (packet[at + 1] == kPayloadFeedback) {
+            // Sender SSRC, media SSRC; a FIR names the media in its entries instead.
+            if (type == kPictureLoss && Get32(packet + at + 8) == ssrc) {
+                return true;
+            }
+            if (type == kFullIntraRequest && at + 16 <= size && Get32(packet + at + 12) == ssrc) {
+                return true;
+            }
+        }
+        at += length;
+    }
+    return false;
 }
 
 }  // namespace gazeora

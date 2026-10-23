@@ -13,13 +13,14 @@ FrameMailbox::~FrameMailbox() {
 }
 
 void FrameMailbox::PostLive(uint32_t width, uint32_t height, uint64_t clock,
-                            std::vector<uint8_t>& bgra) {
+                            std::vector<uint8_t>& bgra, bool stereo) {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_live.bgra.swap(bgra);
         m_live.width = width;
         m_live.height = height;
         m_live.clock = clock;
+        m_live.stereo = stereo;
         m_livePending = true;
     }
     Wake();
@@ -51,13 +52,22 @@ bool FrameMailbox::Take(DWORD timeoutMs, Picture& live, Picture& idle) {
         live.width = m_live.width;
         live.height = m_live.height;
         live.clock = m_live.clock;
+        live.stereo = m_live.stereo;
         m_livePending = false;
     }
     if (m_idlePending) {
-        idle = std::move(m_idle);
+        idle = m_idle;  // a copy: the stream restarts with it (RepostIdle)
         m_idlePending = false;
     }
     return gotLive;
+}
+
+void FrameMailbox::RepostIdle() {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_idlePending = !m_idle.bgra.empty();
+    }
+    Wake();
 }
 
 }  // namespace gazeora

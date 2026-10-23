@@ -7,8 +7,8 @@ namespace gazeora {
 
 // Converts BGRA8 to NV12 (BT.709, limited range), the format video encoders take. Width
 // and height must be even; `stride` is the source row length in pixels. On the CPU, for every
-// frame the stream encodes (VideoPipeline), so it's on the hot path: about 2.3 ms at 1080p
-// in a release build.
+// frame the stream encodes (VideoPipeline), so it's on the hot path: about 1.4 ms at 1080p
+// in a release build (SSE2).
 void BgraToNv12(const uint8_t* bgra, uint32_t stride, uint32_t width, uint32_t height,
                 std::vector<uint8_t>& nv12);
 

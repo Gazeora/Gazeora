@@ -13,6 +13,10 @@
 //  - writingFrame / hostReadingFrame form a Dekker-style handshake so the hook
 //    never overwrites a slot the host has just decided to read (both sides write
 //    their own field with a full barrier, then read the other's).
+//  - For 3D from depth (captureDepth), D3D11 and D3D12 games also copy the game's depth
+//    buffer into a depth slot beside each frame slot: RGBA8 textures the frame's size, each
+//    texel one depth value as a little-endian 32-bit word (DepthEncoding). They're written
+//    with the frame and covered by its fence; depthSlots says what each one holds.
 #pragma once
 
 #include <windows.h>
@@ -23,7 +27,7 @@
 namespace gazeora {
 
 constexpr uint32_t kSharedMagic = 0x415A4147;  // "GAZA"
-constexpr uint32_t kSharedVersion = 3;
+constexpr uint32_t kSharedVersion = 4;
 constexpr uint32_t kFrameSlots = 3;
 
 enum HookState : LONG {
@@ -74,11 +78,28 @@ enum HostFlags : uint32_t {
     kHostLaunchedGame = 1,
 };
 
+// How a depth slot's texels hold the depth buffer's values, read as 32-bit words.
+enum DepthEncoding : uint32_t {
+    kDepthNone = 0,
+    kDepthFloat = 1,    // a 32-bit float, 0..1
+    kDepthUnorm24 = 2,  // the low 24 bits, 0..0xFFFFFF for 0..1 (the stencil in the top byte)
+};
+
+// What one depth slot holds.
+struct DepthSlotInfo {
+    volatile LONG64 frame;  // the frame whose depth it holds; 0 for none
+    uint32_t width;         // the depth buffer's size; the slot holds as much as fits, from
+    uint32_t height;        // the top left
+    uint32_t encoding;      // DepthEncoding
+    uint32_t reserved;
+};
+
 struct SharedHeader {
     uint32_t magic;
     uint32_t version;
     volatile LONG hookState;       // HookState, written by the hook
     volatile LONG captureEnabled;  // written by the host; hook skips copying when 0
+    volatile LONG captureDepth;    // written by the host; the depth buffer too, for 3D
 
     // Seqlock around the texture description below: odd while the hook is
     // rewriting it, 0 until the first textures exist.
@@ -92,6 +113,7 @@ struct SharedHeader {
     uint64_t slotHandles[kFrameSlots];  // NT handles, valid in the game process
     uint64_t frameFenceHandle;          // NT handle, valid in the game process
     uint64_t hostFenceHandle;           // NT handle, valid in the game process
+    uint64_t depthSlotHandles[kFrameSlots];  // NT handles; 0 without depth slots
     int64_t firstFrame;                 // first frame number written to these textures
 
     volatile LONG64 frameIndex;        // latest published frame number (written by hook)
@@ -99,6 +121,7 @@ struct SharedHeader {
     volatile LONG64 hostReadingFrame;  // frame the host is about to read (host)
     volatile LONG64 lastPresentQpc;    // QueryPerformanceCounter at capture time
     volatile LONG64 skippedFrames;     // presents not captured because a slot was busy
+    DepthSlotInfo depthSlots[kFrameSlots];  // by slot, written by the hook with the frame
 
     char status[256];  // last human-readable status/error from the hook
 };

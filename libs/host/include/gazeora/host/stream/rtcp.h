@@ -29,4 +29,9 @@ struct ReceptionReport {
 // The report blocks of every receiver report in a compound RTCP packet.
 std::vector<ReceptionReport> ParseReceiverReports(const uint8_t* packet, size_t size);
 
+// Whether a compound RTCP packet asks `ssrc` for a key frame: a Picture Loss Indication or a
+// Full Intra Request (RFC 4585 6.3.1, RFC 5104 4.3.1), which a player sends when it lost part
+// of a frame and can't decode what follows until one comes.
+bool AsksForKeyFrame(const uint8_t* packet, size_t size, uint32_t ssrc);
+
 }  // namespace gazeora

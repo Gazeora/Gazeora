@@ -144,6 +144,39 @@ TEST_F(FrameTransportTest, HostFollowsRecreatedResources) {
     EXPECT_EQ(HostPixels(), pixels);
 }
 
+TEST_F(FrameTransportTest, DepthTravelsWithItsFrame) {
+    client.SetCaptureDepth(true);
+    EXPECT_TRUE(hook::CaptureDepth());
+    ASSERT_TRUE(
+        ring.Create(game.device.Get(), kWidth, kHeight, DXGI_FORMAT_B8G8R8A8_UNORM, kApiD3D11, true));
+    ASSERT_NE(ring.DepthSlot(0), nullptr);
+
+    // A frame with depth: the words arrive as they were written, with what they are.
+    LONG64 frame = hook::NextFrameNumber();
+    ASSERT_TRUE(ring.Claim(frame));
+    std::vector<uint32_t> pixels(kWidth * kHeight, 0xFF101010);
+    std::vector<uint32_t> depth(kWidth * kHeight, 0x3F000000);  // 0.5f
+    game.context->UpdateSubresource(ring.Slot(frame), 0, nullptr, pixels.data(), kWidth * 4, 0);
+    game.context->UpdateSubresource(ring.DepthSlot(frame), 0, nullptr, depth.data(), kWidth * 4,
+                                    0);
+    hook::PublishDepth(frame, 1920, 1080, kDepthFloat);
+    ring.Publish(game.context.Get(), frame, hook::QpcNow(), true);
+    ASSERT_EQ(client.WaitForFrame(kTimeoutMs), CaptureClient::WaitResult::Frame);
+    ASSERT_NE(client.Depth(), nullptr);
+    EXPECT_EQ(client.Depth()->width, 1920u);
+    EXPECT_EQ(client.Depth()->height, 1080u);
+    EXPECT_EQ(client.Depth()->encoding, kDepthFloat);
+    EXPECT_EQ(test::ReadTexture(client.Device(), client.Depth()->texture), depth);
+
+    // The next frame came without: none, rather than the last frame's.
+    PresentFrame(0xFF202020);
+    ASSERT_EQ(client.WaitForFrame(kTimeoutMs), CaptureClient::WaitResult::Frame);
+    EXPECT_EQ(client.Depth(), nullptr);
+
+    client.SetCaptureDepth(false);
+    EXPECT_FALSE(hook::CaptureDepth());
+}
+
 TEST_F(FrameTransportTest, HostDoesNotReadSlotHookIsOverwriting) {
     PresentFrame(0xFF111111);
     // The hook has already lapped the ring and is writing over the published frame's slot.

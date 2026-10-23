@@ -31,11 +31,14 @@ namespace gazeora::app {
 void App::DrawLibrary() {
     // Header: title + count on the left; search, sort and Add on the right.
     float headerY = ImGui::GetCursorPosY();
+    // Controls are a frame (with S(9) vertical padding) tall; the texts center on them.
+    float controlsHeight = m_fonts.body->FontSize + S(18);
+    ImGui::SetCursorPosY(headerY + (controlsHeight - m_fonts.title->FontSize) * 0.5f);
     ImGui::PushFont(m_fonts.title);
     ImGui::TextUnformatted("Library");
     ImGui::PopFont();
-    ImGui::SameLine(0.0f, S(14));
-    ImGui::SetCursorPosY(headerY + S(16));
+    ImGui::SameLine(0.0f, S(12));
+    ImGui::SetCursorPosY(headerY + (controlsHeight - m_fonts.body->FontSize) * 0.5f);
     char count[32];
     snprintf(count, sizeof(count), "%zu %s", m_library.Games().size(),
              m_library.Games().size() == 1 ? "game" : "games");
@@ -44,13 +47,13 @@ void App::DrawLibrary() {
     ImGui::PopStyleColor();
 
     float right = ImGui::GetContentRegionMax().x;
-    float addWidth = S(140), sortWidth = S(170), searchWidth = S(240), spacing = S(10);
-    float controlsY = headerY + S(6);
+    float addWidth = S(130), sortWidth = S(160), searchWidth = S(220), spacing = S(8);
+    float controlsY = headerY;
     float x = right - addWidth - sortWidth - searchWidth - spacing * 2;
 
     ImGui::SetCursorPos(ImVec2(x, controlsY));
     ImGui::SetNextItemWidth(searchWidth);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(S(12), S(10)));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(S(12), S(9)));
     ImGui::InputTextWithHint("##search", ICON_SEARCH "  Search games", &m_search);
 
     ImGui::SetCursorPos(ImVec2(x + searchWidth + spacing, controlsY));
@@ -64,11 +67,11 @@ void App::DrawLibrary() {
 
     ImGui::SetCursorPos(ImVec2(right - addWidth, controlsY));
     if (AccentButton(ICON_ADD "   Add game##library",
-                     ImVec2(addWidth, ImGui::GetFrameHeight() + S(6)), m_fonts.bold, S(6),
+                     ImVec2(addWidth, controlsHeight), m_fonts.bold, S(6),
                      AccentGradient())) {
         m_deferred.push_back([this] { AddGamesFromDialog(); });
     }
-    ImGui::SetCursorPosY(headerY + S(76));
+    ImGui::SetCursorPosY(headerY + controlsHeight + S(20));
 
     if (m_library.Games().empty()) {
         DrawEmptyLibrary();
@@ -82,11 +85,11 @@ void App::DrawLibrary() {
         return;
     }
 
-    float gap = S(20);
+    float gap = S(16);
     float avail = ImGui::GetContentRegionAvail().x;
-    int columns = std::max(1, int((avail + gap) / (S(176) + gap)));
+    int columns = std::max(1, int((avail + gap) / (S(160) + gap)));
     float cardWidth = (avail - gap * float(columns - 1)) / float(columns);
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(gap, S(26)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(gap, S(18)));
     for (size_t i = 0; i < games.size(); ++i) {
         if (i % size_t(columns) != 0) {
             ImGui::SameLine(0.0f, gap);
@@ -100,7 +103,7 @@ void App::DrawGameCard(const Game& game, float width) {
     ImGui::PushID(int(game.id));
     float coverHeight = std::round(width * 4.0f / 3.0f);
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    ImVec2 size(width, coverHeight + S(56));
+    ImVec2 size(width, coverHeight + S(48));
     ImGui::InvisibleButton("##card", size);
     bool hovered = ImGui::IsItemHovered();
     bool clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
@@ -111,7 +114,7 @@ void App::DrawGameCard(const Game& game, float width) {
 
     ImDrawList* draw = ImGui::GetWindowDrawList();
     ImVec2 coverMax = pos + ImVec2(width, coverHeight);
-    float rounding = S(10);
+    float rounding = S(8);
     const Texture& art = ArtFor(game);
     bool isCover = !game.coverPath.empty() && m_textures.Image(game.coverPath);
 
@@ -132,7 +135,7 @@ void App::DrawGameCard(const Game& game, float width) {
         draw->AddImageRounded(ImTextureID(m_textures.Gradient(true).Id()), pos, coverMax,
                               ImVec2(0, 0), ImVec2(1, 1), Shade(rgb, 0.55f, 0.85f), rounding);
         // Exes with only small icons get scaled less, so they don't turn to mush.
-        float iconSize = std::min(width * 0.46f, S(112));
+        float iconSize = std::min(width * 0.44f, S(96));
         if (art) {
             iconSize = std::min(iconSize, std::max(S(64), float(art.width) * 2.5f));
         }
@@ -167,7 +170,7 @@ void App::DrawGameCard(const Game& game, float width) {
         draw->AddRectFilled(pos, coverMax, WithAlpha(kSidebarBg, 0.45f), rounding);
         draw->AddRect(pos, coverMax, kAccent, rounding, 0, S(2));
         ImVec2 center = pos + ImVec2(width * 0.5f, coverHeight * 0.5f);
-        float radius = S(28);
+        float radius = S(24);
         ImVec2 mouse = ImGui::GetIO().MousePos;
         ImVec2 d = mouse - center;
         overPlay = !session && d.x * d.x + d.y * d.y <= radius * radius;
@@ -179,11 +182,11 @@ void App::DrawGameCard(const Game& game, float width) {
         }
     }
 
-    TextEllipsis(draw, m_fonts.bold, ImVec2(pos.x + S(2), coverMax.y + S(10)),
+    TextEllipsis(draw, m_fonts.bold, ImVec2(pos.x + S(2), coverMax.y + S(8)),
                  hovered ? kText : WithAlpha(kText, 0.9f), U8(game.name), width - S(4));
     std::string subtitle = session ? "Playing now" : RelativeTime(game.lastPlayed);
     draw->AddText(m_fonts.small, m_fonts.small->FontSize,
-                  ImVec2(pos.x + S(2), coverMax.y + S(32)), session ? kAccent : kTextDim,
+                  ImVec2(pos.x + S(2), coverMax.y + S(28)), session ? kAccent : kTextDim,
                   subtitle.c_str());
 
     if (clicked) {

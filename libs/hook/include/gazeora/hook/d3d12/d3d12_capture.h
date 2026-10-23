@@ -8,8 +8,9 @@
 
 namespace gazeora::hook {
 
-// Copies the current back buffer of a D3D12 swapchain into the shared frame ring,
-// using a command list submitted on the game's own present queue.
+// Copies the current back buffer of a D3D12 swapchain into the shared frame ring, and the
+// game's depth (d3d12_depth.h) into the depth slots when the host wants it, using a command
+// list submitted on the game's own present queue.
 class D3D12Capture {
 public:
     void Reset();
@@ -18,7 +19,7 @@ public:
 private:
     bool AttachQueue(IDXGISwapChain* swap);
     bool CreateCommandObjects();
-    bool CreateResources(const D3D12_RESOURCE_DESC& backBuffer);
+    bool CreateResources(const D3D12_RESOURCE_DESC& backBuffer, bool depth);
     void ReleaseResources();
     void WaitForGpu();
 
@@ -28,6 +29,9 @@ private:
     UINT64 m_allocatorFrame[kFrameSlots] = {};
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_list;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_slots[kFrameSlots];
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_depthSlots[kFrameSlots];  // with depth only
+    // The buffer each slot's depth was copied from, kept until that copy has run.
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_depthSources[kFrameSlots];
     Microsoft::WRL::ComPtr<ID3D12Fence> m_frameFence;
     Microsoft::WRL::ComPtr<ID3D12Fence> m_hostFence;
     ExportedHandles m_handles;

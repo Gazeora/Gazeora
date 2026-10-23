@@ -2,14 +2,17 @@
 
 #include <windows.h>
 #include <d3d11.h>
+#include <dxgi.h>
 #include <wrl/client.h>
 
 #include <functional>
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "game_session.h"
+#include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/library/game_library.h"
 #include "settings/stream_settings.h"
@@ -42,12 +45,18 @@ public:
     // True while something animates or changes faster than idle repaints show it.
     bool WantsContinuousFrames() const;
 
+    // After a frame is drawn, before it's presented: when no game is running, this window is
+    // what streams (unless the logo is chosen), so the launcher can be seen from the headset.
+    void StreamWindow(IDXGISwapChain* swapChain);
+
     void OnFilesDropped(const std::vector<std::wstring>& paths);
     // The window was activated: pick up changes GazeoraCLI made to the library.
     void OnActivated();
 
 private:
     enum class Page { Home, Library, Details, Settings };
+    // What streams when no game is.
+    enum class IdlePicture { Window, Logo };
     enum class Sort { RecentlyPlayed, Name, RecentlyAdded };
 
     struct Toast {
@@ -79,7 +88,11 @@ private:
     void DrawGameInfoCard(Game& game);
     void DrawGameCard(const Game& game, float width);
     void DrawGameContextMenu(const Game& game);
-    void DrawCodecChoice();  // the video codec setting, in the frame stream card
+    void DrawProtocolChoice();  // the protocol setting, in the frame stream card
+    void DrawCodecChoice();     // the video codec setting, in the frame stream card
+    void DrawQualityChoice();   // the stream quality (bitrate) setting, beside it
+    void DrawUsbDriverButton();  // the USB driver install, in the frame stream card
+    void DrawOverlayCard(float width);  // the streaming details drawn into the frames
     void DrawVrCard(float width);
 
     // Actions.
@@ -90,10 +103,15 @@ private:
     void OpenDetails(uint32_t gameId);
     void SaveLibrary();
     void ShowToast(const std::string& text, bool error = false);
+    // Starts the stream with its protocol, on kStreamPort or any free port; m_streamError
+    // says why if it can't.
+    void StartStream();
     // Applies m_vr to the stream and saves it; the logo frame is redone on the next Tick.
     void ApplyVrLayout();
     // Streams the logo, through the VR layout when it's on, and refreshes its preview.
     void UpdateLogoFrame();
+    // Picks what streams when no game is, and saves the choice.
+    void SetIdlePicture(IdlePicture picture);
 
     GameSession* SessionFor(uint32_t gameId) const;
     const Texture& ArtFor(const Game& game);
@@ -108,8 +126,14 @@ private:
     GameLibrary m_library;
     FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
     std::wstring m_streamError;  // why it isn't running
-    StreamSettings m_settings;   // stream.ini: codec and VR layout
+    StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout
     VrLayout m_vr;
+    OverlaySettings m_overlay;
+    IdlePicture m_idlePicture = IdlePicture::Window;
+    // This window, streamed: a copy of the back buffer, read back like game frames.
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_windowCopy;
+    TextureReader m_windowReader;
+    uint64_t m_windowStreamedAtMs = 0;  // 0: not yet
     bool m_logoDirty = true;
     // What the logo frame looks like in the stream, shown under the VR settings.
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_logoPreview;
@@ -129,6 +153,14 @@ private:
     uint32_t m_editId = 0;
     std::string m_editName, m_editArgs, m_editWorkDir, m_editProcess;
     std::wstring m_editSteamAppId;  // detected from the exe's Steam library, if any
+
+    // The USB driver being installed or taken off phones, as an administrator: what went
+    // wrong, empty if nothing; and what to say when it's done.
+    std::future<std::wstring> m_usbDriverInstall;
+    std::string m_usbDriverDone;
+    // The phones the installed driver covers, and when that was looked up.
+    std::vector<std::wstring> m_installedPhones;
+    uint64_t m_installedPhonesAtMs = 0;
 
     std::vector<Toast> m_toasts;
     // Actions that add or remove games run after the frame is drawn, so the pages never

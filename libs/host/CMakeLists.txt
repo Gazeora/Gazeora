@@ -11,10 +11,14 @@ add_library(gazeora_host_lib STATIC
     # encode: H.264 / H.265 through Media Foundation
     src/encode/color_convert.cpp
     src/encode/media_foundation_encoder.cpp
-    # stream: the RTSP server and RTP packetization
+    # stream: the stream server and its protocols (RTSP/RTP, UDP, HTTP, USB), discovery
     src/stream/bitrate_controller.cpp
+    src/stream/discovery.cpp
     src/stream/frame_mailbox.cpp
+    src/stream/frame_output.cpp
+    src/stream/frame_packet.cpp
     src/stream/frame_stream.cpp
+    src/stream/http_ts_output.cpp
     src/stream/net.cpp
     src/stream/packet_pacer.cpp
     src/stream/rtcp.cpp
@@ -22,7 +26,23 @@ add_library(gazeora_host_lib STATIC
     src/stream/rtsp_connection.cpp
     src/stream/rtsp_message.cpp
     src/stream/stream_log.cpp
+    src/stream/stream_overlay.cpp
+    src/stream/stream_protocol.cpp
+    src/stream/stream_view_info.cpp
+    src/stream/ts_muxer.cpp
+    src/stream/udp_frame_output.cpp
+    src/stream/usb_accessory_output.cpp
     src/stream/video_pipeline.cpp)
 target_include_directories(gazeora_host_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(gazeora_host_lib PUBLIC gazeora_common d3d11 d3dcompiler dxgi
-    ws2_32 iphlpapi mfplat mfuuid winmm ole32 uuid)
+    ws2_32 iphlpapi mfplat mfuuid winmm ole32 uuid gdi32
+    PRIVATE libusb setupapi winusb)
+
+# OpenMP splits the per-frame pixel loops (NV12 conversion, read-back) over a few cores.
+find_package(OpenMP REQUIRED)
+target_link_libraries(gazeora_host_lib PRIVATE OpenMP::OpenMP_CXX)
+if(NOT MSVC)
+    # GCC links its OpenMP runtime through this flag, which a static library doesn't pass on
+    # to the executables linking it. (MSVC's objects name their runtime themselves.)
+    target_link_options(gazeora_host_lib INTERFACE -fopenmp)
+endif()

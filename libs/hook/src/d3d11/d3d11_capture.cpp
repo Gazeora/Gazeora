@@ -7,6 +7,7 @@ using Microsoft::WRL::ComPtr;
 namespace gazeora::hook {
 
 void D3D11Capture::Reset() {
+    m_depth.Reset();
     m_ring.Release();
     m_context.Reset();
     m_device.Reset();
@@ -49,8 +50,9 @@ void D3D11Capture::Capture(IDXGISwapChain* swap, ID3D11Device* device, LONGLONG 
     }
     D3D11_TEXTURE2D_DESC bb;
     backBuffer->GetDesc(&bb);
-    if (!m_ring.Matches(bb.Width, bb.Height, bb.Format) &&
-        !m_ring.Create(m_device.Get(), bb.Width, bb.Height, bb.Format, kApiD3D11)) {
+    bool depth = CaptureDepth();
+    if (!m_ring.Matches(bb.Width, bb.Height, bb.Format, depth) &&
+        !m_ring.Create(m_device.Get(), bb.Width, bb.Height, bb.Format, kApiD3D11, depth)) {
         return;
     }
 
@@ -63,6 +65,11 @@ void D3D11Capture::Capture(IDXGISwapChain* swap, ID3D11Device* device, LONGLONG 
         m_context->ResolveSubresource(slot, 0, backBuffer.Get(), 0, bb.Format);
     } else {
         m_context->CopyResource(slot, backBuffer.Get());
+    }
+    UINT depthWidth, depthHeight;
+    if (depth && m_depth.Capture(m_device.Get(), m_context.Get(), m_ring.DepthSlot(frame),
+                                 bb.Width, bb.Height, depthWidth, depthHeight)) {
+        PublishDepth(frame, depthWidth, depthHeight, kDepthFloat);
     }
     // Flushed to the GPU by the game's Present right after this.
     m_ring.Publish(m_context.Get(), frame, presentQpc, false);

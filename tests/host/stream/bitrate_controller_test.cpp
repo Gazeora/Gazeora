@@ -58,10 +58,11 @@ TEST(BitrateControllerTest, ForgetsStaleReportsAndResetsWithoutViewers) {
     EXPECT_EQ(controller.Step(), 0) << "the next player starts at full quality";
 }
 
-TEST(BitrateControllerTest, ScalesTheLadder) {
-    EXPECT_EQ(BC::BitrateAt(0, 100), 8000000u);
-    EXPECT_EQ(BC::BitrateAt(0, 70), 5600000u);
-    EXPECT_EQ(BC::BitrateAt(BC::kSteps - 1, 100), 3000000u);
+TEST(BitrateControllerTest, LadderIsAShareOfTheTop) {
+    EXPECT_EQ(BC::BitrateAt(0, 20000000), 20000000u);
+    EXPECT_EQ(BC::BitrateAt(1, 20000000), 15000000u);
+    EXPECT_EQ(BC::BitrateAt(BC::kSteps - 1, 20000000), 5600000u);
+    EXPECT_EQ(BC::BitrateAt(0, 14000000), 14000000u);
 }
 
 }  // namespace

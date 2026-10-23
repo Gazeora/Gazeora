@@ -1,11 +1,14 @@
 // Minimal "game" for testing the capture hook without touching a real game:
-// a 1280x720 window with a color-cycling background and a moving white square.
+// a 1280x720 window with a color-cycling background and a moving white square, and in D3D11
+// and D3D12 a depth-tested 3D scene, for 3D from depth.
 //
 //   gazeora_testapp.exe            D3D11
 //   gazeora_testapp.exe --d3d8     D3D8 (MinGW builds only: the Windows SDK has no d3d8.h)
 //   gazeora_testapp.exe --d3d9     D3D9
 //   gazeora_testapp.exe --d3d10    D3D10
 //   gazeora_testapp.exe --d3d12    D3D12
+//   gazeora_testapp.exe --d3d12-depth-write
+//                                  D3D12, its depth buffer never leaving DEPTH_WRITE
 //   gazeora_testapp.exe --opengl   OpenGL
 
 #include <cstdio>
@@ -29,6 +32,7 @@ const Renderer kRenderers[] = {
     {"--d3d9", "D3D9", testapp::RunD3D9},
     {"--d3d10", "D3D10", testapp::RunD3D10},
     {"--d3d12", "D3D12", testapp::RunD3D12},
+    {"--d3d12-depth-write", "D3D12", testapp::RunD3D12DepthWrite},
     {"--opengl", "OpenGL", testapp::RunOpenGL},
 };
 

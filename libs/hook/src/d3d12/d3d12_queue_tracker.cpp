@@ -3,6 +3,7 @@
 #include <wrl/client.h>
 
 #include "gazeora/hook/core/hook_util.h"
+#include "gazeora/hook/d3d12/d3d12_depth.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -73,6 +74,7 @@ HRESULT WINAPI HookD3D12CreateDevice(IUnknown* adapter, D3D_FEATURE_LEVEL level,
         SUCCEEDED(static_cast<IUnknown*>(*out)->QueryInterface(IID_PPV_ARGS(&device))) &&
         InterlockedCompareExchange(&g_trackerInstalled, 1, 0) == 0) {
         HookQueueVTable(device.Get(), CreateEnabledHook<ExecuteCommandListsFn>);
+        InstallDepthHooks(device.Get(), true);
     }
     return hr;
 }
@@ -85,9 +87,13 @@ bool InstallQueueTracker() {
         auto createDevice =
             reinterpret_cast<D3D12CreateDeviceFn>(ModuleExport(module, "D3D12CreateDevice"));
         ComPtr<ID3D12Device> device;
-        return createDevice &&
-               SUCCEEDED(createDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device))) &&
-               HookQueueVTable(device.Get(), CreateHook<ExecuteCommandListsFn>);
+        if (!createDevice ||
+            FAILED(createDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device))) ||
+            !HookQueueVTable(device.Get(), CreateHook<ExecuteCommandListsFn>)) {
+            return false;
+        }
+        InstallDepthHooks(device.Get(), false);  // without them, 2D only
+        return true;
     }
     module = GraphicsRuntime(L"d3d12.dll");
     void* createDevice = ModuleExport(module, "D3D12CreateDevice");

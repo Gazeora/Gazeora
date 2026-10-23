@@ -4,6 +4,8 @@
 #include <gtest/gtest.h>
 
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -91,6 +93,46 @@ TEST_F(FrameDumpTest, Rgb10A2KeepsTopEightBits) {
         DXGI_FORMAT_R10G10B10A2_UNORM,
         {rgb10(0x3FF, 0, 0), rgb10(0, 0x3FF, 0), rgb10(0, 0, 0x3FF), rgb10(0x004, 0x200, 0x003)});
     EXPECT_EQ(bmp.pixels, (std::vector<uint32_t>{0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFF018000}));
+}
+
+// Rows are converted four pixels at a time, the rest one by one: 13 pixels wide takes both.
+TEST_F(FrameDumpTest, WideRowsConvertEveryPixel) {
+    constexpr UINT kWidth = 13, kHeight = 3;
+    std::vector<uint32_t> pixels(kWidth * kHeight);
+    uint32_t seed = 3;
+    for (uint32_t& p : pixels) p = seed = seed * 1664525u + 1013904223u;
+    struct Case {
+        DXGI_FORMAT format;
+        uint32_t (*expected)(uint32_t);
+    };
+    const Case cases[] = {
+        {DXGI_FORMAT_B8G8R8A8_UNORM, [](uint32_t v) { return v | 0xFF000000; }},
+        {DXGI_FORMAT_R8G8B8A8_UNORM,
+         [](uint32_t v) {
+             uint32_t r = v & 0xFF, g = (v >> 8) & 0xFF, b = (v >> 16) & 0xFF;
+             return 0xFF000000 | r << 16 | g << 8 | b;
+         }},
+        {DXGI_FORMAT_R10G10B10A2_UNORM,
+         [](uint32_t v) {
+             uint32_t r = (v & 0x3FF) >> 2, g = ((v >> 10) & 0x3FF) >> 2, b = ((v >> 20) & 0x3FF) >> 2;
+             return 0xFF000000 | r << 16 | g << 8 | b;
+         }},
+    };
+    for (const Case& c : cases) {
+        auto texture = test::CreateTexture(warp.device.Get(), kWidth, kHeight, c.format, pixels);
+        ASSERT_TRUE(texture);
+        TextureReader reader;
+        UINT width = 0, height = 0;
+        std::vector<uint8_t> bgra;
+        std::wstring error;
+        ASSERT_TRUE(reader.Read(warp.device.Get(), texture.Get(), width, height, bgra, error));
+        ASSERT_EQ(bgra.size(), size_t(kWidth) * kHeight * 4);
+        for (size_t i = 0; i < pixels.size(); ++i) {
+            uint32_t got;
+            memcpy(&got, bgra.data() + i * 4, 4);
+            ASSERT_EQ(got, c.expected(pixels[i])) << "format " << c.format << ", pixel " << i;
+        }
+    }
 }
 
 TEST_F(FrameDumpTest, RejectsUnsupportedFormat) {
@@ -207,6 +249,7 @@ TEST(VrLayoutTest, FrameTakesTheScreenShapeWithinTheMaxSize) {
 // Reads `texture` through the VR pass into a 400x200 frame: two square 200x200 eyes.
 std::vector<uint32_t> ReadVr(ID3D11Device* device, ID3D11Texture2D* texture, VrLayout vr) {
     vr.enabled = true;
+    vr.lensOnPhone = false;  // the PC warps
     vr.screenAspect = 2.0f;
     TextureReader reader;
     reader.SetMaxSize(400, 200);
@@ -278,6 +321,221 @@ TEST_F(FrameDumpTest, VrColorCorrectionDrawsRedLargerThanBlue) {
     uint32_t edge = At(ReadVr(warp.device.Get(), texture.Get(), vr), 197, 100);
     EXPECT_EQ(edge >> 16 & 0xFF, 0xFFu);
     EXPECT_EQ(edge & 0xFF, 0u);
+}
+
+// 3D from depth. The picture is 200x20 with each column's x in blue, so a pixel of a view
+// tells which column it came from. The depth has a subject in the middle (columns 80..119),
+// something nearer at the left (20..39), and a far background. Values are 1/distance-like,
+// as reversed depth stores them: background 0.001, subject 0.5, the near thing 1.
+class StereoTest : public FrameDumpTest {
+protected:
+    static constexpr UINT kWidth = 200;
+    static constexpr UINT kHeight = 20;
+
+    void SetUp() override {
+        FrameDumpTest::SetUp();
+        std::vector<uint32_t> columns(kWidth * kHeight);
+        for (UINT i = 0; i < kWidth * kHeight; ++i) columns[i] = 0xFF00FF00 | (i % kWidth);
+        color = test::CreateTexture(warp.device.Get(), kWidth, kHeight,
+                                    DXGI_FORMAT_B8G8R8A8_UNORM, columns);
+        vr.enabled = true;
+        vr.stereo = true;
+        vr.stereoDepth = 0.1f;  // 10 source columns each way far away
+        vr.stereoPopOut = 0.5f;
+    }
+
+    // 1/distance-like nearness of each column.
+    float Nearness(UINT x) const {
+        return x >= 80 && x < 120 ? subject : x >= 20 && x < 40 ? 1.0f : 0.001f;
+    }
+
+    // Depth as the hook sends it: a 32-bit word a texel of an RGBA8 texture.
+    DepthFrame Depth(std::vector<uint32_t> words, DepthEncoding encoding) {
+        depthTexture = test::CreateTexture(warp.device.Get(), kWidth, kHeight,
+                                           DXGI_FORMAT_R8G8B8A8_UNORM, words);
+        DepthFrame depth;
+        depth.texture = depthTexture.Get();
+        depth.width = kWidth;
+        depth.height = kHeight;
+        depth.encoding = encoding;
+        return depth;
+    }
+
+    // As floats, reversed (1 near, 0 far) or the other way around.
+    DepthFrame FloatDepth(bool reversed) {
+        std::vector<uint32_t> words(kWidth * kHeight);
+        for (UINT i = 0; i < kWidth * kHeight; ++i) {
+            float d = reversed ? Nearness(i % kWidth) : 1 - Nearness(i % kWidth);
+            memcpy(&words[i], &d, 4);
+        }
+        return Depth(words, kDepthFloat);
+    }
+
+    std::vector<uint32_t> Read(const DepthFrame* depth, bool& stereo, UINT maxWidth = 1920,
+                               UINT maxHeight = 1080) {
+        reader.SetMaxSize(maxWidth, maxHeight);
+        reader.SetVrLayout(vr);
+        std::vector<uint8_t> bgra;
+        std::wstring error;
+        EXPECT_TRUE(reader.Read(warp.device.Get(), color.Get(), width, height, bgra, error,
+                                depth))
+            << error;
+        stereo = reader.Stereo();
+        std::vector<uint32_t> pixels(bgra.size() / 4);
+        memcpy(pixels.data(), bgra.data(), bgra.size());
+        return pixels;
+    }
+
+    // The source column a view's pixel shows: eye 0 is the left half, each 100 wide, so
+    // source column x is at about x / 2.
+    int SourceColumn(const std::vector<uint32_t>& frame, int eye, int x) {
+        return int(frame[10 * width + eye * (width / 2) + x] & 0xFF);
+    }
+
+    // The scene as a pair of eyes converged on the subject would see it.
+    void ExpectConvergedOnTheSubject(const std::vector<uint32_t>& frame) {
+        // The subject stays put.
+        EXPECT_NEAR(SourceColumn(frame, 0, 50) - SourceColumn(frame, 1, 50), 0, 3);
+        // Far away goes behind the screen: the left eye sees it further left in its view than
+        // the right eye does, so at the same place in the view, a column further right.
+        int left = SourceColumn(frame, 0, 85), right = SourceColumn(frame, 1, 85);
+        EXPECT_GT(left - right, 14) << left << " " << right;
+        // Nearer than the subject comes out, the other way around, but only half as far.
+        left = SourceColumn(frame, 0, 15);
+        right = SourceColumn(frame, 1, 15);
+        EXPECT_LT(left - right, -6) << left << " " << right;
+        EXPECT_GT(left - right, -14) << left << " " << right;
+    }
+
+    VrLayout vr;
+    TextureReader reader;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> color;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> depthTexture;
+    UINT width = 0, height = 0;
+    float subject = 0.5f;
+};
+
+TEST_F(StereoTest, PairOfViewsSideBySideInTheFramesShape) {
+    DepthFrame depth = FloatDepth(true);
+    bool stereo = false;
+    std::vector<uint32_t> frame = Read(&depth, stereo);
+    EXPECT_TRUE(stereo);
+    EXPECT_EQ(width, kWidth);
+    EXPECT_EQ(height, kHeight);
+    // Each view squeezes the whole picture into its half.
+    EXPECT_NEAR(SourceColumn(frame, 0, 50), 100, 3);
+    EXPECT_NEAR(SourceColumn(frame, 1, 50), 100, 3);
+}
+
+TEST_F(StereoTest, ConvergesOnTheSubjectInTheMiddle) {
+    DepthFrame depth = FloatDepth(true);  // reversed, as most games now have it
+    bool stereo = false;
+    std::vector<uint32_t> frame = Read(&depth, stereo);
+    ASSERT_TRUE(stereo);
+    ExpectConvergedOnTheSubject(frame);
+}
+
+TEST_F(StereoTest, OlderDepthOrderWorksTheSame) {
+    DepthFrame depth = FloatDepth(false);  // 0 near, 1 far: told apart by the average
+    bool stereo = false;
+    std::vector<uint32_t> frame = Read(&depth, stereo);
+    ASSERT_TRUE(stereo);
+    ExpectConvergedOnTheSubject(frame);
+}
+
+TEST_F(StereoTest, Unorm24DepthIsReadFromTheLow24Bits) {
+    std::vector<uint32_t> words(kWidth * kHeight);
+    for (UINT i = 0; i < kWidth * kHeight; ++i) {
+        // The stencil in the top byte mustn't matter.
+        words[i] = 0xAB000000 | uint32_t(Nearness(i % kWidth) * 0xFFFFFF);
+    }
+    DepthFrame depth = Depth(words, kDepthUnorm24);
+    bool stereo = false;
+    std::vector<uint32_t> frame = Read(&depth, stereo);
+    ASSERT_TRUE(stereo);
+    ExpectConvergedOnTheSubject(frame);
+}
+
+TEST_F(StereoTest, WhatOneEyeSeesBehindTheSubjectIsBackground) {
+    // Either depth order, from the second frame on, once the reader knows which it is.
+    for (bool reversed : {true, false}) {
+        reader = TextureReader();
+        DepthFrame depth = FloatDepth(reversed);
+        bool stereo = false;
+        Read(&depth, stereo);
+        std::vector<uint32_t> frame = Read(&depth, stereo);
+        ASSERT_TRUE(stereo);
+        // The background moves out from behind the subject: right of it in the right eye's
+        // view, left of it in the left eye's, there's a strip the picture doesn't have. It's
+        // filled with background (columns outside 80..119), not the subject's edge pulled out.
+        for (int x = 60; x <= 64; ++x) {
+            EXPECT_GE(SourceColumn(frame, 1, x), 120) << "right view at " << x << ", " << reversed;
+        }
+        for (int x = 36; x <= 39; ++x) {
+            EXPECT_LE(SourceColumn(frame, 0, x), 79) << "left view at " << x << ", " << reversed;
+        }
+    }
+}
+
+// How far apart the views show the background: what moves when the convergence does.
+TEST_F(StereoTest, TheScreenHoldsStillWhileTheSubjectMerelyMoves) {
+    auto background = [&](const std::vector<uint32_t>& frame) {
+        return SourceColumn(frame, 0, 85) - SourceColumn(frame, 1, 85);
+    };
+    bool stereo = false;
+    DepthFrame depth = FloatDepth(true);
+    int steady = background(Read(&depth, stereo));
+    for (int frame = 0; frame < 5; ++frame) Read(&depth, stereo);
+    EXPECT_EQ(background(Read(&depth, stereo)), steady);
+
+    // A character breathing, turning: a tenth nearer. Nothing moves.
+    subject = 0.55f;
+    depth = FloatDepth(true);
+    for (int frame = 0; frame < 30; ++frame) {
+        EXPECT_EQ(background(Read(&depth, stereo)), steady) << frame;
+    }
+
+    // Something else in the middle now, twice as near: the 3D follows, but slowly.
+    subject = 1.0f;
+    depth = FloatDepth(true);
+    int before = steady;
+    for (int frame = 0; frame < 10; ++frame) {
+        int now = background(Read(&depth, stereo));
+        EXPECT_LE(std::abs(now - before), 1) << frame;
+        before = now;
+    }
+    for (int frame = 0; frame < 120; ++frame) Read(&depth, stereo);
+    EXPECT_LT(background(Read(&depth, stereo)), steady - 2) << "followed in the end";
+}
+
+TEST_F(StereoTest, NoDepthOrNo3DMeansOnePicture) {
+    bool stereo = true;
+    std::vector<uint32_t> frame = Read(nullptr, stereo);
+    EXPECT_FALSE(stereo);
+    EXPECT_EQ(SourceColumn(frame, 0, 150), 150) << "flat, as it is";
+
+    vr.stereo = false;
+    DepthFrame depth = FloatDepth(true);
+    frame = Read(&depth, stereo);
+    EXPECT_FALSE(stereo);
+}
+
+TEST_F(StereoTest, ThePcWarpsAPairIntoEachEye) {
+    vr.lensOnPhone = false;
+    vr.screenAspect = 2.0f;
+    vr.k1 = vr.k2 = 0;
+    vr.imageScale = 0.1f;  // the 10:1 picture, 10 px tall: as wide as each 100 px eye
+    DepthFrame depth = FloatDepth(true);
+    bool stereo = false;
+    std::vector<uint32_t> frame = Read(&depth, stereo, 200, 100);
+    ASSERT_TRUE(stereo);
+    ASSERT_EQ(width, 200u);
+    ASSERT_EQ(height, 100u);
+    // Each eye has its own view: the background (around column 60 here) further right in
+    // the left eye's, as it's behind the subject the views converge on.
+    int left = int(frame[50 * width + 30] & 0xFF), right = int(frame[50 * width + 130] & 0xFF);
+    EXPECT_EQ(frame[50 * width + 30] & 0xFF00, 0xFF00u) << "the picture, not the black around";
+    EXPECT_GT(left - right, 6) << left << " " << right;
 }
 
 }  // namespace

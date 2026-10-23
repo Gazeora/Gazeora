@@ -44,6 +44,29 @@ TEST(RtcpTest, ParsesReceiverReportBlocksInACompoundPacket) {
     EXPECT_EQ(reports[0].jitter, 360u);
 }
 
+TEST(RtcpTest, FindsKeyFrameRequests) {
+    // RR without blocks, then a PLI for 0xCAFEF00D.
+    const uint8_t pli[] = {
+        0x80, 201,  0x00, 0x01,  0x11, 0x22, 0x33, 0x44,  // RR, no blocks
+        0x81, 206,  0x00, 0x02,  0x11, 0x22, 0x33, 0x44,  // PSFB, PLI, sender
+        0xCA, 0xFE, 0xF0, 0x0D,                           // media source
+    };
+    EXPECT_TRUE(AsksForKeyFrame(pli, sizeof(pli), 0xCAFEF00Du));
+    EXPECT_FALSE(AsksForKeyFrame(pli, sizeof(pli), 0x12345678u));  // another stream's
+    EXPECT_FALSE(AsksForKeyFrame(pli, sizeof(pli) - 4, 0xCAFEF00Du));
+
+    const uint8_t fir[] = {
+        0x84, 206,  0x00, 0x04,  0x11, 0x22, 0x33, 0x44,  // PSFB, FIR, sender
+        0x00, 0x00, 0x00, 0x00,  0xCA, 0xFE, 0xF0, 0x0D,  // media 0, then the entry's SSRC
+        0x01, 0x00, 0x00, 0x00,                           // sequence number
+    };
+    EXPECT_TRUE(AsksForKeyFrame(fir, sizeof(fir), 0xCAFEF00Du));
+
+    const uint8_t receiverReport[] = {0x80, 201, 0x00, 0x01, 0x11, 0x22, 0x33, 0x44,
+                                      0xCA, 0xFE, 0xF0, 0x0D};
+    EXPECT_FALSE(AsksForKeyFrame(receiverReport, sizeof(receiverReport), 0xCAFEF00Du));
+}
+
 TEST(RtcpTest, IgnoresTruncatedBlocks) {
     const uint8_t packet[] = {0x81, 201, 0x00, 0x07, 0x11, 0x22, 0x33, 0x44, 0xCA, 0xFE};
     EXPECT_TRUE(ParseReceiverReports(packet, sizeof(packet)).empty());

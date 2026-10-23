@@ -9,19 +9,20 @@ namespace gazeora::hook {
 void D3D11FrameRing::Release() {
     m_handles.Close();
     for (auto& slot : m_slots) slot.Reset();
+    for (auto& slot : m_depthSlots) slot.Reset();
     m_frameFence.Reset();
     m_hostFence.Reset();
     m_width = m_height = 0;
     m_format = DXGI_FORMAT_UNKNOWN;
 }
 
-bool D3D11FrameRing::Matches(UINT width, UINT height, DXGI_FORMAT format) const {
+bool D3D11FrameRing::Matches(UINT width, UINT height, DXGI_FORMAT format, bool depth) const {
     return m_frameFence && width == m_width && height == m_height && format == m_format &&
-           IsPublisher(this);
+           (m_depthSlots[0] != nullptr) == depth && IsPublisher(this);
 }
 
 bool D3D11FrameRing::Create(ID3D11Device5* device, UINT width, UINT height, DXGI_FORMAT format,
-                            GraphicsApi api) {
+                            GraphicsApi api, bool depth) {
     Release();
 
     D3D11_TEXTURE2D_DESC desc = {};
@@ -35,18 +36,28 @@ bool D3D11FrameRing::Create(ID3D11Device5* device, UINT width, UINT height, DXGI
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
     desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED | D3D11_RESOURCE_MISC_SHARED_NTHANDLE;
 
-    for (UINT i = 0; i < kFrameSlots; ++i) {
+    auto createShared = [&](const D3D11_TEXTURE2D_DESC& desc, ComPtr<ID3D11Texture2D>& slot,
+                            HANDLE& handle) {
         ComPtr<IDXGIResource1> resource;
-        HRESULT hr = device->CreateTexture2D(&desc, nullptr, &m_slots[i]);
-        if (SUCCEEDED(hr)) hr = m_slots[i].As(&resource);
+        HRESULT hr = device->CreateTexture2D(&desc, nullptr, &slot);
+        if (SUCCEEDED(hr)) hr = slot.As(&resource);
         if (SUCCEEDED(hr)) {
             hr = resource->CreateSharedHandle(
                 nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr,
-                &m_handles.slots[i]);
+                &handle);
         }
         if (FAILED(hr)) {
-            SetStatus("D3D11 shared texture %ux%u fmt %d failed: 0x%08lX", width, height, format,
-                      hr);
+            SetStatus("D3D11 shared texture %ux%u fmt %d failed: 0x%08lX", desc.Width,
+                      desc.Height, desc.Format, hr);
+        }
+        return SUCCEEDED(hr);
+    };
+    // Depth values travel as 32-bit words in RGBA8, a format every GPU shares.
+    D3D11_TEXTURE2D_DESC depthDesc = desc;
+    depthDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    for (UINT i = 0; i < kFrameSlots; ++i) {
+        if (!createShared(desc, m_slots[i], m_handles.slots[i]) ||
+            (depth && !createShared(depthDesc, m_depthSlots[i], m_handles.depthSlots[i]))) {
             Release();
             return false;
         }

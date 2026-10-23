@@ -4,7 +4,7 @@
 
 namespace gazeora {
 
-constexpr uint32_t BitrateController::kLadder[];
+constexpr uint32_t BitrateController::kLadderPercent[];
 
 void BitrateController::Report(uint64_t source, float fractionLost, uint64_t nowMs) {
     m_reports[source] = {fractionLost, nowMs};

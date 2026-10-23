@@ -5,6 +5,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(CompilerSettings)  # toolchain checks, static runtime, common definitions
 include(MinHook)
+include(LibUsb)
 include(ClangFormat)       # format / format-check targets
 
 # Keep the executables and gazeora_hook.dll side by side; they load the DLL from their own folder.
@@ -18,4 +19,9 @@ option(GAZEORA_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 if(GAZEORA_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)  # gazeora_*_tests.exe: run with ctest
+endif()
+
+option(GAZEORA_BUILD_BENCH "Build the benchmarks (gazeora_bench.exe)" ON)
+if(GAZEORA_BUILD_BENCH)
+    add_subdirectory(bench)  # gazeora_bench.exe: run directly, in a Release build
 endif()

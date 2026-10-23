@@ -21,10 +21,11 @@ public:
     static constexpr uint64_t kRecoverAfterMs = 8000;
     static constexpr uint64_t kRecoverEveryMs = 3000;
 
-    // Bits/s from the top of the ladder down. `percent` scales the whole ladder (H.265 gets
-    // about the same picture from 70% of H.264's bits).
-    static constexpr uint32_t kLadder[] = {8000000, 6000000, 4500000, 3000000};
-    static constexpr int kSteps = int(sizeof(kLadder) / sizeof(kLadder[0]));
+    // The ladder, from the top down, in percent of the top bitrate (the stream quality picked,
+    // StreamQuality). The bottom still gives a usable picture: a weak link softens it, rather
+    // than washing it out.
+    static constexpr uint32_t kLadderPercent[] = {100, 75, 55, 40, 28};
+    static constexpr int kSteps = int(sizeof(kLadderPercent) / sizeof(kLadderPercent[0]));
 
     // `source` identifies a player (its address, or its connection); a newer report from the
     // same one replaces the older.
@@ -35,8 +36,9 @@ public:
 
     int Step() const { return m_step; }  // 0 is the top
     float WorstLoss() const { return m_worstLoss; }
-    static uint32_t BitrateAt(int step, uint32_t percent) {
-        return kLadder[step] / 100 * percent;
+    // Bits/s at `step` of a ladder topping out at `top` bits/s.
+    static uint32_t BitrateAt(int step, uint32_t top) {
+        return top / 100 * kLadderPercent[step];
     }
 
 private:

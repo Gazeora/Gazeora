@@ -7,6 +7,7 @@
 #include <string>
 
 #include "gazeora/common/shared.h"
+#include "gazeora/host/capture/depth_frame.h"
 
 namespace gazeora {
 
@@ -30,6 +31,8 @@ public:
     }
 
     void SetCaptureEnabled(bool enabled);
+    // Asks the hook for the game's depth buffer too, for 3D (D3D11 and D3D12 games).
+    void SetCaptureDepth(bool depth);
     void SetHostFlags(uint32_t flags) { m_shared->hostFlags = flags; }
     const SharedHeader& Shared() const { return *m_shared; }
 
@@ -38,6 +41,8 @@ public:
 
     // Valid after WaitForFrame returned Frame. Lives on Device().
     ID3D11Texture2D* Frame() const { return m_frame.Get(); }
+    // The game's depth for Frame(); nullptr when the frame came without it.
+    const DepthFrame* Depth() const { return m_depth.texture ? &m_depth : nullptr; }
     ID3D11Device* Device() const { return m_device.Get(); }
 
     // Time from the game's Present to the host receiving the frame, for the last frame.
@@ -67,6 +72,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Fence> m_frameFence;
     Microsoft::WRL::ComPtr<ID3D11Fence> m_hostFence;
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_frame;
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthSlots[kFrameSlots];  // when the hook has them
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> m_depthFrame;
+    DepthFrame m_depth;  // m_depthFrame while the frame has depth
 
     LONGLONG m_qpcFreq = 1;
     double m_lastHandoffMs = 0.0;

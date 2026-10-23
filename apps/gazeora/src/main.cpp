@@ -18,6 +18,7 @@
 #include <imgui_impl_win32.h>
 
 #include "app.h"
+#include "platform/usb_driver.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam,
                                                              LPARAM lParam);
@@ -145,6 +146,12 @@ void StyleTitleBar(HWND hwnd) {
 }  // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
+    // Run as an administrator from Settings to install the USB driver: just that, no window.
+    int driverExit = gazeora::app::RunUsbDriverCommand();
+    if (driverExit >= 0) {
+        return driverExit;
+    }
+
     // One launcher at a time: a second start just brings the first one forward.
     HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\Gazeora_launcher");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
@@ -241,6 +248,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
         g_renderer.context->OMSetRenderTargets(1, &target, nullptr);
         g_renderer.context->ClearRenderTargetView(target, clear);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+        app->StreamWindow(g_renderer.swapChain.Get());
         g_renderer.swapChain->Present(1, 0);
         if (busyFrames > 0) {
             --busyFrames;

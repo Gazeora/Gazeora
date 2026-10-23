@@ -115,8 +115,8 @@ TEST(PixelConvert, B5G5R5X1IgnoresTopBit) {
     EXPECT_EQ(Convert(PixelLayout::B5G5R5X1, src), expected);
 }
 
-// The 16-bit layouts convert through precomputed tables; check every value against the
-// bit-replication formula they're built from.
+// The 16-bit layouts expand each channel by bit replication; check every value against the
+// formula, through both the SIMD path and the scalar one that finishes each row.
 TEST(PixelConvert, SixteenBitLayoutsMatchTheFormulaForEveryValue) {
     auto expand = [](uint32_t v, int bits) {
         return uint8_t((v << (8 - bits)) | (v >> (2 * bits - 8)));
@@ -137,6 +137,27 @@ TEST(PixelConvert, SixteenBitLayoutsMatchTheFormulaForEveryValue) {
         ASSERT_TRUE(b[0] == expand(v & 0x1F, 5) && b[1] == expand((v >> 5) & 0x1F, 5) &&
                     b[2] == expand((v >> 10) & 0x1F, 5) && b[3] == 255)
             << "B5G5R5X1 value " << v;
+    }
+}
+
+// Rows are converted several pixels at a time with SIMD, and the remainder one pixel at a time.
+// A row of any width must come out as converting its pixels one by one does.
+TEST(PixelConvert, WholeRowsMatchPixelByPixel) {
+    std::vector<uint8_t> src(70 * 4);
+    uint32_t seed = 7;
+    for (uint8_t& b : src) b = uint8_t((seed = seed * 1664525u + 1013904223u) >> 24);
+    for (PixelLayout layout :
+         {PixelLayout::BGRA8, PixelLayout::BGRX8, PixelLayout::RGBA8, PixelLayout::RGBX8,
+          PixelLayout::RGB10A2, PixelLayout::BGR10A2, PixelLayout::B5G6R5, PixelLayout::B5G5R5X1}) {
+        uint32_t bpp = SourceBytesPerPixel(layout);
+        for (uint32_t width = 0; width <= 64; ++width) {
+            std::vector<uint8_t> row(size_t(width) * 4 + 4, 0xCD), single(row);
+            ConvertRow(layout, src.data(), row.data(), width);
+            for (uint32_t x = 0; x < width; ++x) {
+                ConvertRow(layout, src.data() + x * bpp, single.data() + x * 4, 1);
+            }
+            ASSERT_EQ(row, single) << "layout " << int(layout) << ", width " << width;
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 #include "gazeora/host/stream/frame_stream.h"
+#include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/rtp_video.h"
+#include "gazeora/host/stream/ts_muxer.h"
 
 #include <gtest/gtest.h>
 #include <ws2tcpip.h>
@@ -22,10 +24,23 @@ protected:
     void SetUp() override {
         WSADATA wsa;
         ASSERT_EQ(WSAStartup(MAKEWORD(2, 2), &wsa), 0);
+        StartServer(StreamProtocol::RtspUdp);
+    }
+
+    // (Re)starts the server with `protocol`, as the app does when it's changed.
+    void StartServer(StreamProtocol protocol) {
+        server.Stop();
+        server.SetProtocol(protocol);
+        server.SetDiscoveryPort(0);  // any free port, so tests running at once don't collide
         std::wstring error;
         ASSERT_TRUE(server.Start(0, false, error)) << std::string(error.begin(), error.end());
         ASSERT_NE(server.Port(), 0);
         base = "rtsp://127.0.0.1:" + std::to_string(server.Port()) + "/";
+    }
+
+    // Waits up to a second for the encode thread to see the viewers.
+    void WaitForViewers(int viewers) {
+        for (int i = 0; i < 100 && server.Viewers() != viewers; ++i) Sleep(10);
     }
 
     void TearDown() override {
@@ -237,7 +252,17 @@ TEST_F(FrameStreamTest, DescribesOneH264VideoTrack) {
     EXPECT_NE(response.find("a=control:track1\r\n"), std::string::npos);
 }
 
+// Players such as ExoPlayer need the parameter sets in the SDP; they can't wait for them
+// in-band.
+TEST_F(FrameStreamTest, DescribeCarriesParameterSetsBeforeAnyoneWatches) {
+    server.SetIdleFrame(64, 48, Solid(64, 48, 0x40));
+    Connect();
+    std::string response = Request("DESCRIBE", base);
+    EXPECT_NE(response.find(";sprop-parameter-sets="), std::string::npos) << response;
+}
+
 TEST_F(FrameStreamTest, TcpPlayerThatFallsBehindResumesOnAKeyFrame) {
+    StartServer(StreamProtocol::RtspTcp);
     Connect();
     int small = 16 * 1024;
     setsockopt(rtsp, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char*>(&small), sizeof(small));
@@ -309,7 +334,23 @@ TEST_F(FrameStreamTest, RefusesMulticast) {
     EXPECT_EQ(response.rfind("RTSP/1.0 461 Unsupported Transport\r\n", 0), 0u) << response;
 }
 
+TEST_F(FrameStreamTest, RtspOverUdpRefusesInterleavedPlayers) {
+    Connect();
+    std::string response =
+        Request("SETUP", base + "track1", "Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\n");
+    EXPECT_EQ(response.rfind("RTSP/1.0 461 Unsupported Transport\r\n", 0), 0u) << response;
+}
+
+TEST_F(FrameStreamTest, RtspOverTcpRefusesUdpPlayers) {
+    StartServer(StreamProtocol::RtspTcp);
+    Connect();
+    std::string response = Request("SETUP", base + "track1",
+                                    "Transport: RTP/AVP;unicast;client_port=5000-5001\r\n");
+    EXPECT_EQ(response.rfind("RTSP/1.0 461 Unsupported Transport\r\n", 0), 0u) << response;
+}
+
 TEST_F(FrameStreamTest, StreamsInterleavedOverTcp) {
+    StartServer(StreamProtocol::RtspTcp);
     Connect();
     std::string setup =
         Request("SETUP", base + "track1", "Transport: RTP/AVP/TCP;unicast;interleaved=2-3\r\n");
@@ -361,6 +402,14 @@ TEST_F(FrameStreamTest, StreamsIdleFrameWithoutLiveFrames) {
     EXPECT_GT(ReceiveFrame(&types), 0);
     EXPECT_TRUE(Has(types, kNalSps) && Has(types, kNalPps) && Has(types, kNalIdrSlice));
     EXPECT_GT(ReceiveFrame(), 0);  // repeated
+}
+
+TEST_F(FrameStreamTest, KeepsTheIdleFrameWhenTheProtocolChanges) {
+    server.SetIdleFrame(64, 48, Solid(64, 48, 0x40));
+    Sleep(100);  // the encode thread takes it
+    StartServer(StreamProtocol::RtspUdp);  // a restart, as a change in Settings does
+    Play();
+    EXPECT_GT(ReceiveFrame(), 0);
 }
 
 TEST_F(FrameStreamTest, StreamsLiveFramesOverUdp) {
@@ -538,10 +587,136 @@ TEST_F(FrameStreamTest, ChangingTheCodecDisconnectsPlayers) {
 
 TEST_F(FrameStreamTest, SecondServerOnSamePortFails) {
     FrameStreamServer other;
+    other.SetDiscoveryPort(0);
     std::wstring error;
     EXPECT_FALSE(other.Start(server.Port(), false, error));
     EXPECT_EQ(error, L"port " + std::to_wstring(server.Port()) + L" is already in use");
     EXPECT_FALSE(other.Running());
+}
+
+TEST_F(FrameStreamTest, UrlsNameTheProtocol) {
+    StartServer(StreamProtocol::Http);
+    std::vector<std::wstring> urls = server.Urls();
+    ASSERT_EQ(urls.size(), 1u);
+    EXPECT_EQ(urls[0], L"http://127.0.0.1:" + std::to_wstring(server.Port()) + L"/stream.ts");
+    StartServer(StreamProtocol::Udp);
+    urls = server.Urls();
+    ASSERT_EQ(urls.size(), 1u);
+    EXPECT_EQ(urls[0], L"udp://127.0.0.1:" + std::to_wstring(server.Port()));
+}
+
+TEST_F(FrameStreamTest, StreamsFramesOverUdpToPlayersThatSayHello) {
+    StartServer(StreamProtocol::Udp);
+    SOCKET player = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    SetTimeout(player, 3000);
+    sockaddr_in to = Loopback(server.Port());
+    auto say = [&](FrameMessage type) {
+        FrameHeader header;
+        header.type = type;
+        uint8_t raw[kFrameHeaderSize];
+        header.Write(raw);
+        sendto(player, reinterpret_cast<char*>(raw), sizeof(raw), 0,
+               reinterpret_cast<sockaddr*>(&to), sizeof(to));
+    };
+    say(FrameMessage::Hello);
+    WaitForViewers(1);
+    ASSERT_EQ(server.Viewers(), 1);
+
+    std::vector<uint8_t> frame = Solid(320, 240, 0x80);
+    server.PushFrame(320, 240, frame);
+    // The frame's chunks, in order: the first frame a player gets is a key frame.
+    std::string annexB;
+    FrameHeader header;
+    for (uint32_t chunk = 0, count = 1; chunk < count; ++chunk) {
+        char datagram[2048];
+        int got = recv(player, datagram, sizeof(datagram), 0);
+        ASSERT_GT(got, int(kFrameHeaderSize));
+        ASSERT_TRUE(header.Read(reinterpret_cast<uint8_t*>(datagram), size_t(got)));
+        EXPECT_EQ(header.type, FrameMessage::Frame);
+        EXPECT_EQ(header.tail >> 16, chunk);
+        count = header.tail & 0xFFFF;
+        annexB.append(datagram + kFrameHeaderSize, size_t(got) - kFrameHeaderSize);
+    }
+    EXPECT_TRUE(header.flags & kFrameFlagKey);
+    EXPECT_FALSE(header.flags & kFrameFlagH265);
+    EXPECT_EQ(header.width, 320);
+    EXPECT_EQ(header.height, 240);
+    std::vector<std::string> nals;
+    SplitAnnexB(annexB, nals);
+    std::vector<uint8_t> types;
+    for (const std::string& nal : nals) types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
+    EXPECT_TRUE(Has(types, kNalSps) && Has(types, kNalPps) && Has(types, kNalIdrSlice));
+
+    say(FrameMessage::Bye);
+    WaitForViewers(0);
+    EXPECT_EQ(server.Viewers(), 0);
+    closesocket(player);
+}
+
+TEST_F(FrameStreamTest, StreamsMpegTsOverHttp) {
+    StartServer(StreamProtocol::Http);
+    Connect();
+    std::string get = "GET /stream.ts HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
+    send(rtsp, get.data(), int(get.size()), 0);
+    while (received.find("\r\n\r\n") == std::string::npos && ReceiveMore()) {
+    }
+    size_t headEnd = received.find("\r\n\r\n");
+    ASSERT_NE(headEnd, std::string::npos) << received;
+    EXPECT_EQ(received.rfind("HTTP/1.1 200 OK\r\n", 0), 0u) << received;
+    EXPECT_NE(received.find("Content-Type: video/mp2t\r\n"), std::string::npos) << received;
+    received.erase(0, headEnd + 4);
+    WaitForViewers(1);
+    ASSERT_EQ(server.Viewers(), 1);
+
+    std::vector<uint8_t> frame = Solid(320, 240, 0x80);
+    server.PushFrame(320, 240, frame);
+    // A player starts on a key frame, with the PAT and PMT in front.
+    while (received.size() < 4 * TsMuxer::kPacketSize && ReceiveMore()) {
+    }
+    ASSERT_GE(received.size(), 4 * TsMuxer::kPacketSize);
+    for (size_t at = 0; at + TsMuxer::kPacketSize <= received.size(); at += TsMuxer::kPacketSize) {
+        EXPECT_EQ(uint8_t(received[at]), 0x47) << "sync byte of packet at " << at;
+    }
+    auto pid = [&](size_t packet) {
+        size_t at = packet * TsMuxer::kPacketSize;
+        return uint16_t((uint8_t(received[at + 1]) & 0x1F) << 8 | uint8_t(received[at + 2]));
+    };
+    EXPECT_EQ(pid(0), 0);  // PAT
+    EXPECT_EQ(pid(1), TsMuxer::kPmtPid);
+    EXPECT_EQ(pid(2), TsMuxer::kVideoPid);
+    EXPECT_TRUE(uint8_t(received[2 * TsMuxer::kPacketSize + 5]) & 0x40) << "random access";
+}
+
+TEST_F(FrameStreamTest, HttpAnswersOtherPathsWithNotFound) {
+    StartServer(StreamProtocol::Http);
+    Connect();
+    std::string get = "GET /other HTTP/1.1\r\n\r\n";
+    send(rtsp, get.data(), int(get.size()), 0);
+    while (ReceiveMore()) {
+    }
+    EXPECT_EQ(received.rfind("HTTP/1.1 404 Not Found\r\n", 0), 0u) << received;
+}
+
+TEST_F(FrameStreamTest, AnswersTheAndroidAppsSearch) {
+    StartServer(StreamProtocol::Http);
+    ASSERT_NE(server.DiscoveryPort(), 0);
+    SOCKET app = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    SetTimeout(app, 3000);
+    sockaddr_in to = Loopback(server.DiscoveryPort());
+    sendto(app, "not for us", 10, 0, reinterpret_cast<sockaddr*>(&to), sizeof(to));
+    sendto(app, kDiscoveryRequest, int(sizeof(kDiscoveryRequest) - 1), 0,
+           reinterpret_cast<sockaddr*>(&to), sizeof(to));
+    char reply[1024];
+    int got = recv(app, reply, sizeof(reply), 0);
+    ASSERT_GT(got, 0);
+    std::string json(reply, size_t(got));
+    EXPECT_NE(json.find("\"service\":\"gazeora\""), std::string::npos) << json;
+    EXPECT_NE(json.find("\"protocol\":\"http\""), std::string::npos) << json;
+    EXPECT_NE(json.find("\"port\":" + std::to_string(server.Port()) + ","), std::string::npos)
+        << json;
+    EXPECT_NE(json.find("\"path\":\"/stream.ts\""), std::string::npos) << json;
+    EXPECT_NE(json.find("\"codec\":\"h264\""), std::string::npos) << json;
+    closesocket(app);
 }
 
 }  // namespace

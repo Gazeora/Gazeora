@@ -2,6 +2,7 @@
 # tests can link them without injecting the DLL anywhere.
 add_library(gazeora_hook_core STATIC
     src/core/capture_target.cpp
+    src/core/depth_picker.cpp
     src/core/hook_util.cpp
     src/core/log.cpp
     src/core/pixel_convert.cpp
@@ -25,7 +26,9 @@ add_library(gazeora_hook SHARED
     src/d3d10/d3d10_capture.cpp
     src/d3d11/d3d11_bridge.cpp
     src/d3d11/d3d11_capture.cpp
+    src/d3d11/d3d11_depth.cpp
     src/d3d12/d3d12_capture.cpp
+    src/d3d12/d3d12_depth.cpp
     src/d3d12/d3d12_queue_tracker.cpp
     src/opengl/gl_api.cpp
     src/opengl/gl_capture.cpp

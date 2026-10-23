@@ -29,8 +29,8 @@ namespace gazeora::app {
 
 namespace {
 
-// RTSP port for the frame stream (8554 is the usual alternative to 554). If it's taken,
-// any free port is used.
+// Port for the frame stream, whatever the protocol (8554 is RTSP's usual alternative to
+// 554). If it's taken, any free port is used.
 constexpr uint16_t kStreamPort = 8554;
 // Size of the logo frame streamed while no game is capturing.
 constexpr int kLogoFrameWidth = 1280;
@@ -48,8 +48,18 @@ App::App(HWND hwnd, ID3D11Device* device, float dpiScale)
     // game is captured.
     m_vr = m_settings.LoadVrLayout();
     m_stream.SetVrLayout(m_vr);
+    m_overlay = m_settings.LoadOverlay();
+    m_stream.SetOverlay(m_overlay);
+    m_idlePicture = m_settings.LoadIdlePicture() ? IdlePicture::Window : IdlePicture::Logo;
     m_stream.SetLogFile(StreamSettings::LogPath());
     m_stream.SetCodec(m_settings.LoadCodec());
+    m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());
+    m_stream.SetProtocol(m_settings.LoadProtocol());
+    StartStream();
+}
+
+void App::StartStream() {
+    m_streamError.clear();
     if (!m_stream.Start(kStreamPort, true, m_streamError) &&
         !m_stream.Start(0, true, m_streamError)) {
         ShowToast("Frame streaming unavailable: " + U8(m_streamError), true);
@@ -119,18 +129,18 @@ void App::SetupImGui() {
         }
         return font;
     };
-    m_fonts.body = addFont("segoeui.ttf", 15.0f, true);  // first font = default
-    m_fonts.bold = addFont("seguisb.ttf", 15.0f, true);
-    m_fonts.small = addFont("segoeui.ttf", 13.0f, true);
-    m_fonts.heading = addFont("seguisb.ttf", 22.0f, true);
-    m_fonts.title = addFont("segoeuib.ttf", 36.0f, true);
-    m_fonts.hugeIcon = addFont("segoeui.ttf", 56.0f, true);
+    m_fonts.body = addFont("segoeui.ttf", 14.0f, true);  // first font = default
+    m_fonts.bold = addFont("seguisb.ttf", 14.0f, true);
+    m_fonts.small = addFont("segoeui.ttf", 12.0f, true);
+    m_fonts.heading = addFont("seguisb.ttf", 17.0f, true);
+    m_fonts.title = addFont("segoeuib.ttf", 26.0f, true);
+    m_fonts.hugeIcon = addFont("segoeui.ttf", 44.0f, true);
 
     ImGuiStyle& style = ImGui::GetStyle();
     ImGui::StyleColorsDark(&style);
     style.WindowPadding = ImVec2(10, 10);  // popups and menus; the panes set their own
-    style.FramePadding = ImVec2(10, 7);
-    style.ItemSpacing = ImVec2(10, 10);
+    style.FramePadding = ImVec2(10, 6);
+    style.ItemSpacing = ImVec2(8, 8);
     style.FrameRounding = 6.0f;
     style.PopupRounding = 8.0f;
     style.WindowRounding = 10.0f;
@@ -176,6 +186,15 @@ void App::Tick() {
     if (m_logoDirty) {
         UpdateLogoFrame();  // here rather than in Draw: it uses the UI's device context
         m_logoDirty = false;
+    }
+    if (m_usbDriverInstall.valid() &&
+        m_usbDriverInstall.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        std::wstring error = m_usbDriverInstall.get();
+        if (error.empty()) {
+            ShowToast(m_usbDriverDone);
+        } else {
+            ShowToast(U8(error), true);
+        }
     }
     for (auto it = m_sessions.begin(); it != m_sessions.end();) {
         GameSession& session = **it;
@@ -245,7 +264,7 @@ void App::Draw() {
     ImGui::SameLine(0.0f, 0.0f);
 
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(40), S(32)));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(32), S(26)));
     ImGui::BeginChild("##content", ImVec2(0, 0), ImGuiChildFlags_AlwaysUseWindowPadding);
     ImGui::PopStyleVar(2);
     if (m_page != m_shownPage || m_detailsId != m_shownDetailsId) {
@@ -306,7 +325,7 @@ void App::UpdateLogoFrame() {
     desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     D3D11_SUBRESOURCE_DATA data = {logo.data(), width * 4, 0};
     ComPtr<ID3D11Texture2D> texture;
-    if (m_vr.enabled && SUCCEEDED(m_device->CreateTexture2D(&desc, &data, &texture))) {
+    if (m_vr.WarpOnPc() && SUCCEEDED(m_device->CreateTexture2D(&desc, &data, &texture))) {
         TextureReader reader;
         reader.SetMaxSize(FrameStreamServer::kMaxWidth, FrameStreamServer::kMaxHeight);
         reader.SetVrLayout(m_vr);
@@ -330,8 +349,70 @@ void App::UpdateLogoFrame() {
         m_device->CreateShaderResourceView(texture.Get(), nullptr, &m_logoPreview);
         m_logoPreviewAspect = float(width) / float(height);
     }
-    if (m_stream.Running()) {
+    // Kept by the stream across restarts, and for a stream that starts later. Streamed when no
+    // game is, unless this window is (StreamWindow).
+    if (m_idlePicture == IdlePicture::Logo) {
         m_stream.SetIdleFrame(width, height, std::move(logo));
+    }
+}
+
+void App::SetIdlePicture(IdlePicture picture) {
+    m_idlePicture = picture;
+    m_settings.SaveIdlePicture(picture == IdlePicture::Window);
+    m_windowStreamedAtMs = 0;  // the window's next frame goes out at once
+    m_logoDirty = true;        // and the logo, when it's the one
+}
+
+void App::StreamWindow(IDXGISwapChain* swapChain) {
+    if (m_idlePicture != IdlePicture::Window || !m_stream.Running()) {
+        return;
+    }
+    // While someone watches, at the stream's frame rate at most; otherwise once, so the
+    // stream has a picture to start with (it repeats the last one until the window changes).
+    uint64_t now = GetTickCount64();
+    if (m_windowStreamedAtMs != 0 && (m_stream.Viewers() == 0 || now - m_windowStreamedAtMs < 33)) {
+        return;
+    }
+    ComPtr<ID3D11Texture2D> backBuffer;
+    if (FAILED(swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer)))) {
+        return;
+    }
+    // A copy the reader can sample: back buffers of a flip swap chain can't be.
+    D3D11_TEXTURE2D_DESC desc;
+    backBuffer->GetDesc(&desc);
+    D3D11_TEXTURE2D_DESC copied = {};
+    if (m_windowCopy) {
+        m_windowCopy->GetDesc(&copied);
+    }
+    if (!m_windowCopy || copied.Width != desc.Width || copied.Height != desc.Height ||
+        copied.Format != desc.Format) {
+        D3D11_TEXTURE2D_DESC copy = {};
+        copy.Width = desc.Width;
+        copy.Height = desc.Height;
+        copy.MipLevels = 1;
+        copy.ArraySize = 1;
+        copy.Format = desc.Format;
+        copy.SampleDesc.Count = 1;
+        copy.Usage = D3D11_USAGE_DEFAULT;
+        copy.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        m_windowCopy.Reset();
+        if (FAILED(m_device->CreateTexture2D(&copy, nullptr, &m_windowCopy))) {
+            return;
+        }
+    }
+    ComPtr<ID3D11DeviceContext> context;
+    m_device->GetImmediateContext(&context);
+    context->CopyResource(m_windowCopy.Get(), backBuffer.Get());
+
+    // Scaled to fit the stream, and laid out for the headset like game frames.
+    m_windowReader.SetMaxSize(FrameStreamServer::kMaxWidth, FrameStreamServer::kMaxHeight);
+    m_windowReader.SetVrLayout(m_vr);
+    UINT width = 0, height = 0;
+    std::vector<uint8_t> bgra;
+    std::wstring error;
+    if (m_windowReader.Read(m_device.Get(), m_windowCopy.Get(), width, height, bgra, error)) {
+        m_stream.SetIdleFrame(width, height, std::move(bgra));
+        m_windowStreamedAtMs = now;
     }
 }
 

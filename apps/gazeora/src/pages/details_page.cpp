@@ -35,7 +35,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     ImVec2 pos = ImGui::GetCursorScreenPos();
     float width = ImGui::GetContentRegionAvail().x;
     ImVec2 max = pos + ImVec2(width, height);
-    float rounding = S(14);
+    float rounding = S(12);
 
     const Texture& art = ArtFor(game);
     bool isCover = !game.coverPath.empty() && m_textures.Image(game.coverPath);
@@ -65,8 +65,8 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
                           Shade(rgb, 0.12f, 0.97f), rounding,
                           ImDrawFlags_RoundCornersLeft);
 
-    float padding = S(40);
-    float textWidth = width * 0.55f;
+    float padding = S(30);
+    float textWidth = width * 0.6f;
     GameSession* session = SessionFor(game.id);
     GameSession::Stats stats;
     if (session) {
@@ -77,12 +77,12 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     ImVec2 cursor = pos + ImVec2(padding, padding);
     draw->AddText(m_fonts.small, m_fonts.small->FontSize, cursor, starting ? kWarning : kAccent,
                   starting ? "STARTING" : eyebrow);
-    cursor.y += S(22);
+    cursor.y += S(18);
     TextEllipsis(draw, m_fonts.title, cursor, kText, U8(game.name), textWidth);
-    cursor.y += m_fonts.title->FontSize + S(8);
+    cursor.y += m_fonts.title->FontSize + S(6);
 
     std::string meta =
-        starting  ? ICON_CLOCK "  Waiting for the game to start"
+        starting  ? ICON_CLOCK "  Starting..."
         : session ? ICON_CLOCK "  Playing for " + ClockText(stats.elapsedSeconds)
                   : ICON_CLOCK "  " + RelativeTime(game.lastPlayed) + "   \xC2\xB7   " +
                         PlaytimeText(game.playtimeSeconds);
@@ -90,7 +90,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
                   meta.c_str());
 
     // Buttons along the bottom.
-    float buttonHeight = S(46);
+    float buttonHeight = S(40);
     ImVec2 buttons(pos.x + padding, max.y - padding - buttonHeight);
     ImGui::SetCursorScreenPos(buttons);
     const char* playLabel = !session ? ICON_PLAY "   PLAY##play"
@@ -98,13 +98,13 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
                             : stats.state == GameSession::State::WaitingForGame
                                 ? "STARTING...##play"
                                 : "RUNNING##play";
-    if (AccentButton(playLabel, ImVec2(S(170), buttonHeight), m_fonts.bold, S(6),
+    if (AccentButton(playLabel, ImVec2(S(150), buttonHeight), m_fonts.bold, S(6),
                      AccentGradient(), !session)) {
         Launch(game.id, game.captureOnLaunch);
     }
     if (showDetails) {
-        ImGui::SameLine(0.0f, S(12));
-        if (FilledButton("Details##details", ImVec2(S(120), buttonHeight),
+        ImGui::SameLine(0.0f, S(10));
+        if (FilledButton("Details##details", ImVec2(S(110), buttonHeight),
                          WithAlpha(kText, 0.12f), WithAlpha(kText, 0.2f), kText,
                          m_fonts.bold, S(6))) {
             OpenDetails(game.id);
@@ -112,7 +112,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     }
 
     // Capture switch next to the buttons.
-    ImGui::SameLine(0.0f, S(24));
+    ImGui::SameLine(0.0f, S(20));
     float toggleY = buttons.y + (buttonHeight - S(22)) * 0.5f;
     ImGui::SetCursorScreenPos(ImVec2(ImGui::GetCursorScreenPos().x, toggleY));
     bool capture = game.captureOnLaunch;
@@ -125,10 +125,9 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     ImGui::SameLine(0.0f, S(10));
     ImGui::SetCursorScreenPos(
         ImVec2(ImGui::GetCursorScreenPos().x, toggleY + (S(22) - m_fonts.body->FontSize) * 0.5f));
-    ImGui::TextUnformatted("Capture with Gazeora");
+    ImGui::TextUnformatted("Capture");
     if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Starts the game with the Gazeora capture hook injected,\n"
-                          "so every frame it renders is captured.");
+        ImGui::SetTooltip("Inject the Gazeora capture hook when the game starts.");
     }
 
     ImGui::SetCursorScreenPos(ImVec2(pos.x, max.y));
@@ -155,12 +154,12 @@ void App::DrawDetails() {
     if (LinkButton(ICON_BACK "   Library##back", m_fonts.body, kTextDim, kText)) {
         m_page = Page::Library;
     }
-    ImGui::Dummy(ImVec2(0, S(10)));
-    DrawGameBanner(*game, S(300), SessionFor(game->id) ? "NOW PLAYING" : "GAME", false);
-    ImGui::Dummy(ImVec2(0, S(20)));
+    ImGui::Dummy(ImVec2(0, S(8)));
+    DrawGameBanner(*game, S(240), SessionFor(game->id) ? "NOW PLAYING" : "GAME", false);
+    ImGui::Dummy(ImVec2(0, S(16)));
 
-    float gap = S(20);
-    float sideWidth = S(330);
+    float gap = S(16);
+    float sideWidth = S(300);
     if (ImGui::BeginTable("##details", 2, ImGuiTableFlags_None)) {
         ImGui::TableSetupColumn("main", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("side", ImGuiTableColumnFlags_WidthFixed, sideWidth);
@@ -183,15 +182,9 @@ void App::DrawSessionCard(const Game& game) {
     if (!session) {
         CardTitle(m_fonts.heading, ICON_CAPTURE "  Gazeora capture");
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-        ImGui::PushTextWrapPos(0.0f);
-        ImGui::TextUnformatted(
-            game.captureOnLaunch
-                ? "Capture is on. When Gazeora runs the exe itself it injects its capture hook "
-                  "before the game creates its renderer; when the game starts through Steam or "
-                  "its launcher, the hook goes in as soon as the game process appears."
-                : "Capture is off. The game starts normally. Turn on \"Capture with Gazeora\" "
-                  "to inject the capture hook when it launches.");
-        ImGui::PopTextWrapPos();
+        ImGui::TextUnformatted(game.captureOnLaunch
+                                   ? "On: the capture hook goes in when the game starts."
+                                   : "Off: the game starts normally.");
         ImGui::PopStyleColor();
         EndCard();
         return;
@@ -205,10 +198,9 @@ void App::DrawSessionCard(const Game& game) {
                                                   : "Launching...");
     } else if (stats.state == GameSession::State::WaitingForGame) {
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::Text("Started %s. Waiting for %s to start%s...",
-                    session->ThroughSteam() ? "through Steam" : "its launcher",
+        ImGui::Text("Waiting for %s (started through %s)...",
                     U8(session->GameProcessName()).c_str(),
-                    session->Capture() ? ", then attaching capture" : "");
+                    session->ThroughSteam() ? "Steam" : "its launcher");
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
         if (FilledButton("Stop waiting##cancel", ImVec2(S(140), S(36)), kSecondary,
@@ -223,7 +215,7 @@ void App::DrawSessionCard(const Game& game) {
     ImGui::PopStyleColor();
 
     if (session->Capture() && stats.state == GameSession::State::Running) {
-        ImGui::Dummy(ImVec2(0, S(4)));
+        ImGui::Dummy(ImVec2(0, S(2)));
         struct Tile {
             const char* label;
             std::string value;
@@ -236,7 +228,7 @@ void App::DrawSessionCard(const Game& game) {
                         {"RESOLUTION", stats.width ? res : "-"},
                         {"GRAPHICS API", stats.api ? GraphicsApiName(stats.api) : "-"},
                         {"HANDOFF", stats.fps > 0 ? latency : "-"}};
-        float gap = S(12);
+        float gap = S(10);
         float tileWidth = (ImGui::GetContentRegionAvail().x - gap * 3) / 4;
         ImDrawList* draw = ImGui::GetWindowDrawList();
         for (int i = 0; i < 4; ++i) {
@@ -244,12 +236,12 @@ void App::DrawSessionCard(const Game& game) {
                 ImGui::SameLine(0.0f, gap);
             }
             ImVec2 p = ImGui::GetCursorScreenPos();
-            ImVec2 size(tileWidth, S(72));
+            ImVec2 size(tileWidth, S(60));
             ImGui::Dummy(size);
             draw->AddRectFilled(p, p + size, kInset, S(8));
-            draw->AddText(m_fonts.small, m_fonts.small->FontSize, p + ImVec2(S(14), S(12)),
+            draw->AddText(m_fonts.small, m_fonts.small->FontSize, p + ImVec2(S(12), S(10)),
                           kTextDim, tiles[i].label);
-            draw->AddText(m_fonts.heading, m_fonts.heading->FontSize, p + ImVec2(S(14), S(32)),
+            draw->AddText(m_fonts.heading, m_fonts.heading->FontSize, p + ImVec2(S(12), S(28)),
                           i == 0 ? kAccent : kText, tiles[i].value.c_str());
         }
 
@@ -261,41 +253,55 @@ void App::DrawSessionCard(const Game& game) {
                     HookStateText(stats.hookState));
         ImGui::PopStyleColor();
         if (!stats.hookStatus.empty()) {
-            ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_Text, kTextFaint);
-            ImGui::TextWrapped("%s", stats.hookStatus.c_str());
+            HelpMarker(stats.hookStatus.c_str(), S(380));
+        }
+        if (stats.stereoWanted) {
+            ImGui::SameLine(0.0f, S(16));
+            ImGui::PushStyleColor(ImGuiCol_Text, stats.stereo ? kAccent : kWarning);
+            ImGui::TextUnformatted(stats.stereo ? "3D from the game's depth"
+                                                : "3D: no depth buffer found, streaming in 2D");
             ImGui::PopStyleColor();
+            if (!stats.stereo) {
+                HelpMarker("3D needs the game's depth buffer, which Gazeora finds in D3D11 and "
+                           "D3D12 games once they draw a 3D scene. Menus, videos and other "
+                           "graphics APIs stay 2D.",
+                           S(380));
+            }
         }
 
         std::vector<std::wstring> urls = m_stream.Urls();
-        if (FilledButton(ICON_CAPTURE "   Copy stream URL##stream", ImVec2(S(190), S(38)),
+        if (FilledButton(ICON_CAPTURE "   Copy stream URL##stream", ImVec2(S(170), S(34)),
                          kSecondary, kSecondaryHover, kText, m_fonts.bold, S(6),
                          !urls.empty())) {
             ImGui::SetClipboardText(U8(urls.front()).c_str());
-            ShowToast("Copied " + U8(urls.front()) + ". Open it in VLC on any device.");
+            ShowToast("Copied " + U8(urls.front()));
         }
-        ImGui::SameLine(0.0f, S(14));
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + S(9));
+        ImGui::SameLine(0.0f, S(12));
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (S(34) - ImGui::GetTextLineHeight()) * 0.5f);
         std::wstring streamError =
             !stats.streamError.empty() ? stats.streamError : m_stream.LastError();
-        if (urls.empty()) {
+        if (!m_stream.Running()) {
             ImGui::PushStyleColor(ImGuiCol_Text, kDanger);
-            ImGui::TextUnformatted(("Stream server not running: " + U8(m_streamError)).c_str());
+            ImGui::TextUnformatted("Stream server not running");
+            HelpMarker(U8(m_streamError).c_str(), S(380));
             ImGui::PopStyleColor();
         } else if (!streamError.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, kDanger);
-            ImGui::TextUnformatted(("Can't stream: " + U8(streamError)).c_str());
+            ImGui::TextUnformatted("Can't stream");
+            HelpMarker(U8(streamError).c_str(), S(380));
             ImGui::PopStyleColor();
         } else {
             int viewers = m_stream.Viewers();
+            // USB has no URL: how the phone's connection stands instead.
+            std::string where = urls.empty() ? U8(m_stream.Status()) : U8(urls.front());
             ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-            ImGui::Text("%s   \xC2\xB7   %d %s", U8(urls.front()).c_str(), viewers,
+            ImGui::Text("%s   \xC2\xB7   %d %s", where.c_str(), viewers,
                         viewers == 1 ? "viewer" : "viewers");
             ImGui::PopStyleColor();
             std::string health = StreamHealth(m_stream);
             if (!health.empty()) {
                 ImGui::PushStyleColor(ImGuiCol_Text, kWarning);
-                ImGui::TextUnformatted((ICON_WARNING "  Weak network: " + health).c_str());
+                ImGui::TextUnformatted((ICON_WARNING "  " + health).c_str());
                 ImGui::PopStyleColor();
             }
         }
@@ -306,7 +312,7 @@ void App::DrawSessionCard(const Game& game) {
 void App::DrawGameSettingsCard(Game& game) {
     BeginCard("##settings", m_scale);
     CardTitle(m_fonts.heading, ICON_EDIT "  Game settings");
-    float browseWidth = S(100);
+    float browseWidth = S(90);
 
     FieldLabel(m_fonts.small, "Name");
     ImGui::SetNextItemWidth(-FLT_MIN);
@@ -318,9 +324,9 @@ void App::DrawGameSettingsCard(Game& game) {
 
     FieldLabel(m_fonts.small, "Executable");
     std::string exe = U8(game.exePath);
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(10));
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
     ImGui::InputText("##exe", &exe, ImGuiInputTextFlags_ReadOnly);
-    ImGui::SameLine(0.0f, S(10));
+    ImGui::SameLine(0.0f, S(8));
     if (ImGui::Button("Show##exe", ImVec2(browseWidth, 0))) {
         ShowInExplorer(game.exePath);
     }
@@ -334,13 +340,13 @@ void App::DrawGameSettingsCard(Game& game) {
     }
 
     FieldLabel(m_fonts.small, "Working directory");
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(10));
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
     ImGui::InputTextWithHint("##workdir", "Defaults to the game's folder", &m_editWorkDir);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.workingDir = Utf8ToWide(m_editWorkDir);
         SaveLibrary();
     }
-    ImGui::SameLine(0.0f, S(10));
+    ImGui::SameLine(0.0f, S(8));
     if (ImGui::Button("Browse##workdir", ImVec2(browseWidth, 0))) {
         std::vector<std::wstring> picked = PickFiles(m_hwnd, PickKind::Folder);
         if (!picked.empty()) {
@@ -363,15 +369,14 @@ void App::DrawGameSettingsCard(Game& game) {
     }
     if (game.launchVia == LaunchVia::Steam && m_editSteamAppId.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, kWarning);
-        ImGui::TextUnformatted(ICON_WARNING "  This exe isn't in a Steam library; it will run "
-                                            "directly.");
+        ImGui::TextUnformatted(ICON_WARNING "  Not in a Steam library: runs the exe.");
         ImGui::PopStyleColor();
     }
 
     FieldLabel(m_fonts.small, "Game process");
+    HelpMarker("Set it if the exe is a launcher for another exe.", S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
-    std::string processHint = "Defaults to " + U8(LaunchSpec{game.exePath}.GameProcessName()) +
-                              "; set it if the exe is a launcher for another exe";
+    std::string processHint = "Defaults to " + U8(LaunchSpec{game.exePath}.GameProcessName());
     ImGui::InputTextWithHint("##process", processHint.c_str(), &m_editProcess);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.processName = Utf8ToWide(m_editProcess);
@@ -407,22 +412,19 @@ void App::DrawGameInfoCard(Game& game) {
     auto row = [&](const char* label, const std::string& value) {
         FieldLabel(m_fonts.small, label);
         ImGui::TextUnformatted(value.c_str());
-        ImGui::Dummy(ImVec2(0, S(2)));
     };
     row("Playtime", PlaytimeText(game.playtimeSeconds));
     row("Last played", game.lastPlayed ? DateText(game.lastPlayed) : "Never");
     row("Added", DateText(game.addedAt));
-    row("Library ID", std::to_string(game.id) + "   (GazeoraCLI launch " +
-                          std::to_string(game.id) + ")");
+    row("Library ID", std::to_string(game.id));
 
-    ImGui::Dummy(ImVec2(0, S(6)));
+    ImGui::Dummy(ImVec2(0, S(4)));
     float width = ImGui::GetContentRegionAvail().x;
-    if (FilledButton(ICON_FOLDER "   Open file location##open", ImVec2(width, S(38)), kSecondary,
+    if (FilledButton(ICON_FOLDER "   Open file location##open", ImVec2(width, S(34)), kSecondary,
                      kSecondaryHover, kText, m_fonts.bold, S(6))) {
         ShowInExplorer(game.exePath);
     }
-    ImGui::Dummy(ImVec2(0, S(2)));
-    if (FilledButton(ICON_DELETE "   Remove from library##remove", ImVec2(width, S(38)),
+    if (FilledButton(ICON_DELETE "   Remove from library##remove", ImVec2(width, S(34)),
                      WithAlpha(kDanger, 0.14f), WithAlpha(kDanger, 0.26f), kDanger, m_fonts.bold,
                      S(6))) {
         m_pendingRemoveId = game.id;

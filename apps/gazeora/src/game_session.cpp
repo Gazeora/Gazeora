@@ -182,6 +182,8 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
             handoffSum += client.LastHandoffMs();
         }
         const SharedHeader& shared = client.Shared();
+        VrLayout vr = m_stream ? m_stream->GetVrLayout() : VrLayout();  // may change while playing
+        client.SetCaptureDepth(vr.enabled && vr.stereo);
 
         {
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -191,6 +193,7 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
             m_stats.height = shared.height;
             m_stats.api = shared.api;
             m_stats.skippedFrames = shared.skippedFrames;
+            m_stats.stereoWanted = vr.enabled && vr.stereo;
         }
 
         QueryPerformanceCounter(&now);
@@ -211,12 +214,15 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
             nextStream = std::max(nextStream, now.QuadPart - interval / 4) + interval;
             UINT width, height;
             std::wstring error;
-            reader.SetVrLayout(m_stream->GetVrLayout());  // may change while playing
-            if (reader.Read(client.Device(), client.Frame(), width, height, pixels, error)) {
-                m_stream->PushFrame(width, height, pixels);
+            reader.SetVrLayout(vr);
+            bool read = reader.Read(client.Device(), client.Frame(), width, height, pixels, error,
+                                    client.Depth());
+            if (read) {
+                m_stream->PushFrame(width, height, pixels, reader.Stereo());
             }
             std::lock_guard<std::mutex> lock(m_mutex);
             m_stats.streamError = error;
+            m_stats.stereo = read && reader.Stereo();
         }
 
         double elapsed = double(now.QuadPart - statsStart.QuadPart) / double(m_qpcFreq);

@@ -5,9 +5,16 @@
 //   GazeoraCLI add <game.exe | shortcut.lnk> [--name N] [--args A] [--workdir D] [--capture]
 //   GazeoraCLI remove <id | name>
 //   GazeoraCLI launch <id | name> [--capture]
-//   GazeoraCLI attach <pid | process.exe>
+//   GazeoraCLI attach <pid | process.exe> [--depth] [--save-after SECONDS]
+//   GazeoraCLI run <game.exe> [--args A] [--depth] [--save-after SECONDS]
+//
+// run starts an exe with capture, hooked from its first instruction like a game launched
+// from the library, without adding it there.
 //
 // Keys while capturing:  S = save current frame as BMP,  Q = quit.
+// --depth also asks for the game's depth buffer (3D from depth) and says how many frames
+// came with it; saving then also writes the frame's 3D pair. --save-after saves once, that
+// many seconds in, and quits.
 
 #include <windows.h>
 #include <conio.h>
@@ -42,8 +49,9 @@ void PrintUsage(const wchar_t* exe) {
              L"[--capture]\n"
              L"  %ls remove <id | name>\n"
              L"  %ls launch <id | name> [--capture]\n"
-             L"  %ls attach <pid | process.exe>\n",
-             exe, exe, exe, exe, exe);
+             L"  %ls attach <pid | process.exe> [--depth] [--save-after SECONDS]\n"
+             L"  %ls run <game.exe> [--args A] [--depth] [--save-after SECONDS]\n",
+             exe, exe, exe, exe, exe, exe);
 }
 
 bool IsNumber(const std::wstring& text) {
@@ -97,24 +105,65 @@ std::wstring FormatPlaytime(int64_t seconds) {
     return text;
 }
 
+struct CaptureOptions {
+    bool depth = false;
+    double saveAfter = -1;  // seconds; negative: only on S
+};
+
+// Saves the current frame as frame_N.bmp, and with its depth the 3D pair as frame_N_3d.bmp:
+// the two views side by side, as the phone gets them.
+void SaveFrame(gazeora::CaptureClient& client) {
+    std::wstring name = L"frame_" + std::to_wstring(client.Shared().frameIndex);
+    std::wstring error;
+    if (gazeora::SaveTextureAsBmp(client.Device(), client.Frame(), name + L".bmp", error)) {
+        wprintf(L"Saved %ls.bmp\n", name.c_str());
+    } else {
+        fwprintf(stderr, L"Save failed: %ls\n", error.c_str());
+    }
+    if (!client.Depth()) {
+        return;
+    }
+    gazeora::VrLayout vr;
+    vr.enabled = vr.stereo = true;
+    gazeora::TextureReader reader;
+    reader.SetVrLayout(vr);
+    std::vector<uint8_t> bgra;
+    UINT width, height;
+    // Twice: the first read learns how the game stores depth, as streaming does over its first
+    // frame.
+    reader.Read(client.Device(), client.Frame(), width, height, bgra, error, client.Depth());
+    if (reader.Read(client.Device(), client.Frame(), width, height, bgra, error, client.Depth()) &&
+        reader.Stereo() &&
+        gazeora::SaveBgraAsBmp(name + L"_3d.bmp", width, height, bgra, error)) {
+        wprintf(L"Saved %ls_3d.bmp\n", name.c_str());
+    } else {
+        fwprintf(stderr, L"Saving the 3D pair failed: %ls\n", error.c_str());
+    }
+}
+
 // Prints capture stats until Q / Ctrl+C, or until `game` (if given) exits.
-int RunCaptureLoop(gazeora::CaptureClient& client, HANDLE game) {
+int RunCaptureLoop(gazeora::CaptureClient& client, HANDLE game,
+                   const CaptureOptions& options = {}) {
     client.SetCaptureEnabled(true);
+    client.SetCaptureDepth(options.depth);
     SetConsoleCtrlHandler(OnConsoleCtrl, TRUE);
     printf("Press S to save a frame, Q to quit.\n");
 
     LARGE_INTEGER freq, statsStart, now;
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&statsStart);
-    int frames = 0;
+    LARGE_INTEGER started = statsStart;
+    int frames = 0, depthFrames = 0;
     double handoffSum = 0.0;
     LONG lastState = -100;
     std::string lastStatus;
     std::wstring error;
 
     while (!g_quit) {
-        if (client.WaitForFrame(100) == gazeora::CaptureClient::WaitResult::Frame) {
+        bool gotFrame = client.WaitForFrame(100) == gazeora::CaptureClient::WaitResult::Frame;
+        if (gotFrame) {
             ++frames;
+            depthFrames += client.Depth() ? 1 : 0;
             handoffSum += client.LastHandoffMs();
         }
         if (game && WaitForSingleObject(game, 0) == WAIT_OBJECT_0) {
@@ -135,11 +184,20 @@ int RunCaptureLoop(gazeora::CaptureClient& client, HANDLE game) {
         double elapsed = double(now.QuadPart - statsStart.QuadPart) / double(freq.QuadPart);
         if (elapsed >= 1.0) {
             if (frames > 0) {
-                printf("%5.1f fps  %ux%u %s  handoff %.2f ms  skipped %lld\n", frames / elapsed,
+                printf("%5.1f fps  %ux%u %s  handoff %.2f ms  skipped %lld", frames / elapsed,
                        shared.width, shared.height, gazeora::GraphicsApiName(shared.api),
                        handoffSum / frames, shared.skippedFrames);
+                if (options.depth) {
+                    const gazeora::DepthFrame* depth = client.Depth();
+                    printf("  depth %d/%d", depthFrames, frames);
+                    if (depth) {
+                        printf(" (%ux%u, %s)", depth->width, depth->height,
+                               depth->encoding == gazeora::kDepthUnorm24 ? "24-bit" : "float");
+                    }
+                }
+                printf("\n");
             }
-            frames = 0;
+            frames = depthFrames = 0;
             handoffSum = 0.0;
             statsStart = now;
         }
@@ -149,13 +207,13 @@ int RunCaptureLoop(gazeora::CaptureClient& client, HANDLE game) {
             if (key == L'Q') {
                 g_quit = true;
             } else if (key == L'S') {
-                std::wstring path = L"frame_" + std::to_wstring(shared.frameIndex) + L".bmp";
-                if (gazeora::SaveTextureAsBmp(client.Device(), client.Frame(), path, error)) {
-                    wprintf(L"Saved %ls\n", path.c_str());
-                } else {
-                    fwprintf(stderr, L"Save failed: %ls\n", error.c_str());
-                }
+                SaveFrame(client);
             }
+        }
+        if (options.saveAfter >= 0 && gotFrame &&
+            double(now.QuadPart - started.QuadPart) / double(freq.QuadPart) >= options.saveAfter) {
+            SaveFrame(client);
+            g_quit = true;
         }
     }
 
@@ -165,7 +223,7 @@ int RunCaptureLoop(gazeora::CaptureClient& client, HANDLE game) {
     return 0;
 }
 
-int CmdAttach(const std::wstring& target) {
+int CmdAttach(const std::wstring& target, const CaptureOptions& options) {
     DWORD pid = ResolveTarget(target);
     if (pid == 0) {
         fwprintf(stderr, L"process '%ls' not found\n", target.c_str());
@@ -194,7 +252,24 @@ int CmdAttach(const std::wstring& target) {
             return 1;
         }
     }
-    return RunCaptureLoop(client, nullptr);
+    return RunCaptureLoop(client, nullptr, options);
+}
+
+int CmdRun(const std::wstring& exe, const std::wstring& arguments,
+           const CaptureOptions& options) {
+    gazeora::LaunchSpec spec;
+    spec.exePath = FullPath(exe);
+    spec.arguments = arguments;
+    gazeora::CaptureClient client;
+    gazeora::LaunchedGame launched;
+    std::wstring error;
+    if (!gazeora::LaunchGameWithHook(spec, gazeora::HookDllPathNextToExe(), client, launched,
+                                     error)) {
+        fwprintf(stderr, L"launch failed: %ls\n", error.c_str());
+        return 1;
+    }
+    wprintf(L"Launched %ls (PID %lu) with capture\n", spec.exePath.c_str(), launched.pid);
+    return RunCaptureLoop(client, launched.process, options);
 }
 
 bool LoadLibraryOrReport(gazeora::GameLibrary& library) {
@@ -434,14 +509,29 @@ int wmain(int argc, wchar_t** argv) {
     } else if (command == L"launch" && !args.empty()) {
         bool capture = args.size() > 1 && args[1] == L"--capture";
         return CmdLaunch(args[0], capture);
-    } else if (command == L"attach" && args.size() == 1) {
-        return CmdAttach(args[0]);
+    } else if ((command == L"attach" || command == L"run") && !args.empty()) {
+        CaptureOptions options;
+        std::wstring arguments;
+        for (size_t i = 1; i < args.size(); ++i) {
+            if (args[i] == L"--depth") {
+                options.depth = true;
+            } else if (args[i] == L"--save-after" && i + 1 < args.size()) {
+                options.saveAfter = _wtof(args[++i].c_str());
+            } else if (command == L"run" && args[i] == L"--args" && i + 1 < args.size()) {
+                arguments = args[++i];
+            } else {
+                PrintUsage(argv[0]);
+                return 1;
+            }
+        }
+        return command == L"run" ? CmdRun(args[0], arguments, options)
+                                 : CmdAttach(args[0], options);
     } else if (command == L"help" || command == L"--help" || command == L"-h") {
         PrintUsage(argv[0]);
         return 0;
     } else if (args.empty() && command[0] != L'-') {
         // The original interface: GazeoraCLI <pid | process.exe>.
-        return CmdAttach(command);
+        return CmdAttach(command, {});
     }
     PrintUsage(argv[0]);
     return 1;

@@ -31,24 +31,25 @@ namespace gazeora::app {
 void App::DrawSidebar() {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kSidebarBg);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(14), S(24)));
-    ImGui::BeginChild("##sidebar", ImVec2(S(236), 0), ImGuiChildFlags_AlwaysUseWindowPadding,
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(12), S(20)));
+    ImGui::BeginChild("##sidebar", ImVec2(S(212), 0), ImGuiChildFlags_AlwaysUseWindowPadding,
                       ImGuiWindowFlags_NoScrollbar);
     ImGui::PopStyleVar(2);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, S(4)));
     ImDrawList* draw = ImGui::GetWindowDrawList();
 
     // Logo: the exe's own icon, then the name.
-    ImVec2 pos = ImGui::GetCursorScreenPos() + ImVec2(S(8), -S(4));
+    ImVec2 pos = ImGui::GetCursorScreenPos() + ImVec2(S(8), 0);
     wchar_t exePath[MAX_PATH];
     GetModuleFileNameW(nullptr, exePath, MAX_PATH);
     const Texture& logo = m_textures.Icon(exePath);
     if (logo) {
-        draw->AddImage(ImTextureID(logo.Id()), pos, pos + ImVec2(S(32), S(32)));
+        draw->AddImage(ImTextureID(logo.Id()), pos, pos + ImVec2(S(28), S(28)));
     }
-    draw->AddText(m_fonts.heading, m_fonts.heading->FontSize, pos + ImVec2(S(42), S(3)), kText,
+    draw->AddText(m_fonts.heading, m_fonts.heading->FontSize,
+                  pos + ImVec2(S(38), (S(28) - m_fonts.heading->FontSize) * 0.5f - S(1)), kText,
                   "GAZEORA");
-    ImGui::Dummy(ImVec2(0, S(52)));
+    ImGui::Dummy(ImVec2(0, S(44)));
 
     struct NavItem {
         const char* icon;
@@ -64,7 +65,7 @@ void App::DrawSidebar() {
     for (const NavItem& item : items) {
         bool selected = m_page == item.page || (item.page == Page::Library && m_page == Page::Details);
         ImVec2 p = ImGui::GetCursorScreenPos();
-        ImVec2 size(width, S(42));
+        ImVec2 size(width, S(38));
         ImGui::PushID(item.label);
         if (ImGui::InvisibleButton("##nav", size)) {
             m_page = item.page;
@@ -77,15 +78,15 @@ void App::DrawSidebar() {
                                 S(8));
         }
         if (selected) {
-            draw->AddRectFilled(p + ImVec2(0, S(11)), p + ImVec2(S(3), size.y - S(11)), kAccent,
+            draw->AddRectFilled(p + ImVec2(0, S(10)), p + ImVec2(S(3), size.y - S(10)), kAccent,
                                 S(2));
         }
         ImU32 color = selected ? kText : (hovered ? kText : kTextDim);
         float textY = p.y + (size.y - m_fonts.body->FontSize) * 0.5f;
-        draw->AddText(m_fonts.body, m_fonts.body->FontSize, ImVec2(p.x + S(16), textY),
+        draw->AddText(m_fonts.body, m_fonts.body->FontSize, ImVec2(p.x + S(14), textY),
                       selected ? kAccent : color, item.icon);
         draw->AddText(selected ? m_fonts.bold : m_fonts.body, m_fonts.body->FontSize,
-                      ImVec2(p.x + S(48), textY), color, item.label);
+                      ImVec2(p.x + S(42), textY), color, item.label);
     }
 
     // "Now playing" panel at the bottom while a game launched from here is running.
@@ -98,8 +99,8 @@ void App::DrawSidebar() {
     if (playing) {
         const Game* game = m_library.Find(playing->GameId());
         GameSession::Stats stats = playing->Snapshot();
-        float panelHeight = S(playing->Capture() ? 118 : 96);
-        float bottom = ImGui::GetWindowPos().y + ImGui::GetWindowHeight() - S(18);
+        float panelHeight = S(playing->Capture() ? 100 : 80);
+        float bottom = ImGui::GetWindowPos().y + ImGui::GetWindowHeight() - S(16);
         ImVec2 p(ImGui::GetCursorScreenPos().x, bottom - panelHeight);
         ImVec2 size(width, panelHeight);
         ImGui::SetCursorScreenPos(p);
@@ -109,31 +110,31 @@ void App::DrawSidebar() {
         bool hovered = ImGui::IsItemHovered();
         draw->AddRectFilled(p, p + size, hovered ? kCardHover : kCardBg, S(8));
 
-        ImVec2 inner = p + ImVec2(S(14), S(12));
+        ImVec2 inner = p + ImVec2(S(12), S(10));
         bool launching = stats.state != GameSession::State::Running;
-        draw->AddCircleFilled(inner + ImVec2(S(4), S(8)), S(4),
+        draw->AddCircleFilled(inner + ImVec2(S(4), S(7)), S(3.5f),
                               launching ? kWarning : kAccent);
         draw->AddText(m_fonts.small, m_fonts.small->FontSize, inner + ImVec2(S(14), 0),
                       launching ? kWarning : kAccent,
                       launching ? SessionLabel(stats.state) : "NOW PLAYING");
-        inner.y += S(22);
+        inner.y += S(20);
         TextEllipsis(draw, m_fonts.bold, inner, kText, game ? U8(game->name) : "Game",
-                     size.x - S(28));
-        inner.y += S(24);
+                     size.x - S(24));
+        inner.y += S(20);
         draw->AddText(m_fonts.small, m_fonts.small->FontSize, inner, kTextDim,
                       (ICON_CLOCK "  " + ClockText(stats.elapsedSeconds)).c_str());
         if (playing->Capture()) {
-            inner.y += S(20);
+            inner.y += S(18);
             char text[64];
             if (launching) {
-                snprintf(text, sizeof(text), ICON_CAPTURE "  Waiting for the game");
+                snprintf(text, sizeof(text), ICON_CAPTURE "  Waiting...");
             } else if (stats.fps > 0.0) {
                 snprintf(text, sizeof(text), ICON_CAPTURE "  %.0f fps  %ux%u", stats.fps,
                          stats.width, stats.height);
             } else {
                 snprintf(text, sizeof(text), ICON_CAPTURE "  %s", HookStateText(stats.hookState));
             }
-            TextEllipsis(draw, m_fonts.small, inner, kTextDim, text, size.x - S(28));
+            TextEllipsis(draw, m_fonts.small, inner, kTextDim, text, size.x - S(24));
         }
     }
 
@@ -148,10 +149,10 @@ void App::DrawToasts() {
     if (m_pendingRemoveId != 0 && !ImGui::IsPopupOpen("Remove game?")) {
         ImGui::OpenPopup("Remove game?");
     }
-    ImGui::SetNextWindowSize(ImVec2(S(420), 0));
+    ImGui::SetNextWindowSize(ImVec2(S(380), 0));
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always,
                             ImVec2(0.5f, 0.5f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(24), S(20)));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(20), S(18)));
     if (ImGui::BeginPopupModal("Remove game?", nullptr,
                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                    ImGuiWindowFlags_NoTitleBar)) {
@@ -161,21 +162,21 @@ void App::DrawToasts() {
         ImGui::PopFont();
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::Text("%s will be removed from Gazeora. The game itself stays installed.",
+        ImGui::Text("%s will be removed from Gazeora. The game stays installed.",
                     game ? U8(game->name).c_str() : "This game");
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
         ImGui::Dummy(ImVec2(0, S(6)));
-        float buttonWidth = S(110);
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - S(24) - buttonWidth * 2 - S(10));
-        if (FilledButton("Cancel##remove", ImVec2(buttonWidth, S(38)), kSecondary,
+        float buttonWidth = S(100);
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - S(20) - buttonWidth * 2 - S(8));
+        if (FilledButton("Cancel##remove", ImVec2(buttonWidth, S(34)), kSecondary,
                          kSecondaryHover, kText, m_fonts.bold, S(6)) ||
             ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             m_pendingRemoveId = 0;
             ImGui::CloseCurrentPopup();
         }
-        ImGui::SameLine(0.0f, S(10));
-        if (FilledButton("Remove##remove", ImVec2(buttonWidth, S(38)), kDanger,
+        ImGui::SameLine(0.0f, S(8));
+        if (FilledButton("Remove##remove", ImVec2(buttonWidth, S(34)), kDanger,
                          kDangerHover, IM_COL32_WHITE, m_fonts.bold,
                          S(6))) {
             uint32_t id = m_pendingRemoveId;
@@ -194,25 +195,25 @@ void App::DrawToasts() {
                    m_toasts.end());
     ImDrawList* draw = ImGui::GetForegroundDrawList();
     ImVec2 corner = ImGui::GetMainViewport()->WorkPos + ImGui::GetMainViewport()->WorkSize -
-                    ImVec2(S(24), S(24));
-    float maxTextWidth = S(380);
+                    ImVec2(S(20), S(20));
+    float maxTextWidth = S(340);
     for (auto it = m_toasts.rbegin(); it != m_toasts.rend(); ++it) {
         float fade = float(std::min(1.0, (it->expiresAt - now) / 0.4));
         ImVec2 textSize = m_fonts.body->CalcTextSizeA(m_fonts.body->FontSize, FLT_MAX,
                                                       maxTextWidth, it->text.c_str());
-        ImVec2 size = textSize + ImVec2(S(56), S(28));
+        ImVec2 size = textSize + ImVec2(S(50), S(22));
         ImVec2 pos = corner - size;
         draw->AddRectFilled(pos, pos + size, WithAlpha(kCardHover, 0.97f * fade),
                             S(8));
         draw->AddRectFilled(pos, pos + ImVec2(S(4), size.y),
                             WithAlpha(it->error ? kDanger : kAccent, fade), S(8),
                             ImDrawFlags_RoundCornersLeft);
-        draw->AddText(m_fonts.body, m_fonts.body->FontSize, pos + ImVec2(S(18), S(14)),
+        draw->AddText(m_fonts.body, m_fonts.body->FontSize, pos + ImVec2(S(16), S(11)),
                       WithAlpha(it->error ? kDanger : kAccent, fade),
                       it->error ? ICON_WARNING : ICON_CHECK);
-        draw->AddText(m_fonts.body, m_fonts.body->FontSize, pos + ImVec2(S(42), S(14)),
+        draw->AddText(m_fonts.body, m_fonts.body->FontSize, pos + ImVec2(S(38), S(11)),
                       WithAlpha(kText, fade), it->text.c_str(), nullptr, maxTextWidth);
-        corner.y -= size.y + S(10);
+        corner.y -= size.y + S(8);
     }
 }
 
