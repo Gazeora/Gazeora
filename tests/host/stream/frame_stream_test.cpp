@@ -755,5 +755,16 @@ TEST_F(FrameStreamTest, AnswersTheAndroidAppsSearch) {
     closesocket(app);
 }
 
+TEST(FrameStreamServerTest, KeepsTheFrameRateInRange) {
+    FrameStreamServer server;
+    EXPECT_EQ(server.FrameRate(), FrameStreamServer::kDefaultFrameRate);
+    server.SetFrameRate(30);
+    EXPECT_EQ(server.FrameRate(), 30u);
+    server.SetFrameRate(0);
+    EXPECT_EQ(server.FrameRate(), FrameStreamServer::kMinFrameRate);
+    server.SetFrameRate(1000);
+    EXPECT_EQ(server.FrameRate(), FrameStreamServer::kMaxFrameRate);
+}
+
 }  // namespace
 }  // namespace gazeora

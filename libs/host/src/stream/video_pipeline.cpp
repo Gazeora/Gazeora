@@ -23,7 +23,9 @@ bool VideoPipeline::Prepare(const Config& config, uint32_t width, uint32_t heigh
     }
     bool refused = device == m_refusedDevice.Get() && config.codec == m_refusedCodec;
     ID3D11Device* wanted = refused ? nullptr : device;
-    if (!m_encoder->Matches(config.codec, width, height, wanted)) {
+    const VideoEncoder::Settings& current = m_encoder->Current();
+    bool sameRate = current.fps == config.fps && current.keyInterval == config.keyInterval;
+    if (!sameRate || !m_encoder->Matches(config.codec, width, height, wanted)) {
         if (!Open(config, width, height, wanted, error)) {
             if (!wanted) {
                 return false;

@@ -37,8 +37,8 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   or Intel Quick Sync). H.264 falls back to Microsoft's software encoder; H.265 to an installed
   software one, if any, and otherwise isn't offered.
 - **Low latency.** About 4 to 25 ms from capture to arrival on the local network, depending on
-  frame size. Frames above 1080p are scaled down on the GPU before read-back, and the stream is
-  paced to a steady 30 fps.
+  frame size. Frames stay on the GPU from capture to the encoder, packets go out from a thread
+  of their own while the next frame encodes, and the stream runs at a steady 60 fps (or 30).
 - **Built for Wi-Fi.** Frames are cut into small slices and packets are paced instead of burst,
   so a lost packet smears a strip of the picture briefly instead of freezing it. The bitrate adapts
   to the loss players report.

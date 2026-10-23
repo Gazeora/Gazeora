@@ -123,6 +123,16 @@ public:
     void SetMaxBitrate(uint32_t bitrate) { m_maxBitrate = bitrate; }
     uint32_t MaxBitrate() const { return m_maxBitrate; }
 
+    // Frames streamed a second, a key frame among them every second. 60 halves the wait for
+    // the next frame and moves smoother than 30, from the same bitrate: each frame gets half
+    // the bits. A change opens a new encoder, so players get a key frame; it applies from the
+    // next frame. Capture follows it (GameSession).
+    static constexpr uint32_t kDefaultFrameRate = 60;
+    static constexpr uint32_t kMinFrameRate = 10;
+    static constexpr uint32_t kMaxFrameRate = 120;
+    void SetFrameRate(uint32_t fps);
+    uint32_t FrameRate() const { return m_frameRate; }
+
     // The layout frames should be pushed in. The server only stores it: whoever reads the
     // frames back applies it (TextureReader::SetVrLayout), once per frame.
     void SetVrLayout(const VrLayout& vr);
@@ -253,6 +263,7 @@ private:
     std::atomic<bool> m_keyFrameWanted{false};  // a player just started: send one now
     std::atomic<VideoCodec> m_requestedCodec{VideoCodec::H264};
     std::atomic<uint32_t> m_maxBitrate{kDefaultMaxBitrate};
+    std::atomic<uint32_t> m_frameRate{kDefaultFrameRate};
     std::atomic<bool> m_h265Available{false};
     // Bumped when the codec players get changes; their connections close on seeing it.
     std::atomic<uint32_t> m_codecGeneration{0};

@@ -55,6 +55,7 @@ App::App(HWND hwnd, ID3D11Device* device, float dpiScale)
     m_stream.SetLogFile(StreamSettings::LogPath());
     m_stream.SetCodec(m_settings.LoadCodec());
     m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());
+    m_stream.SetFrameRate(m_settings.LoadFrameRate());
     m_stream.SetProtocol(m_settings.LoadProtocol());
     m_stream.SetPointerSink(&m_remoteTouches);
     StartStream();

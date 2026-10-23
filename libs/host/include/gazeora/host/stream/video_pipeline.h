@@ -47,9 +47,9 @@ public:
 
     explicit VideoPipeline(EncoderFactory factory = CreateVideoEncoder);
 
-    // Opens (or reopens) the encoder when the codec, size or device changed, and applies a
-    // new bitrate. `device` is the one the pictures' textures are on, null for pictures in
-    // memory. `reopened` tells whether a new encoder was opened. False with `error` set if no
+    // Opens (or reopens) the encoder when the codec, size, frame rate or device changed, and
+    // applies a new bitrate. `device` is the one the pictures' textures are on, null for
+    // pictures in memory. `reopened` tells whether a new encoder was opened. False with `error` set if no
     // encoder could be opened.
     bool Prepare(const Config& config, uint32_t width, uint32_t height, bool& reopened,
                  std::wstring& error, ID3D11Device* device = nullptr);

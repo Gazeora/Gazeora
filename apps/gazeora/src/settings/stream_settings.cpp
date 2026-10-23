@@ -89,6 +89,17 @@ void StreamSettings::SaveMaxBitrate(uint32_t bitrate) const {
                                std::to_wstring(bitrate / 1000000).c_str(), m_path.c_str());
 }
 
+uint32_t StreamSettings::LoadFrameRate() const {
+    UINT fps = GetPrivateProfileIntW(L"stream", L"fps", 0, m_path.c_str());
+    return fps ? std::clamp(fps, FrameStreamServer::kMinFrameRate, FrameStreamServer::kMaxFrameRate)
+               : FrameStreamServer::kDefaultFrameRate;
+}
+
+void StreamSettings::SaveFrameRate(uint32_t fps) const {
+    EnsureFolder();
+    WritePrivateProfileStringW(L"stream", L"fps", std::to_wstring(fps).c_str(), m_path.c_str());
+}
+
 StreamProtocol StreamSettings::LoadProtocol() const {
     wchar_t text[32];
     GetPrivateProfileStringW(L"stream", L"protocol", L"", text, 32, m_path.c_str());

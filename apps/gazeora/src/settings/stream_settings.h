@@ -26,6 +26,9 @@ public:
     // The bitrate at full quality for H.264, bits/s (FrameStreamServer::SetMaxBitrate).
     uint32_t LoadMaxBitrate() const;
     void SaveMaxBitrate(uint32_t bitrate) const;
+    // Frames a second (FrameStreamServer::SetFrameRate); 60 unless saved otherwise.
+    uint32_t LoadFrameRate() const;
+    void SaveFrameRate(uint32_t fps) const;
     void SaveCodec(VideoCodec codec) const;
     // A stream_protocol.h id; RTSP over TCP by default.
     StreamProtocol LoadProtocol() const;

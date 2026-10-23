@@ -1,5 +1,5 @@
 // The stream server: the hand-off from the capture thread to the encode thread, the pacing of
-// UDP packets, and the whole server end to end, from PushFrame to a player on loopback
+// UDP packets on the send thread, and the whole server end to end at 30 and 60 fps, from PushFrame to a player on loopback
 // receiving the frame's packets.
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -203,10 +203,13 @@ private:
 // Pushes 1080p frames at 30 fps into a server with one UDP player on loopback, and times
 // each frame from PushFrame to its first and its last (marker) packet arriving. RTP
 // timestamps are the push time on the 90 kHz clock, so frames are matched by them.
-void BenchServer(VideoCodec codec) {
+void BenchServer(VideoCodec codec, uint32_t fps) {
     const Size size = k1080p;
-    constexpr int kFrames = 150;
-    constexpr int kSkip = 10;  // the first frames open the encoder and send a key frame
+    constexpr int kFrames = 140;  // counted
+    // Counting starts this many frames after the first one arrives: before, frames replace each
+    // other while the GPU encoder opens (over a second), then comes the key frame.
+    constexpr int kSkip = 10;
+    constexpr int kMaxUncounted = 600;
     FrameStreamServer server;
     server.SetProtocol(StreamProtocol::RtspUdp);  // the player sets up RTP over UDP
     server.SetDiscoveryPort(0);                    // any free port, beside a running Gazeora
@@ -217,6 +220,7 @@ void BenchServer(VideoCodec codec) {
         return;
     }
     server.SetCodec(codec);
+    server.SetFrameRate(fps);
     UdpPlayer player;
     std::string playError;
     ASSERT_TRUE(player.Play(server.Port(), playError)) << playError;
@@ -229,6 +233,7 @@ void BenchServer(VideoCodec codec) {
     std::atomic<bool> stop{false};
     std::atomic<uint32_t> firstCountedTimestamp{0};
     std::atomic<bool> counting{false};
+    std::atomic<bool> flowing{false};
     std::vector<double> first, last;
     std::vector<size_t> packetCounts;
     std::thread receiver([&] {
@@ -239,6 +244,7 @@ void BenchServer(VideoCodec codec) {
         while (!stop) {
             int got = recv(player.Rtp(), packet, sizeof(packet), 0);
             if (got < 12) continue;
+            flowing = true;
             uint32_t now = uint32_t(RtpClock64());
             const auto* p = reinterpret_cast<const uint8_t*>(packet);
             uint32_t timestamp = uint32_t(p[4]) << 24 | p[5] << 16 | p[6] << 8 | p[7];
@@ -263,13 +269,15 @@ void BenchServer(VideoCodec codec) {
     Pacer pacer;
     std::vector<uint8_t> frame;
     double next = QpcSeconds();
-    for (int i = 0; i < kFrames; ++i) {
-        pacer.SleepUntil(next += 1.0 / 30);
+    int sinceFlowing = 0, counted = 0;
+    for (int i = 0; counted < kFrames && i < kMaxUncounted + kFrames; ++i) {
+        pacer.SleepUntil(next += 1.0 / fps);
         frame = scenes[size_t(i) % scenes.size()];
-        if (i == kSkip) {
+        if (flowing && sinceFlowing++ == kSkip) {
             firstCountedTimestamp = uint32_t(RtpClock64());
             counting = true;
         }
+        counted += counting;
         server.PushFrame(size.width, size.height, frame);
     }
     Sleep(300);
@@ -278,9 +286,10 @@ void BenchServer(VideoCodec codec) {
 
     size_t packets = 0;
     for (size_t n : packetCounts) packets += n;
-    std::string label = std::string(CodecName(codec)) + " " + size.name;
+    std::string label = std::string(CodecName(codec)) + " " + size.name + " " +
+                        std::to_string(fps) + " fps";
     PrintNote(label, Narrow(server.EncoderName()) + ", " + std::to_string(last.size()) + " of " +
-                         std::to_string(kFrames - kSkip) + " frames arrived, " +
+                         std::to_string(counted) + " frames arrived, " +
                          std::to_string(packetCounts.empty() ? 0 : packets / packetCounts.size()) +
                          " packets each");
     Print("  PushFrame to first packet", Stats::Of(first));
@@ -290,8 +299,10 @@ void BenchServer(VideoCodec codec) {
 }
 
 TEST(Stream, ServerEndToEndOverUdp) {
-    PrintHeader("FrameStreamServer, 30 fps, one UDP player on loopback");
-    for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) BenchServer(codec);
+    PrintHeader("FrameStreamServer, one UDP player on loopback");
+    for (uint32_t fps : {30u, 60u}) {
+        for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) BenchServer(codec, fps);
+    }
 }
 
 }  // namespace

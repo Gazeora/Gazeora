@@ -33,11 +33,10 @@ namespace {
 // H.265 gets about the same picture from 70% of the bits. The rest is saved rather than
 // spent on detail: fewer packets per frame means fewer frames hit by a loss on Wi-Fi.
 constexpr uint32_t kH265BitratePercent = 70;
-constexpr uint32_t kFrameRate = 30;
-// A key frame every second: what a lost packet smears is repaired by then, and a player
-// that joins without one still starts within a second. More often costs too much picture
-// quality at these bitrates.
-constexpr uint32_t kKeyFrameInterval = 30;
+// A key frame every second (the frame rate's worth of frames): what a lost packet smears is
+// repaired by then, and a player that joins without one still starts within a second. More
+// often costs too much picture quality at these bitrates.
+constexpr uint32_t kKeyFramesPerSecond = 1;
 // Interleaved players: a frame is skipped while this much is still queued for the player,
 // about a fifth of a second at the default full bitrate. The socket's own buffer is kept small
 // too, so what's queued stays where it can be counted.
@@ -49,11 +48,10 @@ constexpr uint64_t kQuietPlayerMs = 12000;
 // RTP packets stay under a typical 1500-byte Ethernet / Wi-Fi MTU.
 constexpr size_t kMaxPacketSize = 1400;
 constexpr size_t kRtpHeaderSize = 12;
-// Without a live frame for this long, the idle frame is streamed, kIdleIntervalMs apart:
-// the full frame rate, as players (VLC at least) drop frames as late when a stream runs much
-// slower than 30 fps. A repeated still picture costs next to nothing.
+// Without a live frame for this long, the idle frame is streamed at the full frame rate, as
+// players (VLC at least) drop frames as late when a stream runs much slower than it started.
+// A repeated still picture costs next to nothing.
 constexpr uint64_t kLiveTimeoutMs = 1000;
-constexpr uint64_t kIdleIntervalMs = 1000 / kFrameRate;
 // How long a DESCRIBE waits for the encoder's first parameter sets. Players that can't take
 // them in-band (ExoPlayer) need them in the SDP.
 constexpr auto kParameterSetsWait = std::chrono::seconds(2);
@@ -331,6 +329,10 @@ void FrameStreamServer::SetOverlay(const OverlaySettings& overlay) {
 OverlaySettings FrameStreamServer::GetOverlay() {
     std::lock_guard<std::mutex> lock(m_overlayMutex);
     return m_overlay;
+}
+
+void FrameStreamServer::SetFrameRate(uint32_t fps) {
+    m_frameRate = std::clamp(fps, kMinFrameRate, kMaxFrameRate);
 }
 
 void FrameStreamServer::SetVrLayout(const VrLayout& vr) {
@@ -856,9 +858,9 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
                                       bool send) {
     VideoPipeline::Config config;
     config.codec = Codec();
-    config.fps = kFrameRate;
+    config.fps = FrameRate();
     config.bitrate = BitrateAt(m_bitrate.Step());
-    config.keyInterval = kKeyFrameInterval;
+    config.keyInterval = config.fps / kKeyFramesPerSecond;
     config.ssrc = m_ssrc;
     config.maxPacketSize = kMaxPacketSize;
     // Encoders take even sizes only.
@@ -939,9 +941,10 @@ void FrameStreamServer::EncodeLoop() {
 
     while (true) {
         // Until a frame arrives or the next idle frame is due.
+        const uint64_t idleIntervalMs = 1000 / FrameRate();
         uint64_t clockMs = RtpClock64() / 90;
         uint64_t waitMs = nextIdleMs > clockMs ? nextIdleMs - clockMs : 0;
-        bool gotLive = m_mailbox.Take(DWORD(std::min(waitMs, kIdleIntervalMs)), live, idle);
+        bool gotLive = m_mailbox.Take(DWORD(std::min(waitMs, idleIntervalMs)), live, idle);
         if (m_stopping) {
             break;
         }
@@ -963,7 +966,7 @@ void FrameStreamServer::EncodeLoop() {
         if (gotLive) {
             source = &live;
             lastLiveMs = now;
-            nextIdleMs = clockMs + kIdleIntervalMs;
+            nextIdleMs = clockMs + idleIntervalMs;
         } else if (!idle.bgra.empty() && (m_viewers > 0 || m_parameterSetsWanted) &&
                    now - lastLiveMs >= kLiveTimeoutMs) {
             if (clockMs >= nextIdleMs) {
@@ -971,11 +974,11 @@ void FrameStreamServer::EncodeLoop() {
                 idle.clock = RtpClock64();
                 // One interval on from when this one was due, so the time spent encoding
                 // doesn't add up; more than an interval behind (after a pause), from now.
-                nextIdleMs = clockMs - nextIdleMs > kIdleIntervalMs ? clockMs + kIdleIntervalMs
-                                                                    : nextIdleMs + kIdleIntervalMs;
+                nextIdleMs = clockMs - nextIdleMs > idleIntervalMs ? clockMs + idleIntervalMs
+                                                                   : nextIdleMs + idleIntervalMs;
             }
         } else {
-            nextIdleMs = clockMs + kIdleIntervalMs;  // nothing to repeat: don't spin
+            nextIdleMs = clockMs + idleIntervalMs;  // nothing to repeat: don't spin
         }
         if (source && source->Complete()) {
             // The idle frame with no one watching is only for a DESCRIBE's parameter sets: it

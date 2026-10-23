@@ -121,6 +121,7 @@ void App::DrawSettings() {
     if (m_stream.Running()) {
         DrawCodecChoice();
         DrawQualityChoice();
+        DrawFrameRateChoice();
         FieldLabel(m_fonts.small, "When no game is running, stream");
         static const char* kIdlePictures[] = {"Gazeora (this window)", "The Gazeora logo"};
         int idle = int(m_idlePicture);
@@ -348,6 +349,40 @@ void App::DrawQualityChoice() {
                "uses 70% of it for about the same picture. While the phone reports lost "
                "packets, the stream steps down to as little as a quarter of it, and back up "
                "once the link is clean. Applies at once.",
+               S(380));
+}
+
+void App::DrawFrameRateChoice() {
+    struct Choice {
+        uint32_t fps;
+        const char* name;
+    };
+    static const Choice kChoices[] = {
+        {30, "30 fps - the most detail in each frame"},
+        {60, "60 fps - smoother, and less delay"},
+    };
+    uint32_t current = m_stream.FrameRate();
+    char custom[32];
+    snprintf(custom, sizeof(custom), "Custom - %u fps", current);
+    const char* shown = custom;
+    for (const Choice& choice : kChoices) {
+        if (choice.fps == current) shown = choice.name;
+    }
+    FieldLabel(m_fonts.small, "Frame rate");
+    ImGui::SetNextItemWidth(-FLT_MIN);
+    if (ImGui::BeginCombo("##framerate", shown)) {
+        for (const Choice& choice : kChoices) {
+            if (ImGui::Selectable(choice.name, choice.fps == current)) {
+                m_stream.SetFrameRate(choice.fps);
+                m_settings.SaveFrameRate(choice.fps);
+            }
+        }
+        ImGui::EndCombo();
+    }
+    HelpMarker("Frames streamed a second. 60 halves the wait for the next frame and moves "
+               "smoother; from the same stream quality each frame gets half the bits, so pick "
+               "a higher quality with it if the Wi-Fi allows. Games drawing fewer frames have "
+               "their last one sent again. Applies at once, with a key frame.",
                S(380));
 }
 

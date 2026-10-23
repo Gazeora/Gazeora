@@ -39,7 +39,7 @@ cd build\bin
 | `Capture` | The frame transport in one process; `TextureReader` at full size, scaled, 10-bit and VR; BMP screenshots; the real hook in `gazeora_testapp.exe` for each graphics API (opens a window per API) |
 | `Encode` | Each codec on the hardware and the software encoder: time per call, input-to-output latency, frame sizes, open time; the whole `VideoPipeline`; a 1080p game frame to packets, read back or kept on the GPU (time and CPU per frame) |
 | `Rtp`, `Rtcp`, `Rtsp`, `Bitrate` | Packetizing and depacketizing both codecs, parameter sets, RTCP reports, RTSP messages, the bitrate controller |
-| `Stream` | The `FrameMailbox` hand-off, `PacketPacer` timing, and the whole server: `PushFrame` to a loopback UDP player receiving the frame |
+| `Stream` | The `FrameMailbox` hand-off, `PacketSendQueue` pacing against its `PacingPlan`, and the whole server at 30 and 60 fps: `PushFrame` to a loopback UDP player receiving the frame |
 | `Library` | Loading, saving and searching a 500-game library |
 
 ## Project layout

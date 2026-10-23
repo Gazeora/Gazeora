@@ -100,6 +100,12 @@ motion sharp. Balanced (10 Mbit/s) suits weak or busy Wi-Fi, High (20) good Wi-F
 (35) 5 GHz Wi-Fi close to the router, or USB. It's saved as `[stream] max_bitrate_mbps` and
 applies at once.
 
+**Frame rate** next to it picks 60 fps (the default) or 30. At 60 the next frame is never more
+than 17 ms away and motion is smoother; from the same stream quality each frame gets half the
+bits, so pick a higher quality with it if the Wi-Fi allows. 30 puts the most detail in each
+frame. It's saved as `[stream] fps` and applies at once: the encoder starts over with a key
+frame. Games drawing fewer frames have their last one sent again.
+
 | | H.264 | H.265 |
 |---|---|---|
 | Bitrate at full quality | The stream quality picked: 10, 20 (default) or 35 Mbit/s | 70% of it: 7, 14 or 24.5 Mbit/s |

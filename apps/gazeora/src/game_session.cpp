@@ -20,9 +20,6 @@ constexpr int kMaxHandOffs = 4;
 // and graphics runtime) before injecting anyway.
 constexpr DWORD kWaitForReadyMs = 30000;
 
-// Frames handed to the stream server per second, at most; more is a lot for Wi-Fi.
-constexpr int kStreamMaxFps = 30;
-
 }  // namespace
 
 GameSession::GameSession(uint32_t gameId, const LaunchSpec& spec, bool capture,
@@ -162,7 +159,6 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
     }
     LONGLONG nextStream = 0;     // QPC time the next streamed frame is due
     LONGLONG lastGameFrame = 0;  // QPC time of the game's latest frame
-    const LONGLONG interval = m_qpcFreq / kStreamMaxFps;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_stats.fps = 0.0;
@@ -170,6 +166,9 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
     }
 
     while (!m_stop && game.Running()) {
+        // Frames go to the stream at its frame rate, at most; it may change while playing.
+        const LONGLONG interval =
+            m_qpcFreq / (m_stream ? m_stream->FrameRate() : FrameStreamServer::kDefaultFrameRate);
         // Wait for the game's next frame, but no later than the end of the current slot, when
         // the last frame may have to go out again.
         QueryPerformanceCounter(&now);
@@ -204,9 +203,9 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
             lastGameFrame = now.QuadPart;
         }
         // Frames go out on a fixed schedule, taking the first game frame within a quarter
-        // interval of each slot. "An interval since the last one" would skip a 60 fps
-        // game's frames that land a hair early and drop the stream to 20 fps.
-        // A game below 30 fps, or one that stalls for a moment, leaves slots empty; the last
+        // interval of each slot. "An interval since the last one" would skip the frames of a
+        // game at the stream's rate that land a hair early, and drop the stream to 2/3 of it.
+        // A game below the stream's frame rate, or one that stalls, leaves slots empty; the last
         // frame goes out again to fill them, as players such as VLC drop frames as late when a
         // stream runs slow; the stream encodes the picture it holds again, nothing is read
         // back. After a second without game frames the server shows the logo.

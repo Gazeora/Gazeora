@@ -103,6 +103,7 @@ private:
     void DrawProtocolChoice();  // the protocol setting, in the frame stream card
     void DrawCodecChoice();     // the video codec setting, in the frame stream card
     void DrawQualityChoice();   // the stream quality (bitrate) setting, beside it
+    void DrawFrameRateChoice(); // the frame rate setting, beside those
     void DrawUsbDriverButton();  // the USB driver install, in the frame stream card
     void DrawOverlayCard(float width);  // the streaming details drawn into the frames
     void DrawVrCard(float width);

@@ -130,6 +130,19 @@ TEST_F(VideoPipelineTest, OpensOnceAndOnlyReopensForANewSize) {
     EXPECT_EQ(calls.opens, 2);
 }
 
+TEST_F(VideoPipelineTest, ReopensForANewFrameRate) {
+    bool reopened = false;
+    std::wstring error;
+    ASSERT_TRUE(pipeline.Prepare(config, 64, 32, reopened, error));
+    config.fps = 60;
+    config.keyInterval = 60;
+    ASSERT_TRUE(pipeline.Prepare(config, 64, 32, reopened, error));
+    EXPECT_TRUE(reopened);
+    ASSERT_TRUE(pipeline.Prepare(config, 64, 32, reopened, error));
+    EXPECT_FALSE(reopened);
+    EXPECT_EQ(calls.opens, 2);
+}
+
 TEST_F(VideoPipelineTest, AppliesNewBitratesWithoutReopening) {
     bool reopened = false;
     std::wstring error;
