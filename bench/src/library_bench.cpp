@@ -6,7 +6,7 @@
 #include <string>
 
 #include "bench_util.h"
-#include "gazeora/library/game_library.h"
+#include "gazeora/library/game_library_services.h"
 
 namespace gazeora::bench {
 namespace {
@@ -17,7 +17,8 @@ TEST(Library, LoadSaveAndLookups) {
     GetTempPathW(MAX_PATH, dir);
     std::wstring path = std::wstring(dir) + L"gazeora_bench_library_" +
                         std::to_wstring(GetCurrentProcessId()) + L".json";
-    GameLibrary library(path);
+    GameLibraryServices services(path);
+    GameLibrary& library = services.Library();
     for (int i = 0; i < kGames; ++i) {
         Game game;
         game.name = L"Game number " + std::to_wstring(i);
@@ -29,7 +30,8 @@ TEST(Library, LoadSaveAndLookups) {
     PrintHeader("GameLibrary, 500 games");
     std::wstring error;
     Print("Save", Measure(20, [&] { EXPECT_TRUE(library.Save(error)) << Narrow(error); }));
-    GameLibrary loaded(path);
+    GameLibraryServices loadedServices(path);
+    GameLibrary& loaded = loadedServices.Library();
     Print("Load", Measure(20, [&] { EXPECT_TRUE(loaded.Load(error)) << Narrow(error); }));
     EXPECT_EQ(loaded.Games().size(), size_t(kGames));
     Print("ChangedOnDisk", Measure(200, [&] { EXPECT_FALSE(loaded.ChangedOnDisk()); }, 3, 10));
@@ -42,7 +44,7 @@ TEST(Library, LoadSaveAndLookups) {
     // Auto launch looks for a Steam library around the exe, on disk.
     const Game& game = loaded.Games().back();
     Print("ToLaunchSpec (Auto: Steam lookup)", Measure(50, [&] {
-              LaunchSpec spec = ToLaunchSpec(game);
+              LaunchSpec spec = loadedServices.LaunchSpecs().Create(game);
               Consume(spec.exePath.data());
           }));
     DeleteFileW(path.c_str());
