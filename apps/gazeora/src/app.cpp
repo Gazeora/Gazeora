@@ -13,6 +13,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/common/shared.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
@@ -93,7 +94,7 @@ void App::SetupImGui() {
     GetWindowsDirectoryW(windows, MAX_PATH);
     std::string fonts = U8(windows) + "\\Fonts\\";
     auto exists = [](const std::string& path) {
-        return GetFileAttributesW(Utf8ToWide(path).c_str()) != INVALID_FILE_ATTRIBUTES;
+        return GetFileAttributesW(Utf8::ToWide(path).c_str()) != INVALID_FILE_ATTRIBUTES;
     };
     // Windows 11 ships Segoe Fluent Icons; Windows 10 has the MDL2 assets with the same codes.
     std::string iconFont = fonts + "SegoeIcons.ttf";

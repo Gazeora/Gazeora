@@ -14,6 +14,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/common/shared.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
@@ -318,7 +319,7 @@ void App::DrawGameSettingsCard(Game& game) {
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputText("##name", &m_editName);
     if (ImGui::IsItemDeactivatedAfterEdit() && !m_editName.empty()) {
-        game.name = Utf8ToWide(m_editName);
+        game.name = Utf8::ToWide(m_editName);
         SaveLibrary();
     }
 
@@ -335,7 +336,7 @@ void App::DrawGameSettingsCard(Game& game) {
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputTextWithHint("##args", "e.g. -dx12 -windowed", &m_editArgs);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        game.arguments = Utf8ToWide(m_editArgs);
+        game.arguments = Utf8::ToWide(m_editArgs);
         SaveLibrary();
     }
 
@@ -343,7 +344,7 @@ void App::DrawGameSettingsCard(Game& game) {
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
     ImGui::InputTextWithHint("##workdir", "Defaults to the game's folder", &m_editWorkDir);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        game.workingDir = Utf8ToWide(m_editWorkDir);
+        game.workingDir = Utf8::ToWide(m_editWorkDir);
         SaveLibrary();
     }
     ImGui::SameLine(0.0f, S(8));
@@ -379,7 +380,7 @@ void App::DrawGameSettingsCard(Game& game) {
     std::string processHint = "Defaults to " + U8(LaunchSpec{game.exePath}.GameProcessName());
     ImGui::InputTextWithHint("##process", processHint.c_str(), &m_editProcess);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
-        game.processName = Utf8ToWide(m_editProcess);
+        game.processName = Utf8::ToWide(m_editProcess);
         SaveLibrary();
     }
 

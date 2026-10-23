@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/capture_client.h"
 #include "gazeora/host/capture/frame_dump.h"  // TextureReader
 #include "gazeora/host/launch/injector.h"
@@ -112,7 +113,7 @@ void GameSession::Run() {
                 if (!captureReady) {
                     std::lock_guard<std::mutex> lock(m_mutex);
                     m_stats.hookState = kHookError;
-                    m_stats.hookStatus = "capture unavailable: " + WideToUtf8(error);
+                    m_stats.hookStatus = "capture unavailable: " + Utf8::FromWide(error);
                 }
             }
         }
