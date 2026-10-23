@@ -34,6 +34,7 @@ add_library(gazeora_host_lib STATIC
     src/stream/rtsp_message.cpp
     src/stream/stream_log.cpp
     src/stream/stream_overlay.cpp
+    src/stream/stream_frame_sender.cpp
     src/stream/stream_protocol.cpp
     src/stream/stream_view_info.cpp
     src/stream/ts_muxer.cpp

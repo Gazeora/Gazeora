@@ -85,7 +85,9 @@ frame rate; bitrate and packet loss; the encoder; this PC's clock (handy for jud
 photograph the PC's clock and the phone together); and a line of your own text. Pick the
 details, the corner, the text size and how dark the panel behind it is; changes show in the
 stream at once. In VR mode the panel is drawn into each eye, away from the lens edges. The
-choices are saved in `stream.ini` under `[overlay]`. It's off until switched on.
+choices are saved in `stream.ini` under `[overlay]`. It's off until switched on. The overlay
+is drawn on the CPU, so while it's on, frames are read back from the GPU instead of going
+straight to its encoder: a few milliseconds more per frame and some CPU time.
 
 ## Choosing a codec
 

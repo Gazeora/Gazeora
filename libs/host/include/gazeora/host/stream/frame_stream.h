@@ -19,6 +19,7 @@
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_output.h"
+#include "gazeora/host/stream/live_frame_sink.h"
 #include "gazeora/host/stream/net.h"
 #include "gazeora/host/stream/pointer_gate.h"
 #include "gazeora/host/stream/pointer_input_receiver.h"
@@ -43,14 +44,15 @@ struct RtspRequest;
 //  - UDP, HTTP and USB: a FrameOutput each (frame_output.h).
 // Whatever the protocol, the PC answers the Android app's search for it (discovery.h).
 // Frames are pushed from the capture thread and encoded on the server's own thread; frames
-// arriving faster than they can be encoded are dropped, newest wins. While no frame has been
+// arriving faster than they can be encoded are dropped, newest wins. They come as BGRA8 in
+// memory, or as NV12 textures that go to a GPU encoder without leaving the GPU. While no frame has been
 // pushed for a second, the idle frame (the logo) is streamed instead.
 //
 // The server coordinates; the work is done by its parts: FrameMailbox (frames in),
 // VideoPipeline (encoding, RTP), BitrateController (adapting to loss), RtspConnection (one
 // per RTSP player), FrameOutput (the other protocols), PacketPacer (spreading UDP packets),
 // DiscoveryResponder and StreamLog.
-class FrameStreamServer {
+class FrameStreamServer : public LiveFrameSink {
 public:
     // Frames should be scaled down to fit before they're pushed (TextureReader::SetMaxSize):
     // 1080p at several Mbit/s is what phones on Wi-Fi handle well.
@@ -61,7 +63,7 @@ public:
     explicit FrameStreamServer(VideoPipeline::EncoderFactory encoderFactory = CreateVideoEncoder);
     FrameStreamServer(const FrameStreamServer&) = delete;
     FrameStreamServer& operator=(const FrameStreamServer&) = delete;
-    ~FrameStreamServer();
+    ~FrameStreamServer() override;
 
     // Starts the protocol (SetProtocol), listening on `port` (0 picks a free one) if it has
     // one, on every network interface when `lan` is set and on 127.0.0.1 only otherwise.
@@ -94,7 +96,9 @@ public:
     // (player_identity.h).
     int AppViewers() const { return m_appViewers; }
     // False while nobody watches; frames pushed then are wasted work.
-    bool WantsFrames() const { return m_viewers > 0; }
+    bool WantsFrames() const override { return m_viewers > 0; }
+    // The overlay is drawn into pixels in memory, so it needs frames pushed as BGRA8.
+    bool WantsTextures() override { return !GetOverlay().enabled; }
     // Why the last pushed frame couldn't be streamed; empty if it was.
     std::wstring LastError();
     // The share of packets players reported lost lately (worst player, 0..1), and the
@@ -137,7 +141,14 @@ public:
     // side (TextureReader::Stereo). `bgra` is swapped with an older buffer, so the caller can
     // reuse it for the next frame without reallocating.
     void PushFrame(uint32_t width, uint32_t height, std::vector<uint8_t>& bgra,
-                   bool stereo = false);
+                   bool stereo = false) override;
+    // One NV12 frame on the GPU, width x height (even), from GpuNv12Converter. Encoded on the
+    // GPU when an encoder there takes its device's textures, read back otherwise.
+    void PushTexture(uint32_t width, uint32_t height, Microsoft::WRL::ComPtr<ID3D11Texture2D> nv12,
+                     bool stereo = false) override;
+    // The last frame pushed, encoded again: for a game drawing fewer frames than the stream
+    // sends, with nothing read back or converted.
+    void RepeatFrame() override;
     // The BGRA8 picture streamed while there are no live frames.
     void SetIdleFrame(uint32_t width, uint32_t height, std::vector<uint8_t> bgra);
 
@@ -203,8 +214,8 @@ private:
     // sets). False if it couldn't be.
     bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, PacketPacer& pacer,
                        bool send);
-    // `picture` with the overlay drawn on, when it's on: drawn in `target`, a copy unless it's
-    // `picture` itself. `picture` as it is otherwise.
+    // `picture` with the overlay drawn on, when it's on: drawn in `target`, a copy, so the
+    // picture itself can be encoded again. `picture` as it is otherwise, and for textures.
     const Picture* DrawOverlay(const Picture& picture, Picture& target, OverlayRenderer& renderer,
                                float frameRate);
     void SetLastError(const std::wstring& error);

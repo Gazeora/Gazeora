@@ -16,29 +16,49 @@ VideoPipeline::VideoPipeline(EncoderFactory factory)
       m_seq(uint16_t(std::random_device()())) {}
 
 bool VideoPipeline::Prepare(const Config& config, uint32_t width, uint32_t height,
-                            bool& reopened, std::wstring& error) {
+                            bool& reopened, std::wstring& error, ID3D11Device* device) {
     reopened = false;
     if (!m_encoder) {
         m_encoder = m_factory();
     }
-    if (!m_encoder->Matches(config.codec, width, height)) {
-        VideoEncoder::Settings settings;
-        settings.codec = config.codec;
-        settings.width = width;
-        settings.height = height;
-        settings.fps = config.fps;
-        settings.bitrate = config.bitrate;
-        settings.keyInterval = config.keyInterval;
-        if (!m_encoder->Open(settings, error)) {
-            return false;
+    bool refused = device == m_refusedDevice.Get() && config.codec == m_refusedCodec;
+    ID3D11Device* wanted = refused ? nullptr : device;
+    if (!m_encoder->Matches(config.codec, width, height, wanted)) {
+        if (!Open(config, width, height, wanted, error)) {
+            if (!wanted) {
+                return false;
+            }
+            // No encoder takes this device's textures: read them back from now on.
+            m_refusedDevice = device;
+            m_refusedCodec = config.codec;
+            error.clear();
+            if (!Open(config, width, height, nullptr, error)) {
+                return false;
+            }
         }
-        m_format = &RtpPayloadFormat::For(config.codec);
-        m_parameterSets = ParameterSetCache(*m_format);
         reopened = true;
     } else if (config.bitrate != m_config.bitrate) {
         m_encoder->SetBitrate(config.bitrate);
     }
     m_config = config;
+    return true;
+}
+
+bool VideoPipeline::Open(const Config& config, uint32_t width, uint32_t height,
+                         ID3D11Device* device, std::wstring& error) {
+    VideoEncoder::Settings settings;
+    settings.codec = config.codec;
+    settings.width = width;
+    settings.height = height;
+    settings.fps = config.fps;
+    settings.bitrate = config.bitrate;
+    settings.keyInterval = config.keyInterval;
+    settings.device = device;
+    if (!m_encoder->Open(settings, error)) {
+        return false;
+    }
+    m_format = &RtpPayloadFormat::For(config.codec);
+    m_parameterSets = ParameterSetCache(*m_format);
     return true;
 }
 
@@ -52,10 +72,17 @@ bool VideoPipeline::Encode(const Picture& picture, const FrameSink& sink, bool& 
                            std::wstring& error) {
     fmtpChanged = false;
     const VideoEncoder::Settings& size = m_encoder->Current();
-    BgraToNv12(picture.bgra.data(), picture.width, size.width, size.height, m_nv12);
     m_encoded.clear();
     // Sample times in 100 ns units, from the 90 kHz capture clock.
-    if (!m_encoder->Encode(m_nv12.data(), int64_t(picture.clock * 1000 / 9), m_encoded, error)) {
+    const int64_t time = int64_t(picture.clock * 1000 / 9);
+    if (picture.nv12 && size.device) {
+        if (!m_encoder->EncodeTexture(picture.nv12.Get(), time, m_encoded, error)) {
+            m_encoder->Close();
+            return false;
+        }
+    } else if (!ToMemory(picture, error)) {
+        return false;
+    } else if (!m_encoder->Encode(m_nv12.data(), time, m_encoded, error)) {
         m_encoder->Close();
         return false;
     }
@@ -89,6 +116,15 @@ bool VideoPipeline::Encode(const Picture& picture, const FrameSink& sink, bool& 
         sink(EncodedFrame{m_packets, m_annexB, timestamp, keyFrame, m_config.codec, size.width,
                           size.height});
     }
+    return true;
+}
+
+bool VideoPipeline::ToMemory(const Picture& picture, std::wstring& error) {
+    const VideoEncoder::Settings& size = m_encoder->Current();
+    if (picture.nv12) {
+        return m_readback.Read(picture.nv12.Get(), size.width, size.height, m_nv12, error);
+    }
+    BgraToNv12(picture.bgra.data(), picture.width, size.width, size.height, m_nv12);
     return true;
 }
 

@@ -68,7 +68,7 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 ┌──────────────────────┐  shared   ┌───────────────────────────────┐  RTSP (TCP)  ┌───────────────┐
 │ gazeora_hook.dll     │  GPU      │ CaptureClient                 │◄────────────►│ VLC / ffplay  │
 │  hooks Present /     │ textures, │  → TextureReader (GPU scale,  │              │ / OBS         │
-│  SwapBuffers,        │──fences──►│     VR lens pass, read-back)  │  RTP/H.26x   │               │
+│  SwapBuffers,        │──fences──►│     VR lens pass, NV12 on GPU)│  RTP/H.26x   │               │
 │  copies the frame    │ + shared  │  → FrameStreamServer          │══(UDP)══════►│               │
 │  into a frame ring   │  memory   │     (H.26x encode, RTP, RTCP) │              │               │
 └──────────────────────┘           └───────────────────────────────┘              └───────────────┘
@@ -80,11 +80,14 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
    small ring of shared textures. A shared memory block carries the frame metadata and the
    handles; GPU fences order the copies without stalling the game.
 3. The launcher opens those textures on its own D3D11 device. While someone is watching, it
-   scales the frame on the GPU (and applies the VR layout), reads it back and passes it to the
-   stream server.
-4. The stream server converts the frame to NV12, encodes it as H.264 or H.265 on its own thread and sends
-   RTP packets to every player that has pressed play. Frames that arrive faster than they can be
-   encoded are dropped, so delay never builds up.
+   scales the frame on the GPU (and applies the VR layout), converts it to NV12 there and
+   passes the texture to the stream server. A game drawing fewer frames than the stream sends
+   has its last frame encoded again, with nothing read or converted.
+4. The stream server encodes the frame as H.264 or H.265 on its own thread, on the GPU's
+   encoder straight from the texture, and sends RTP packets to every player that has pressed
+   play. Frames that arrive faster than they can be encoded are dropped, so delay never builds
+   up. Without a GPU encoder that takes the textures, or with the stream overlay on, the frame
+   is read back and encoded from memory instead.
 
 ## Requirements
 

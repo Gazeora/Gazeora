@@ -17,11 +17,35 @@ void FrameMailbox::PostLive(uint32_t width, uint32_t height, uint64_t clock,
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_live.bgra.swap(bgra);
+        m_live.nv12.Reset();
         m_live.width = width;
         m_live.height = height;
         m_live.clock = clock;
         m_live.stereo = stereo;
         m_livePending = true;
+    }
+    Wake();
+}
+
+void FrameMailbox::PostLiveTexture(uint32_t width, uint32_t height, uint64_t clock,
+                                   Microsoft::WRL::ComPtr<ID3D11Texture2D> nv12, bool stereo) {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_live.nv12 = std::move(nv12);
+        m_live.width = width;
+        m_live.height = height;
+        m_live.clock = clock;
+        m_live.stereo = stereo;
+        m_livePending = true;
+    }
+    Wake();
+}
+
+void FrameMailbox::PostRepeat(uint64_t clock) {
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_repeatPending = true;
+        m_repeatClock = clock;
     }
     Wake();
 }
@@ -49,12 +73,17 @@ bool FrameMailbox::Take(DWORD timeoutMs, Picture& live, Picture& idle) {
     bool gotLive = m_livePending;
     if (m_livePending) {
         live.bgra.swap(m_live.bgra);
+        live.nv12 = std::move(m_live.nv12);
         live.width = m_live.width;
         live.height = m_live.height;
         live.clock = m_live.clock;
         live.stereo = m_live.stereo;
         m_livePending = false;
+    } else if (m_repeatPending && live.Complete()) {
+        live.clock = m_repeatClock;
+        gotLive = true;
     }
+    m_repeatPending = false;
     if (m_idlePending) {
         idle = m_idle;  // a copy: the stream restarts with it (RepostIdle)
         m_idlePending = false;

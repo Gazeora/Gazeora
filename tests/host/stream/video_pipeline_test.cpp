@@ -6,6 +6,9 @@
 
 #include "gazeora/host/stream/video_pipeline.h"
 
+#include "gazeora/host/encode/gpu_nv12_converter.h"
+#include "support/d3d_test_util.h"
+
 namespace gazeora {
 namespace {
 
@@ -17,10 +20,18 @@ public:
         int opens = 0;
         uint32_t bitrate = 0;
         int keyFrameRequests = 0;
+        bool takesTextures = false;  // Open with a device fails otherwise
+        int memoryFrames = 0;
+        int textureFrames = 0;
+        uint8_t firstLuma = 0;  // of the last frame from memory
     };
     explicit FakeEncoder(Calls& calls) : m_calls(calls) {}
 
-    bool Open(const Settings& settings, std::wstring&) override {
+    bool Open(const Settings& settings, std::wstring& error) override {
+        if (settings.device && !m_calls.takesTextures) {
+            error = L"no textures";
+            return false;
+        }
         m_settings = settings;
         m_open = true;
         m_nextIsKey = true;
@@ -38,7 +49,20 @@ public:
         m_nextIsKey = true;
         ++m_calls.keyFrameRequests;
     }
-    bool Encode(const uint8_t*, int64_t time, std::vector<Frame>& out, std::wstring&) override {
+    bool Encode(const uint8_t* nv12, int64_t time, std::vector<Frame>& out,
+                std::wstring&) override {
+        ++m_calls.memoryFrames;
+        m_calls.firstLuma = nv12[0];
+        return Emit(time, out);
+    }
+    bool EncodeTexture(ID3D11Texture2D*, int64_t time, std::vector<Frame>& out,
+                       std::wstring&) override {
+        ++m_calls.textureFrames;
+        return Emit(time, out);
+    }
+
+private:
+    bool Emit(int64_t time, std::vector<Frame>& out) {
         static const std::string kStart("\0\0\0\1", 4);
         Frame frame;
         frame.time = time;
@@ -52,7 +76,6 @@ public:
         return true;
     }
 
-private:
     Calls& m_calls;
     Settings m_settings;
     std::wstring m_name = L"Fake";
@@ -177,6 +200,65 @@ TEST_F(VideoPipelineTest, ForwardsKeyFrameRequests) {
     ASSERT_EQ(next.size(), 1u);
     EXPECT_TRUE(next[0].second);
     EXPECT_EQ(calls.keyFrameRequests, 1);
+}
+
+class VideoPipelineTextureTest : public VideoPipelineTest {
+protected:
+    void SetUp() override {
+        warp = test::CreateWarpDevice();
+        ASSERT_TRUE(warp.device) << "WARP D3D11.4 device unavailable";
+        // White: luma 235 in studio range.
+        auto frame = test::CreateTexture(warp.device.Get(), 64, 32, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                         std::vector<uint32_t>(64 * 32, 0xFFFFFFFF));
+        UINT width = 0, height = 0;
+        std::wstring error;
+        picture.nv12 = converter.Convert(warp.device.Get(), frame.Get(), width, height, error);
+        ASSERT_TRUE(picture.nv12) << std::string(error.begin(), error.end());
+        picture.bgra.clear();
+    }
+
+    bool Prepare(ID3D11Device* device, bool& reopened) {
+        std::wstring error;
+        return pipeline.Prepare(config, 64, 32, reopened, error, device);
+    }
+
+    test::WarpDevice warp;
+    GpuNv12Converter converter;
+};
+
+TEST_F(VideoPipelineTextureTest, EncodesTexturesWithAnEncoderThatTakesThem) {
+    calls.takesTextures = true;
+    bool reopened = false;
+    ASSERT_TRUE(Prepare(warp.device.Get(), reopened));
+    EXPECT_TRUE(reopened);
+    ASSERT_EQ(EncodeOnce().size(), 1u);
+    EXPECT_EQ(calls.textureFrames, 1);
+    EXPECT_EQ(calls.memoryFrames, 0);
+}
+
+TEST_F(VideoPipelineTextureTest, ReadsTexturesBackForAnEncoderThatTakesNone) {
+    bool reopened = false;
+    ASSERT_TRUE(Prepare(warp.device.Get(), reopened));
+    EXPECT_TRUE(reopened);
+    ASSERT_EQ(EncodeOnce().size(), 1u);
+    EXPECT_EQ(calls.memoryFrames, 1);
+    EXPECT_EQ(calls.textureFrames, 0);
+    EXPECT_EQ(calls.firstLuma, 235);
+    // The refusal is remembered: the next frame doesn't try again.
+    ASSERT_TRUE(Prepare(warp.device.Get(), reopened));
+    EXPECT_FALSE(reopened);
+    EXPECT_EQ(calls.opens, 1);
+}
+
+TEST_F(VideoPipelineTextureTest, ReopensBetweenTexturesAndPicturesInMemory) {
+    calls.takesTextures = true;
+    bool reopened = false;
+    ASSERT_TRUE(Prepare(warp.device.Get(), reopened));
+    ASSERT_TRUE(Prepare(nullptr, reopened));
+    EXPECT_TRUE(reopened) << "the idle picture comes from memory";
+    ASSERT_TRUE(Prepare(warp.device.Get(), reopened));
+    EXPECT_TRUE(reopened);
+    EXPECT_EQ(calls.opens, 3);
 }
 
 }  // namespace

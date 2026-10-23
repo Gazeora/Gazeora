@@ -40,12 +40,14 @@ gazeora_add_test(gazeora_host_tests
         host/encode/gpu_nv12_converter_test.cpp
         host/encode/video_encoder_test.cpp
         host/stream/bitrate_controller_test.cpp
+        host/stream/frame_mailbox_test.cpp
         host/stream/frame_stream_test.cpp
         host/stream/pointer_input_test.cpp
         host/stream/rtcp_test.cpp
         host/stream/rtp_video_test.cpp
         host/stream/rtsp_message_test.cpp
         host/stream/stream_formats_test.cpp
+        host/stream/stream_frame_sender_test.cpp
         host/stream/stream_overlay_test.cpp
         host/stream/stream_view_info_test.cpp
         host/stream/video_pipeline_test.cpp

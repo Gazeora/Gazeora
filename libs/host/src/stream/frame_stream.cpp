@@ -362,6 +362,13 @@ void FrameStreamServer::PushFrame(uint32_t width, uint32_t height, std::vector<u
     m_mailbox.PostLive(width, height, RtpClock64(), bgra, stereo);
 }
 
+void FrameStreamServer::PushTexture(uint32_t width, uint32_t height,
+                                    Microsoft::WRL::ComPtr<ID3D11Texture2D> nv12, bool stereo) {
+    m_mailbox.PostLiveTexture(width, height, RtpClock64(), std::move(nv12), stereo);
+}
+
+void FrameStreamServer::RepeatFrame() { m_mailbox.PostRepeat(RtpClock64()); }
+
 void FrameStreamServer::SetIdleFrame(uint32_t width, uint32_t height, std::vector<uint8_t> bgra) {
     m_mailbox.PostIdle(width, height, std::move(bgra));
 }
@@ -863,10 +870,14 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     config.maxPacketSize = kMaxPacketSize;
     // Encoders take even sizes only.
     const uint32_t width = picture.width & ~1u, height = picture.height & ~1u;
+    Microsoft::WRL::ComPtr<ID3D11Device> device;
+    if (picture.nv12) {
+        picture.nv12->GetDevice(&device);
+    }
 
     std::wstring error;
     bool reopened = false;
-    if (!pipeline.Prepare(config, width, height, reopened, error)) {
+    if (!pipeline.Prepare(config, width, height, reopened, error, device.Get())) {
         m_log.Write("cannot open an %s encoder for %ux%u: %ls", CodecName(config.codec), width,
                     height, error.c_str());
         if (config.codec == VideoCodec::H265) {
@@ -926,7 +937,7 @@ void FrameStreamServer::EncodeLoop() {
     PacketPacer pacer;
     VideoPipeline pipeline(m_encoderFactory);
     Picture live, idle;
-    Picture overlaid;  // the idle picture with the overlay drawn on
+    Picture overlaid;  // the picture streamed with the overlay drawn on
     OverlayRenderer overlay;
     FrameRateCounter frameRate;
     uint64_t lastLiveMs = 0;
@@ -985,8 +996,7 @@ void FrameStreamServer::EncodeLoop() {
             }
             if (!probe) {
                 frameRate.Add(now);
-                source = DrawOverlay(*source, source == &idle ? overlaid : live, overlay,
-                                     frameRate.PerSecond(now));
+                source = DrawOverlay(*source, overlaid, overlay, frameRate.PerSecond(now));
             }
             StreamPicture(pipeline, *source, pacer, !probe);
             probed |= probe;
@@ -998,7 +1008,8 @@ void FrameStreamServer::EncodeLoop() {
 const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& target,
                                               OverlayRenderer& renderer, float frameRate) {
     OverlaySettings settings = GetOverlay();
-    if (!settings.enabled) {
+    // A texture pushed just before the overlay was switched on goes without it.
+    if (!settings.enabled || picture.nv12) {
         return &picture;
     }
     OverlayStats stats;
@@ -1016,14 +1027,13 @@ const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& t
     if (lines.empty()) {
         return &picture;
     }
-    // The idle picture is reused frame after frame: draw on a copy of it.
-    if (&target != &picture) {
-        target.bgra.assign(picture.bgra.begin(), picture.bgra.end());
-        target.width = picture.width;
-        target.height = picture.height;
-        target.clock = picture.clock;
-        target.stereo = picture.stereo;
-    }
+    // The idle picture is reused frame after frame, and a live one when it's repeated: draw
+    // on a copy.
+    target.bgra.assign(picture.bgra.begin(), picture.bgra.end());
+    target.width = picture.width;
+    target.height = picture.height;
+    target.clock = picture.clock;
+    target.stereo = picture.stereo;
     OverlayLayout layout = GetVrLayout().WarpOnPc() ? OverlayLayout::VrEyes
                            : picture.stereo         ? OverlayLayout::Pair
                                                     : OverlayLayout::Flat;

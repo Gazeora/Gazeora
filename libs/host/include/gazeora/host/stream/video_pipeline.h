@@ -7,14 +7,16 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/host/encode/nv12_readback.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/rtp_video.h"
 
 namespace gazeora {
 
-// BGRA8 pictures in, encoded frames out: NV12 conversion, encoding, parameter sets in front
-// of every key frame, RTP packetization. The encoder comes from a factory, so tests (and
+// Pictures in, encoded frames out: NV12 conversion, encoding, parameter sets in front of
+// every key frame, RTP packetization. A picture already on the GPU as NV12 goes straight to a
+// GPU encoder that takes its device's textures, or is read back for one that doesn't. The encoder comes from a factory, so tests (and
 // other encoder back ends) can supply their own. Use from one thread.
 class VideoPipeline {
 public:
@@ -43,11 +45,12 @@ public:
 
     explicit VideoPipeline(EncoderFactory factory = CreateVideoEncoder);
 
-    // Opens (or reopens) the encoder when the codec or size changed, and applies a new
-    // bitrate. `reopened` tells whether a new encoder was opened. False with `error` set if
-    // no encoder could be opened.
+    // Opens (or reopens) the encoder when the codec, size or device changed, and applies a
+    // new bitrate. `device` is the one the pictures' textures are on, null for pictures in
+    // memory. `reopened` tells whether a new encoder was opened. False with `error` set if no
+    // encoder could be opened.
     bool Prepare(const Config& config, uint32_t width, uint32_t height, bool& reopened,
-                 std::wstring& error);
+                 std::wstring& error, ID3D11Device* device = nullptr);
     void RequestKeyFrame();
     // The SEI message frames carry from now on (stream_view_info.h); empty for none.
     void SetViewInfo(std::string text) { m_viewInfo = std::move(text); }
@@ -64,6 +67,11 @@ public:
     std::string Fmtp() const { return m_parameterSets.Fmtp(); }
 
 private:
+    bool Open(const Config& config, uint32_t width, uint32_t height, ID3D11Device* device,
+              std::wstring& error);
+    // The picture as NV12 in m_nv12, for an encoder that takes it from memory.
+    bool ToMemory(const Picture& picture, std::wstring& error);
+
     EncoderFactory m_factory;
     std::unique_ptr<VideoEncoder> m_encoder;
     Config m_config;
@@ -72,6 +80,10 @@ private:
     uint16_t m_seq;
     // Reused between frames, so steady streaming doesn't allocate.
     std::vector<uint8_t> m_nv12;
+    Nv12Readback m_readback;
+    // The device and codec no encoder took textures for: their pictures are read back.
+    Microsoft::WRL::ComPtr<ID3D11Device> m_refusedDevice;
+    VideoCodec m_refusedCodec = VideoCodec::H264;
     std::vector<VideoEncoder::Frame> m_encoded;
     std::vector<std::string> m_nalUnits;
     std::vector<std::string> m_packets;

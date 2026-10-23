@@ -16,7 +16,7 @@ block:
 | Suite | Covers |
 |---|---|
 | `gazeora_hook_tests` | Hook core against a fake host |
-| `gazeora_host_tests` | Capture client, injector, launcher, frame read-back, GPU scaling and the VR pass, H.264 and H.265 encoding (software and hardware), slicing, and RTP round trips through the system decoders, the RTSP server |
+| `gazeora_host_tests` | Capture client, injector, launcher, frame read-back, GPU scaling and the VR pass, NV12 conversion on the GPU, H.264 and H.265 encoding (software and hardware, from memory and from GPU textures), repeated frames, slicing, and RTP round trips through the system decoders, the RTSP server |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
 | `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`) |
@@ -37,7 +37,7 @@ cd build\bin
 |---|---|
 | `Convert` | The hook's per-pixel conversion for each CPU readback layout; BGRA8 to NV12 at 720p, 1080p, 1440p |
 | `Capture` | The frame transport in one process; `TextureReader` at full size, scaled, 10-bit and VR; BMP screenshots; the real hook in `gazeora_testapp.exe` for each graphics API (opens a window per API) |
-| `Encode` | Each codec on the hardware and the software encoder: time per call, input-to-output latency, frame sizes, open time; the whole `VideoPipeline` |
+| `Encode` | Each codec on the hardware and the software encoder: time per call, input-to-output latency, frame sizes, open time; the whole `VideoPipeline`; a 1080p game frame to packets, read back or kept on the GPU (time and CPU per frame) |
 | `Rtp`, `Rtcp`, `Rtsp`, `Bitrate` | Packetizing and depacketizing both codecs, parameter sets, RTCP reports, RTSP messages, the bitrate controller |
 | `Stream` | The `FrameMailbox` hand-off, `PacketPacer` timing, and the whole server: `PushFrame` to a loopback UDP player receiving the frame |
 | `Library` | Loading, saving and searching a 500-game library |

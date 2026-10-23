@@ -2,12 +2,11 @@
 
 #include <algorithm>
 #include <memory>
-#include <vector>
 
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/capture_client.h"
-#include "gazeora/host/capture/frame_dump.h"  // TextureReader
 #include "gazeora/host/launch/injector.h"
+#include "gazeora/host/stream/stream_frame_sender.h"
 #include "gazeora/library/game_library.h"
 
 namespace gazeora::app {
@@ -156,9 +155,11 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
     QueryPerformanceCounter(&statsStart);
     int frames = 0;
     double handoffSum = 0.0;
-    TextureReader reader;
-    reader.SetMaxSize(FrameStreamServer::kMaxWidth, FrameStreamServer::kMaxHeight);
-    std::vector<uint8_t> pixels;
+    std::unique_ptr<StreamFrameSender> sender;
+    if (m_stream) {
+        sender = std::make_unique<StreamFrameSender>(*m_stream);
+        sender->SetMaxSize(FrameStreamServer::kMaxWidth, FrameStreamServer::kMaxHeight);
+    }
     LONGLONG nextStream = 0;     // QPC time the next streamed frame is due
     LONGLONG lastGameFrame = 0;  // QPC time of the game's latest frame
     const LONGLONG interval = m_qpcFreq / kStreamMaxFps;
@@ -181,6 +182,7 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
         if (gotFrame) {
             ++frames;
             handoffSum += client.LastHandoffMs();
+            if (sender) sender->FrameCaptured();
         }
         const SharedHeader& shared = client.Shared();
         VrLayout vr = m_stream ? m_stream->GetVrLayout() : VrLayout();  // may change while playing
@@ -206,24 +208,20 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
         // game's frames that land a hair early and drop the stream to 20 fps.
         // A game below 30 fps, or one that stalls for a moment, leaves slots empty; the last
         // frame goes out again to fill them, as players such as VLC drop frames as late when a
-        // stream runs slow. After a second without game frames the server shows the logo.
+        // stream runs slow; the stream encodes the picture it holds again, nothing is read
+        // back. After a second without game frames the server shows the logo.
         bool due = now.QuadPart >= nextStream - interval / 4;
         bool repeat = !gotFrame && lastGameFrame && now.QuadPart - lastGameFrame < m_qpcFreq &&
                       now.QuadPart >= nextStream + interval / 4;
         if (((gotFrame && due) || repeat) && m_stream && m_stream->WantsFrames()) {
             // After a pause the schedule restarts from now instead of catching up.
             nextStream = std::max(nextStream, now.QuadPart - interval / 4) + interval;
-            UINT width, height;
             std::wstring error;
-            reader.SetVrLayout(vr);
-            bool read = reader.Read(client.Device(), client.Frame(), width, height, pixels, error,
-                                    client.Depth());
-            if (read) {
-                m_stream->PushFrame(width, height, pixels, reader.Stereo());
-            }
+            sender->SetVrLayout(vr);
+            bool sent = sender->Send(client.Device(), client.Frame(), client.Depth(), error);
             std::lock_guard<std::mutex> lock(m_mutex);
             m_stats.streamError = error;
-            m_stats.stereo = read && reader.Stereo();
+            m_stats.stereo = sent && sender->Stereo();
         }
 
         double elapsed = double(now.QuadPart - statsStart.QuadPart) / double(m_qpcFreq);
