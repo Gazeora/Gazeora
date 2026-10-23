@@ -49,6 +49,16 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 - **3D from depth.** In D3D11 and D3D12 games, the hook copies the game's depth buffer and
   Gazeora makes a separate view for each eye from it, so the scene has real depth in the
   viewer.
+- **Hand gestures.** A webcam on the PC turns your hands into a touch screen in the air: the
+  right index fingertip moves the pointer; with the left index up, folding the right index
+  and opening it again clicks; with the left hand pinching, the right index scrolls. Runs
+  MediaPipe's hand models on the CPU.
+- **Touch from the phone.** While VR viewer mode is off, touches on the picture in the Android
+  app control the Gazeora window, and only it: the PC's own mouse and other programs are left
+  alone. A tap clicks and a finger moving scrolls. It works with Gazeora minimized too, as
+  long as the stream shows the window. While a game is launching or running, touches and hand
+  gestures are both off; they come back when it closes. Touches arrive on the USB cable, or
+  over UDP port 8557 for the network protocols.
 - **Command line.** `GazeoraCLI` manages the same library and can attach to a running game.
 
 ## How it works
@@ -85,8 +95,10 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 - An internet connection for the first configure. CMake downloads
   [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.3,
   [Dear ImGui](https://github.com/ocornut/imgui) 1.91.5,
-  [libusb](https://github.com/libusb/libusb) 1.0.29 (for the USB protocol) and
-  [GoogleTest](https://github.com/google/googletest) 1.15.2.
+  [libusb](https://github.com/libusb/libusb) 1.0.29 (for the USB protocol),
+  [ONNX Runtime](https://github.com/microsoft/onnxruntime) 1.20.1 and MediaPipe's palm detection
+  and hand landmark models as converted by the [OpenCV model zoo](https://github.com/opencv/opencv_zoo)
+  (for hand gestures), and [GoogleTest](https://github.com/google/googletest) 1.15.2.
 
 ## Building
 
@@ -97,7 +109,8 @@ cmake --build build
 
 Visual Studio generators work too (`-G "Visual Studio 17 2022" -A x64`). Everything is placed in
 `build/bin/`. Keep the executables and `gazeora_hook.dll` in the same folder, because the
-launcher loads the hook from its own directory.
+launcher loads the hook from its own directory. The same goes for `onnxruntime.dll` and the
+`models` folder, which hand gestures load from there.
 
 | Output | Description |
 |---|---|
@@ -317,6 +330,80 @@ whether 3D is working. Notes:
 
 There is no head tracking yet.
 
+### Hand gestures
+
+**Controls → Hand gestures** lets a webcam on the PC drive the mouse pointer, alongside the
+mouse and keyboard, which keep working as always. It's for playing in the headset: it turns
+on by itself when the Gazeora app on a phone watches the stream with VR on (Settings), and
+you can turn it off again for that connection. While no phone watches in VR (or only other
+players, such as VLC, do), it's off and can't be turned on. The app is told apart by the
+User-Agent it sends over RTSP and HTTP (`Gazeora Android`); over UDP and USB only the app
+speaks Gazeora's format. Pick the camera; the card shows the hand it sees, live.
+
+Your hands work like a touch screen you don't touch. The right hand points; the left hand
+only signals:
+
+- **Move (right hand):** palm toward the screen, index finger up. The pointer goes where your
+  fingertip is in an air box in front of you that stands for the screen, so there's nothing
+  to lift and put back, and every corner is a reach away. The box is placed when your hand
+  is first seen, so the pointer doesn't jump, and slides along if your fingertip goes past
+  an edge, so moving back moves away from it at once. The camera sees the hand best with
+  the palm toward it; a finger pointing straight at the camera is hard for it to place.
+- **Fine-tuning:** small, slow moves nudge the pointer with pointer precision (0.3 of the
+  fingertip's move, rising to all of it at 2 palm lengths a second), up to 3% of the screen
+  from where the fingertip is; quick moves bring it back under the fingertip. Moves are
+  measured in palm lengths, so how near the camera you are doesn't matter, and the
+  fingertip has to move a millimetre before the pointer does, so a still hand can't make it
+  drift.
+- **Hold and click (left index up):** raise your left index finger, the others folded, and
+  the pointer holds still. Then fold your right index finger (halfway is enough) and open
+  it again to click, as often as you like. The left index has to be up for 0.2 s first, so
+  a few misread pictures don't stop the pointer; a fold held longer than a second isn't a
+  click; and the right index has to have been up while holding before a fold counts, so
+  raising the left index with the right one curled doesn't click.
+- **Scroll (left pinch):** pinch your left thumb and index fingertips together, and your
+  right index finger scrolls instead of moving the pointer: the page follows it, as on a
+  touch screen (moving up scrolls down, moving right scrolls left). Each stroke scrolls the
+  way it first went, vertically or sideways; pause a moment and the next stroke picks
+  again. A palm's length of fingertip move turns the wheel five notches. The pinch has to
+  last a tenth of a second, and is read from the fingertips' distance in the picture. A
+  fist brings them close too, but its thumb lies across the index knuckle and its index tip
+  curls into the palm; with either, it's no pinch.
+- **Back to moving:** open the pinch, or lower the left hand (gone for over 0.3 s), and the
+  right index moves the pointer again, from where it held.
+- **The left hand never moves the pointer,** and means nothing else: two fingers up, an open
+  hand or a fist are ignored. The hands are told apart by the landmark model's guess at
+  which hand it sees, averaged over the pictures each is followed (your right hand reads
+  as right in 98 to 100% of pictures on recordings). Alone, a left hand leaves the pointer
+  where it is; two hands both taken for right, the one further to your left is the left.
+  Gazeora follows up to two hands: while it follows one, it looks for the other every
+  third picture.
+- **Back under the finger:** hold all your right fingers open for half a second, and the
+  pointer goes right where your fingertip is in the box, undoing fine-tuning and wherever
+  the mouse put it. Seen from the knuckles the model draws folded fingers straight for up
+  to about a third of a second at a time, so a shorter glimpse of an open hand does nothing.
+- **Colors:** the hand preview and the status line show each gesture in its own color:
+  violet moving (right index), amber holding (right index and left index), red folding to
+  click, cyan scrolling (right index and the left pinch), green an open hand (every finger).
+- A finger counts as folded by its joints, not its direction: a straight finger pointing
+  down is still straight. Folding halfway counts. It counts as up only if it also reaches
+  out from its knuckle in the model's 3D guess at the hand, which catches a folded finger
+  hidden behind the others (seen from the side) that the model draws straight.
+- When a hand is lost, the palm detector's three likeliest palms get a look, not just the
+  first: a palm-like print on a shirt can outscore a hand seen from an unusual side, and
+  the landmark model tells them apart.
+- **Pointer speed** sets the box's size: the higher, the shorter the move that crosses the
+  screen. At 5, the default, about 20 cm (two and a half palm lengths).
+- The mouse keeps working alongside: the pointer stays where the mouse puts it until your
+  fingertip moves, then glides back under it. Losing sight of a hand for a moment (under
+  0.3 s) doesn't interrupt a gesture.
+
+The pointer is moved as a mouse would move it, in the main screen's coordinates, so it works
+in menus and games that show a cursor. Games that read raw mouse movement for the camera
+don't respond to it yet. Windows won't let it reach a game running as administrator unless
+Gazeora runs as administrator too. Tracking runs on the CPU with two threads, at the camera's
+frame rate (Gazeora picks its fastest mode, up to 30 fps), and stops when it's switched off.
+
 ### Command line
 
 ```
@@ -381,6 +468,7 @@ block:
 | `gazeora_host_tests` | Capture client, injector, launcher, frame read-back, GPU scaling and the VR pass, H.264 and H.265 encoding (software and hardware), slicing, and RTP round trips through the system decoders, the RTSP server |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
+| `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`) |
 
 ## Benchmarks
 
@@ -409,6 +497,7 @@ cd build\bin
 |---|---|
 | `%APPDATA%\Gazeora\library.json` | The game library, shared by `Gazeora.exe` and `GazeoraCLI`. Set `GAZEORA_LIBRARY` to use another path. |
 | `%APPDATA%\Gazeora\stream.ini` | The stream codec and protocol (`[stream]`) and VR viewer settings (`[vr]`: lenses, `lens_on_phone`, and `stereo`, `stereo_amount`, `stereo_front` for 3D), stored next to the library file. Plain INI, safe to edit by hand. |
+| `%APPDATA%\Gazeora\controls.ini` | Hand gestures (`[hand_gestures]`: `camera`, the camera's device path, and `pointer_speed`, from 1 to 10). Whether they're on isn't kept: the phone's connection decides. |
 | `%APPDATA%\Gazeora\stream.log` | What stream players did, rewritten at each start. See [Stream log](#stream-log). |
 
 ## Project layout
@@ -425,6 +514,11 @@ libs/                 Libraries, in dependency order
     encode/               The VideoEncoder interface, Media Foundation behind it, BGRA to NV12
     stream/               The stream server, its protocols and what it's made of (see below)
   library/              The game library behind both front ends
+  input/                Hand gestures: webcam, hand tracking, gestures, the pointer
+    tracking/             MediaPipe's palm detector and hand landmark model, and following a hand
+    gestures/             Finger aim, hand poses to steer, hold and click (a state machine), smoothing
+    services/             The camera-to-pointer loop and its background session
+    platform/             Media Foundation cameras, ONNX Runtime, SendInput
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/ (one file per page), ui/ (theme, widgets),
