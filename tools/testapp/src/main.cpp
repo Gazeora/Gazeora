@@ -3,7 +3,8 @@
 // and D3D12 a depth-tested 3D scene, for 3D from depth.
 //
 //   gazeora_testapp.exe            D3D11
-//   gazeora_testapp.exe --d3d8     D3D8 (MinGW builds only: the Windows SDK has no d3d8.h)
+//   gazeora_testapp.exe --d3d8     D3D8 (MinGW builds only: the Windows SDK has no d3d8.h;
+//                                  in the x86 release only, as Windows' D3D8 is 32-bit)
 //   gazeora_testapp.exe --d3d9     D3D9
 //   gazeora_testapp.exe --d3d10    D3D10
 //   gazeora_testapp.exe --d3d12    D3D12

@@ -22,9 +22,16 @@ int RunD3D8(HWND hwnd) {
     // No import library ships for d3d8.dll, so load it like old games' wrappers do.
     using Direct3DCreate8Fn = IDirect3D8*(WINAPI*)(UINT);
     HMODULE module = LoadLibraryW(L"d3d8.dll");
-    auto create = module ? reinterpret_cast<Direct3DCreate8Fn>(
-                               reinterpret_cast<void*>(GetProcAddress(module, "Direct3DCreate8")))
-                         : nullptr;
+    if (!module) {
+        // Windows ships D3D8 as 32-bit only: a 64-bit build needs a 64-bit d3d8.dll beside it.
+        fprintf(stderr, sizeof(void*) == 8
+                            ? "no 64-bit d3d8.dll: Windows has D3D8 in 32-bit only, so use the "
+                              "x86 release's test app (or put a 64-bit d3d8.dll next to this one)\n"
+                            : "d3d8.dll is missing\n");
+        return 1;
+    }
+    auto create = reinterpret_cast<Direct3DCreate8Fn>(
+        reinterpret_cast<void*>(GetProcAddress(module, "Direct3DCreate8")));
     ComPtr<IDirect3D8> d3d;
     if (create) {
         d3d.Attach(create(D3D_SDK_VERSION));

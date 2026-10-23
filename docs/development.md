@@ -16,7 +16,7 @@ block:
 | Suite | Covers |
 |---|---|
 | `gazeora_hook_tests` | Hook core against a fake host |
-| `gazeora_host_tests` | Capture client, injector, launcher, frame read-back, GPU scaling and the VR pass, NV12 conversion on the GPU, H.264 and H.265 encoding (software and hardware, from memory and from GPU textures), repeated frames, slicing, and RTP round trips through the system decoders, the RTSP server |
+| `gazeora_host_tests` | Capture client, injector (refusing a game of the other bitness), launcher, the test app captured end to end with the real hook (D3D9, and D3D8 in MinGW x86 builds), frame read-back, GPU scaling and the VR pass, NV12 conversion on the GPU, H.264 and H.265 encoding (software and hardware, from memory and from GPU textures), repeated frames, slicing, and RTP round trips through the system decoders, the RTSP server |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
 | `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`) |
@@ -72,6 +72,21 @@ tests/                GoogleTest suites, in the same folders as the code they te
 bench/                gazeora_bench, the benchmarks
 cmake/                Compiler settings, dependency fetching and formatting targets
 ```
+
+### x64 and x86 releases
+
+The hook runs inside the game, so it has the game's bitness, and so does the program that
+injects it: `CreateRemoteThread` + `LoadLibraryW` only works between processes of the same
+bitness. So Gazeora is built twice, as two releases: x64 for 64-bit games and x86 for 32-bit
+ones, each the whole of Gazeora. The compiler picks which (`GAZEORA_ARCH`, in
+`CompilerSettings.cmake`), and so does what depends on it: the ONNX Runtime package. `InjectDll`
+refuses a game of the other bitness with a message naming the release that captures it.
+
+To test both on one PC, build both: the tests and the test app of each run as that release.
+With MinGW, use a 64-bit or a 32-bit toolchain (MSYS2's `mingw-w64-i686-gcc` for x86). Code
+that hands Win32 a callback must give it the callback calling convention (`CALLBACK` /
+`WINAPI`, `__stdcall` on x86): a lambda only converts to a `__cdecl` function pointer there, so
+callbacks are named functions.
 
 Headers live under each library's `include/gazeora/<module>/`, sources under `src/`, with the
 same subfolders, so `libs/host/src/stream/frame_stream.cpp` implements

@@ -10,6 +10,11 @@ FetchContent_MakeAvailable(minhook)
 add_library(minhook STATIC
     ${minhook_SOURCE_DIR}/src/buffer.c
     ${minhook_SOURCE_DIR}/src/hook.c
-    ${minhook_SOURCE_DIR}/src/trampoline.c
-    ${minhook_SOURCE_DIR}/src/hde/hde64.c)
+    ${minhook_SOURCE_DIR}/src/trampoline.c)
+# Its instruction decoder for the build's bitness.
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    target_sources(minhook PRIVATE ${minhook_SOURCE_DIR}/src/hde/hde64.c)
+else()
+    target_sources(minhook PRIVATE ${minhook_SOURCE_DIR}/src/hde/hde32.c)
+endif()
 target_include_directories(minhook PUBLIC ${minhook_SOURCE_DIR}/include)

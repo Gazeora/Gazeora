@@ -35,6 +35,7 @@ gazeora_add_test(gazeora_host_tests
         common/shared_test.cpp
         host/launch/injector_test.cpp
         host/launch/launcher_test.cpp
+        host/capture/capture_test_app_test.cpp
         host/capture/capture_client_test.cpp
         host/capture/frame_dump_test.cpp
         host/encode/gpu_nv12_converter_test.cpp
@@ -54,6 +55,12 @@ gazeora_add_test(gazeora_host_tests
         host/stream/stream_view_info_test.cpp
         host/stream/video_pipeline_test.cpp
     LIBS gazeora_host_lib)
+# The capture test launches the test app with the hook, both from this build.
+add_dependencies(gazeora_host_tests gazeora_testapp gazeora_hook)
+# Windows' D3D8 is 32-bit only, and the test app has it only where the compiler has d3d8.h.
+if(TESTAPP_HAVE_D3D8_H AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    target_compile_definitions(gazeora_host_tests PRIVATE GAZEORA_TEST_D3D8)
+endif()
 
 gazeora_add_test(gazeora_library_tests
     SOURCES library/game_library_test.cpp

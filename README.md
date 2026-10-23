@@ -18,7 +18,10 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   track play time. The launcher follows games that restart themselves through a launcher
   (Steam, Ubisoft Connect, EA app).
 - **Frame capture.** Supports Direct3D 8, 9, 10, 11 and 12 and OpenGL. Frames are shared with
-  the launcher as GPU textures, not copied through system memory.
+  the launcher as GPU textures, not copied through system memory. Two releases, built
+  separately: **x64** for 64-bit games and **x86** for 32-bit ones (Direct3D 8 games are all
+  32-bit, as are many older Direct3D 9 and OpenGL ones). Each captures games of its own kind
+  and says so when a game is the other.
 - **Network streaming.** A stream that is always on, over one of five protocols (see
   [Choosing a protocol](docs/streaming.md#choosing-a-protocol)): RTSP with H.264 or H.265 over RTP
   ([RFC 6184](https://www.rfc-editor.org/rfc/rfc6184),
@@ -91,10 +94,11 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 
 ## Requirements
 
-- Windows 10 or 11, 64-bit. Only 64-bit games can be captured.
+- Windows 10 or 11 (64-bit for the x64 release).
 - CMake 3.20 or newer.
-- A C++17 compiler: MSVC (Visual Studio 2022 or newer) or MinGW-w64 (for example, the one
-  bundled with CLion).
+- A C++17 compiler for the release's architecture: MSVC (Visual Studio 2022 or newer, its x64
+  or x86 tools) or MinGW-w64 (64-bit, such as the one bundled with CLion; 32-bit, such as
+  MSYS2's `mingw-w64-i686-gcc`).
 - An internet connection for the first configure. CMake downloads
   [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.3,
   [Dear ImGui](https://github.com/ocornut/imgui) 1.91.5,
@@ -105,22 +109,29 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 
 ## Building
 
+The compiler decides the release: a 64-bit one builds the x64 release, a 32-bit one the x86
+release, each in a build folder of its own. Configuring prints which (`Building the x64 release
+of Gazeora`).
+
 ```powershell
+# MinGW-w64: the 64-bit compiler on PATH for x64, the 32-bit one (e.g. C:\msys64\mingw32\bin) for x86
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
-Visual Studio generators work too (`-G "Visual Studio 17 2022" -A x64`). Everything is placed in
-`build/bin/`. Keep the executables and `gazeora_hook.dll` in the same folder, because the
-launcher loads the hook from its own directory. The same goes for `onnxruntime.dll` and the
-`models` folder, which hand gestures load from there.
+In CLion, a toolchain per release does the same: the bundled MinGW for x64, a 32-bit MinGW for
+x86.
+
+Everything is placed in `build/bin/`. Keep the executables and `gazeora_hook.dll` in the same
+folder, because the launcher loads the hook from its own directory. The same goes for
+`onnxruntime.dll` and the `models` folder, which hand gestures load from there.
 
 | Output | Description |
 |---|---|
 | `Gazeora.exe` | The launcher (Dear ImGui on Direct3D 11) and stream server |
 | `GazeoraCLI.exe` | Command-line front end for the same library |
 | `gazeora_hook.dll` | The capture hook, injected into games |
-| `gazeora_testapp.exe` | A test "game" that renders with each supported API |
+| `gazeora_testapp.exe` | A test "game" that renders with each supported API (Direct3D 8 in MinGW x86 builds) |
 | `gazeora_stream_probe.exe` | An RTSP client that measures the stream |
 | `gazeora_*_tests.exe` | Unit tests (with `GAZEORA_BUILD_TESTS=ON`, the default) |
 | `gazeora_bench.exe` | Benchmarks of every stage, from capture to RTP packets (with `GAZEORA_BUILD_BENCH=ON`, the default) |

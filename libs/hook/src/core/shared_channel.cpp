@@ -69,12 +69,13 @@ void PublishResources(const ExportedHandles& handles, UINT width, UINT height, D
     g_shared->api = api;
     g_shared->adapterLuid = adapterLuid;
     for (UINT i = 0; i < kFrameSlots; ++i) {
-        g_shared->slotHandles[i] = reinterpret_cast<uint64_t>(handles.slots[i]);
-        g_shared->depthSlotHandles[i] = reinterpret_cast<uint64_t>(handles.depthSlots[i]);
+        g_shared->slotHandles[i] = uint64_t(reinterpret_cast<uintptr_t>(handles.slots[i]));
+        g_shared->depthSlotHandles[i] =
+            uint64_t(reinterpret_cast<uintptr_t>(handles.depthSlots[i]));
         g_shared->depthSlots[i].frame = 0;
     }
-    g_shared->frameFenceHandle = reinterpret_cast<uint64_t>(handles.frameFence);
-    g_shared->hostFenceHandle = reinterpret_cast<uint64_t>(handles.hostFence);
+    g_shared->frameFenceHandle = uint64_t(reinterpret_cast<uintptr_t>(handles.frameFence));
+    g_shared->hostFenceHandle = uint64_t(reinterpret_cast<uintptr_t>(handles.hostFence));
     g_shared->firstFrame = g_shared->frameIndex + 1;
     InterlockedIncrement(&g_shared->texSeq);  // even: stable again
     g_publisher = owner;

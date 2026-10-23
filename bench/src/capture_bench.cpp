@@ -213,6 +213,10 @@ TEST(Capture, RealHookPerGraphicsApi) {
                         {L"--d3d10", "D3D10"}, {L"--d3d12", "D3D12"}, {L"--opengl", "OpenGL"}};
     constexpr int kFrames = 120;
     for (const Api& api : apis) {
+        if (api.flag == std::wstring(L"--d3d8") && sizeof(void*) == 8) {
+            PrintNote(api.name, "32-bit only, as Windows' D3D8 is: in the x86 release");
+            continue;
+        }
         LaunchSpec spec;
         spec.exePath = testApp;
         spec.arguments = api.flag;

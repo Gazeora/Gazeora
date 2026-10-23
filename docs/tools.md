@@ -22,7 +22,8 @@ the difference between the two clocks.
 
 `gazeora_testapp.exe` opens a 1280×720 window with a moving square, for testing capture without
 a real game. It uses Direct3D 11 by default; pass `--d3d8` (MinGW builds only), `--d3d9`,
-`--d3d10`, `--d3d12` or `--opengl` for the other APIs. In D3D11 and D3D12 it also draws a
+`--d3d10`, `--d3d12` or `--opengl` for the other APIs. Direct3D 8 runs in the x86 release only,
+as Windows has no 64-bit D3D8. In D3D11 and D3D12 it also draws a
 depth-tested 3D scene, for testing 3D from depth: D3D11 with 24-bit depth (0 near), D3D12 with
 reversed 32-bit float depth that goes to a shader-readable state after drawing, like a deferred
 renderer. `--d3d12-depth-write` keeps it in the depth write state instead.

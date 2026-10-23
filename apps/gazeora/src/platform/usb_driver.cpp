@@ -275,6 +275,20 @@ void DeleteKey(const std::wstring& container) {
                          CRYPT_DELETEKEYSET | CRYPT_MACHINE_KEYSET);
 }
 
+// The first error CryptCAT* reports while making a catalog, and the definition line it was in.
+// Its error callback takes no context pointer, so this is where it can leave them.
+DWORD g_catalogFailure = 0;
+std::wstring g_catalogFailureLine;
+
+// A named WINAPI function, not a lambda: on x86 Win32 calls it __stdcall, and a lambda only
+// converts to a __cdecl function pointer.
+void WINAPI OnCatalogError(DWORD area, DWORD code, WCHAR* line) {
+    if (!g_catalogFailure) {
+        g_catalogFailure = code ? code : area;
+        g_catalogFailureLine = line ? line : L"";
+    }
+}
+
 // The catalog of the driver package, the INF's SHA-256 hash in it, made as makecat makes it:
 // from a definition, through Windows' own catalog writer. (Catalogs put together member by
 // member come out in a form driver installs don't accept.)
@@ -312,16 +326,11 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
                                                          "CryptCATCDFEnumAttributesWithCDFTag");
 
     // The first thing the definition had wrong, and where.
-    static DWORD failure;
-    static std::wstring where;
+    DWORD& failure = g_catalogFailure;
+    std::wstring& where = g_catalogFailureLine;
     failure = 0;
     where.clear();
-    auto onError = [](DWORD area, DWORD code, WCHAR* line) {
-        if (!failure) {
-            failure = code ? code : area;
-            where = line ? line : L"";
-        }
-    };
+    PFN_CDF_PARSE_ERROR_CALLBACK onError = OnCatalogError;
     CRYPTCATCDF* cdf =
         enumAttributes ? CryptCATCDFOpen(const_cast<LPWSTR>(definition.c_str()), onError) : nullptr;
     if (!cdf) {

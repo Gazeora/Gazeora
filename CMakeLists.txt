@@ -3,7 +3,9 @@ project(Gazeora LANGUAGES C CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-include(CompilerSettings)  # toolchain checks, static runtime, common definitions
+# The compiler picks the release: a 64-bit one builds the x64 release (for 64-bit games), a
+# 32-bit one the x86 release (for 32-bit games). Each is the whole of Gazeora, built on its own.
+include(CompilerSettings)  # toolchain checks, GAZEORA_ARCH, static runtime, common definitions
 include(MinHook)
 include(LibUsb)
 include(ClangFormat)       # format / format-check targets

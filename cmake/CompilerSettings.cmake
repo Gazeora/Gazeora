@@ -3,9 +3,18 @@
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "Gazeora must be built for 64-bit Windows (the hook runs inside x64 games).")
+# The release this build makes, by the compiler's bitness: the hook runs inside games, so the
+# x64 release captures 64-bit games and the x86 release 32-bit ones.
+if(NOT WIN32)
+    message(FATAL_ERROR "Gazeora is built for Windows only.")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(GAZEORA_ARCH x64)
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(GAZEORA_ARCH x86)
+else()
+    message(FATAL_ERROR "Gazeora needs a 32-bit or 64-bit Windows compiler.")
 endif()
+message(STATUS "Building the ${GAZEORA_ARCH} release of Gazeora")
 
 # The hook DLL is loaded into game processes that don't ship our compiler's runtime
 # DLLs, so link the C/C++ runtime statically everywhere.

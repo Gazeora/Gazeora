@@ -5,6 +5,7 @@ add_library(gazeora_host_lib STATIC
     # launch: starting games and injecting the hook into them
     src/launch/injector.cpp
     src/launch/launcher.cpp
+    src/launch/remote_thread_injector.cpp
     # capture: receiving the hook's frames and reading them back from the GPU
     src/capture/capture_client.cpp
     src/capture/frame_dump.cpp
@@ -48,10 +49,14 @@ target_link_libraries(gazeora_host_lib PUBLIC gazeora_common d3d11 d3dcompiler d
     PRIVATE libusb setupapi winusb)
 
 # OpenMP splits the per-frame pixel loops (NV12 conversion, read-back) over a few cores.
-find_package(OpenMP REQUIRED)
-target_link_libraries(gazeora_host_lib PRIVATE OpenMP::OpenMP_CXX)
-if(NOT MSVC)
-    # GCC links its OpenMP runtime through this flag, which a static library doesn't pass on
-    # to the executables linking it. (MSVC's objects name their runtime themselves.)
+if(MSVC)
+    find_package(OpenMP REQUIRED)
+    target_link_libraries(gazeora_host_lib PRIVATE OpenMP::OpenMP_CXX)
+else()
+    # Just the flag, to compile and to link: GCC's driver then links its OpenMP runtime itself,
+    # statically like the rest (-static). FindOpenMP hands out the runtime DLL's import library
+    # on some MinGW builds (MSYS2's), which would make every program need libgomp-1.dll. The
+    # link flag goes on to the executables, as a static library doesn't link anything itself.
+    target_compile_options(gazeora_host_lib PRIVATE -fopenmp)
     target_link_options(gazeora_host_lib INTERFACE -fopenmp)
 endif()

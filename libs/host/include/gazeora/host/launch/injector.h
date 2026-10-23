@@ -12,7 +12,9 @@ std::wstring HookDllPathNextToExe();
 // isn't `ignorePid`, or 0.
 DWORD FindProcessByName(const std::wstring& exeName, DWORD ignorePid = 0);
 
-// Loads dllPath into the target process via CreateRemoteThread + LoadLibraryW.
+// Loads dllPath into the target process via CreateRemoteThread + LoadLibraryW. The target
+// must have this process's bitness, like the hook: the x64 release captures 64-bit games,
+// the x86 release 32-bit ones.
 bool InjectDll(DWORD pid, const std::wstring& dllPath, std::wstring& error);
 
 }  // namespace gazeora

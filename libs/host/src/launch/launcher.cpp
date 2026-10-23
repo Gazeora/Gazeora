@@ -74,23 +74,27 @@ bool HasGraphicsRuntime(DWORD pid) {
     return found;
 }
 
+struct WindowSearch {
+    DWORD pid;
+    bool found;
+};
+
+// EnumWindows' callback. A named CALLBACK function, not a lambda: on x86 Win32 calls it
+// __stdcall, and a lambda only converts to a __cdecl function pointer.
+BOOL CALLBACK FindVisibleWindow(HWND hwnd, LPARAM param) {
+    auto* search = reinterpret_cast<WindowSearch*>(param);
+    DWORD owner = 0;
+    GetWindowThreadProcessId(hwnd, &owner);
+    if (owner == search->pid && IsWindowVisible(hwnd) && !GetWindow(hwnd, GW_OWNER)) {
+        search->found = true;
+        return FALSE;
+    }
+    return TRUE;
+}
+
 bool HasVisibleWindow(DWORD pid) {
-    struct Search {
-        DWORD pid;
-        bool found;
-    } search = {pid, false};
-    EnumWindows(
-        [](HWND hwnd, LPARAM param) -> BOOL {
-            auto* s = reinterpret_cast<Search*>(param);
-            DWORD owner = 0;
-            GetWindowThreadProcessId(hwnd, &owner);
-            if (owner == s->pid && IsWindowVisible(hwnd) && !GetWindow(hwnd, GW_OWNER)) {
-                s->found = true;
-                return FALSE;
-            }
-            return TRUE;
-        },
-        reinterpret_cast<LPARAM>(&search));
+    WindowSearch search = {pid, false};
+    EnumWindows(FindVisibleWindow, reinterpret_cast<LPARAM>(&search));
     return search.found;
 }
 
