@@ -88,6 +88,9 @@ public:
     std::vector<UsbPhone> PhonesNeedingUsbDriver() const;
     // Players currently receiving the stream.
     int Viewers() const { return m_viewers; }
+    // Of those, the ones that are the Gazeora Android app, not VLC and the like
+    // (player_identity.h).
+    int AppViewers() const { return m_appViewers; }
     // False while nobody watches; frames pushed then are wasted work.
     bool WantsFrames() const { return m_viewers > 0; }
     // Why the last pushed frame couldn't be streamed; empty if it was.
@@ -144,6 +147,7 @@ private:
         bool tcp = false;     // interleaved in the RTSP connection instead
         uint8_t channel = 0;  // interleaved channel for RTP; RTCP goes on the next one
         bool playing = false;
+        bool app = false;  // the Gazeora app, by its User-Agent
         bool needsReport = false;  // just started playing: send a sender report right away
         // Interleaved: frames that didn't fit the connection's backlog, and whether the
         // player has to wait for a key frame since.
@@ -219,6 +223,7 @@ private:
     std::atomic<uint16_t> m_port{0};
     std::atomic<bool> m_stopping{false};
     std::atomic<int> m_viewers{0};
+    std::atomic<int> m_appViewers{0};
     uint32_t m_ssrc = 0;
     // Sender statistics for RTCP, touched by the encode thread only.
     uint32_t m_packetsSent = 0;

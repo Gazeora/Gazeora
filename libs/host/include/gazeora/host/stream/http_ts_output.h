@@ -29,6 +29,7 @@ public:
     void Stop() override;
     uint16_t Port() const override { return m_port; }
     int Viewers() const override { return m_viewers; }
+    int AppViewers() const override { return m_appViewers; }
     bool TakeKeyFrameRequest() override { return m_keyFrameWanted.exchange(false); }
     void Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
               uint64_t now) override;
@@ -40,6 +41,7 @@ private:
     struct Player {
         std::unique_ptr<RtspConnection> connection;
         bool streaming = false;
+        bool app = false;  // the Gazeora app, by its User-Agent
         bool waitingForKeyFrame = true;
         uint32_t framesSent = 0;
         uint32_t framesSkipped = 0;
@@ -50,7 +52,7 @@ private:
     void Serve(RtspConnection& connection);
     // Reads and answers the request; true if the player now gets the stream.
     bool Answer(RtspConnection& connection, const std::string& request);
-    void SetStreaming(RtspConnection& connection, bool streaming);
+    void SetStreaming(RtspConnection& connection, bool streaming, bool app = false);
     void Reap(bool all);
 
     StreamLog& m_log;
@@ -58,6 +60,7 @@ private:
     std::atomic<uint16_t> m_port{0};
     std::atomic<bool> m_stopping{false};
     std::atomic<int> m_viewers{0};
+    std::atomic<int> m_appViewers{0};
     std::atomic<bool> m_keyFrameWanted{false};
     std::thread m_acceptThread;
 

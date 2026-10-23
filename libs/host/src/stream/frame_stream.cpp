@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "gazeora/host/stream/packet_pacer.h"
+#include "gazeora/host/stream/player_identity.h"
 #include "gazeora/host/stream/rtcp.h"
 #include "gazeora/host/stream/rtp_video.h"
 #include "gazeora/host/stream/rtsp_connection.h"
@@ -249,6 +250,7 @@ void FrameStreamServer::Stop() {
         std::lock_guard<std::mutex> lock(m_sessionsMutex);
         m_sessions.clear();
         m_viewers = 0;
+        m_appViewers = 0;
     }
     std::lock_guard<std::mutex> lock(m_urlsMutex);
     m_urls.clear();
@@ -406,6 +408,9 @@ void FrameStreamServer::ReapConnections(bool all) {
 void FrameStreamServer::UpdateViewers() {
     m_viewers = int(std::count_if(m_sessions.begin(), m_sessions.end(),
                                   [](const auto& entry) { return entry.second.playing; }));
+    m_appViewers = int(std::count_if(m_sessions.begin(), m_sessions.end(), [](const auto& entry) {
+        return entry.second.playing && entry.second.app;
+    }));
 }
 
 void FrameStreamServer::Serve(RtspConnection& connection) {
@@ -605,6 +610,7 @@ bool FrameStreamServer::OnSetup(RequestContext& context) {
     }
     Session& session = it->second;
     session.tcp = transport.interleaved;
+    session.app = PlayerIdentity::IsGazeoraApp(context.request.Header("User-Agent"));
     std::string replyTransport;
     if (transport.interleaved) {
         session.channel = transport.channel;
@@ -931,6 +937,7 @@ void FrameStreamServer::EncodeLoop() {
         uint64_t now = GetTickCount64();
         if (m_output) {
             m_viewers = m_output->Viewers();
+            m_appViewers = m_output->AppViewers();
             if (m_output->TakeKeyFrameRequest()) {
                 m_keyFrameWanted = true;
             }

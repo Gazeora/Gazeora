@@ -34,6 +34,9 @@ public:
 
     virtual uint16_t Port() const = 0;  // 0 if the output has none
     virtual int Viewers() const = 0;
+    // The viewers that are the Gazeora app (player_identity.h): all of them on outputs only
+    // the app speaks (UDP, USB).
+    virtual int AppViewers() const { return Viewers(); }
     // True once after a player joined or lost a frame: the next frame should be a key frame.
     virtual bool TakeKeyFrameRequest() = 0;
     // Sends one frame to every player. Loss the players see is reported to `bitrate`.

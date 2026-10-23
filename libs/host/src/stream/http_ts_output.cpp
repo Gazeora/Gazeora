@@ -3,6 +3,9 @@
 #include <ws2tcpip.h>
 
 #include <algorithm>
+#include <cctype>
+
+#include "gazeora/host/stream/player_identity.h"
 
 namespace gazeora {
 
@@ -20,6 +23,21 @@ std::string Response(const char* status, const char* type, const std::string& bo
            "\r\nServer: Gazeora\r\nContent-Type: " + type +
            "\r\nContent-Length: " + std::to_string(body.size()) +
            "\r\nConnection: close\r\n\r\n" + body;
+}
+
+// The request's User-Agent header, trimmed; empty if it has none.
+std::string UserAgent(const std::string& request) {
+    constexpr char kHeader[] = "\r\nuser-agent:";
+    std::string lower(request.size(), ' ');
+    std::transform(request.begin(), request.end(), lower.begin(),
+                   [](unsigned char c) { return char(std::tolower(c)); });
+    size_t at = lower.find(kHeader);
+    if (at == std::string::npos) {
+        return {};
+    }
+    size_t begin = request.find_first_not_of(' ', at + sizeof(kHeader) - 1);
+    size_t end = request.find("\r\n", begin);
+    return request.substr(begin, end - begin);
 }
 
 }  // namespace
@@ -65,6 +83,7 @@ void HttpTsOutput::Stop() {
     m_listen.Reset();
     m_port = 0;
     m_viewers = 0;
+    m_appViewers = 0;
 }
 
 std::wstring HttpTsOutput::Url(const std::wstring& host) const {
@@ -118,17 +137,20 @@ void HttpTsOutput::Reap(bool all) {
     }
 }
 
-void HttpTsOutput::SetStreaming(RtspConnection& connection, bool streaming) {
+void HttpTsOutput::SetStreaming(RtspConnection& connection, bool streaming, bool app) {
     std::lock_guard<std::mutex> lock(m_playersMutex);
     for (Player& player : m_players) {
         if (player.connection.get() == &connection) {
             player.streaming = streaming;
+            player.app = streaming && app;
             player.waitingForKeyFrame = true;
             player.countedSinceMs = GetTickCount64();
         }
     }
     m_viewers = int(std::count_if(m_players.begin(), m_players.end(),
                                   [](const Player& player) { return player.streaming; }));
+    m_appViewers = int(std::count_if(m_players.begin(), m_players.end(),
+                                     [](const Player& player) { return player.app; }));
     if (streaming) {
         m_keyFrameWanted = true;  // so it doesn't wait up to a second for a picture
     }
@@ -214,7 +236,7 @@ void HttpTsOutput::Serve(RtspConnection& connection) {
         if (request.find("\r\n\r\n") != std::string::npos) {
             streaming = Answer(connection, request);
             if (streaming) {
-                SetStreaming(connection, true);
+                SetStreaming(connection, true, PlayerIdentity::IsGazeoraApp(UserAgent(request)));
             }
         } else if (request.size() > kMaxRequestBytes) {
             reason = "its request was too large";

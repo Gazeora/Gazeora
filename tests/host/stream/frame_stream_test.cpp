@@ -387,6 +387,37 @@ TEST_F(FrameStreamTest, StreamsInterleavedOverTcp) {
     EXPECT_EQ(keepalive.rfind("RTSP/1.0 200 OK\r\n", 0), 0u) << keepalive;
 }
 
+TEST_F(FrameStreamTest, CountsTheAndroidAppApartFromOtherPlayers) {
+    StartServer(StreamProtocol::RtspTcp);
+    auto play = [&](const std::string& userAgent) {
+        Connect();
+        std::string setup = Request(
+            "SETUP", base + "track1",
+            "Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\nUser-Agent: " + userAgent + "\r\n");
+        std::string session = Header(setup, "Session");
+        session = session.substr(0, session.find(';'));
+        Request("PLAY", base, "Session: " + session + "\r\n");
+    };
+    play("LibVLC/3.0.20 (LIVE555 Streaming Media v2016.11.28)");
+    EXPECT_EQ(server.Viewers(), 1);
+    EXPECT_EQ(server.AppViewers(), 0);
+    closesocket(rtsp);
+    received.clear();
+    play("Gazeora Android");
+    EXPECT_EQ(server.AppViewers(), 1);
+}
+
+TEST_F(FrameStreamTest, CountsTheAndroidAppOverHttp) {
+    StartServer(StreamProtocol::Http);
+    Connect();
+    std::string get =
+        "GET /stream.ts HTTP/1.1\r\nHost: 127.0.0.1\r\nUser-Agent: Gazeora Android\r\n\r\n";
+    send(rtsp, get.data(), int(get.size()), 0);
+    WaitForViewers(1);
+    for (int i = 0; i < 100 && server.AppViewers() != 1; ++i) Sleep(10);
+    EXPECT_EQ(server.AppViewers(), 1);
+}
+
 TEST_F(FrameStreamTest, PlayWithoutSetupIsAnUnknownSession) {
     Connect();
     std::string response = Request("PLAY", base, "Session: 1234\r\n");
@@ -622,6 +653,7 @@ TEST_F(FrameStreamTest, StreamsFramesOverUdpToPlayersThatSayHello) {
     say(FrameMessage::Hello);
     WaitForViewers(1);
     ASSERT_EQ(server.Viewers(), 1);
+    EXPECT_EQ(server.AppViewers(), 1);  // only the app speaks GZF1
 
     std::vector<uint8_t> frame = Solid(320, 240, 0x80);
     server.PushFrame(320, 240, frame);
@@ -668,6 +700,7 @@ TEST_F(FrameStreamTest, StreamsMpegTsOverHttp) {
     received.erase(0, headEnd + 4);
     WaitForViewers(1);
     ASSERT_EQ(server.Viewers(), 1);
+    EXPECT_EQ(server.AppViewers(), 0);  // no User-Agent: some other player
 
     std::vector<uint8_t> frame = Solid(320, 240, 0x80);
     server.PushFrame(320, 240, frame);
