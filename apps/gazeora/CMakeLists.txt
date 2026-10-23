@@ -15,6 +15,7 @@ add_executable(Gazeora WIN32
     src/pages/settings_page.cpp
     src/platform/shell.cpp
     src/platform/usb_driver.cpp
+    src/settings/settings_file.cpp
     src/settings/stream_settings.cpp
     src/ui/logo_frame.cpp
     src/ui/text_format.cpp
