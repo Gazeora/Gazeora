@@ -52,6 +52,7 @@ using PresentFn = HRESULT(STDMETHODCALLTYPE*)(Device8*, const RECT*, const RECT*
 using ResetFn = HRESULT(STDMETHODCALLTYPE*)(Device8*, PresentParameters*);
 
 // IDirect3D8: IUnknown 0-2, then d3d8.h order.
+constexpr size_t kGetAdapterDisplayModeSlot = 8;
 constexpr size_t kCreateDeviceSlot = 15;
 // IDirect3DDevice8: IUnknown 0-2, then d3d8.h order.
 constexpr size_t kResetSlot = 14;
@@ -68,6 +69,11 @@ template <typename Ret, typename... Args>
 Ret CallSlot(IUnknown* object, size_t slot, Args... args) {
     using Fn = Ret(STDMETHODCALLTYPE*)(IUnknown*, Args...);
     return reinterpret_cast<Fn>((*reinterpret_cast<void***>(object))[slot])(object, args...);
+}
+
+// D3DDISPLAYMODE kept its layout in D3D9.
+inline HRESULT GetAdapterDisplayMode(Direct3D8* d3d, UINT adapter, D3DDISPLAYMODE* mode) {
+    return CallSlot<HRESULT>(d3d, kGetAdapterDisplayModeSlot, adapter, mode);
 }
 
 inline HRESULT CreateDevice(Direct3D8* d3d, UINT adapter, D3DDEVTYPE type, HWND focus,

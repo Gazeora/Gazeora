@@ -56,6 +56,13 @@ bool HookVTable(Direct3DCreate8Fn direct3DCreate8, CreateFn create) {
         SetStatus("dummy Direct3DCreate8 failed");
         return false;
     }
+    // A windowed D3D8 device takes the desktop's format only: unlike D3D9, it refuses
+    // D3DFMT_UNKNOWN for it.
+    D3DDISPLAYMODE mode = {};
+    if (FAILED(GetAdapterDisplayMode(d3d.Get(), kAdapterDefault, &mode))) {
+        SetStatus("dummy D3D8 device: no display mode");
+        return false;
+    }
     // Explicit size: the dummy window's client area may be empty.
     PresentParameters pp = {};
     pp.BackBufferWidth = 16;
@@ -63,7 +70,7 @@ bool HookVTable(Direct3DCreate8Fn direct3DCreate8, CreateFn create) {
     pp.BackBufferCount = 1;
     pp.Windowed = TRUE;
     pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    pp.BackBufferFormat = D3DFMT_UNKNOWN;
+    pp.BackBufferFormat = mode.Format;
     pp.hDeviceWindow = window.hwnd();
     ComPtr<Device8> device;
     HRESULT hr = E_FAIL;
