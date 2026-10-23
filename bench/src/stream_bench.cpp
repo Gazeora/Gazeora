@@ -183,6 +183,8 @@ void BenchServer(VideoCodec codec) {
     constexpr int kFrames = 150;
     constexpr int kSkip = 10;  // the first frames open the encoder and send a key frame
     FrameStreamServer server;
+    server.SetProtocol(StreamProtocol::RtspUdp);  // the player sets up RTP over UDP
+    server.SetDiscoveryPort(0);                    // any free port, beside a running Gazeora
     std::wstring error;
     ASSERT_TRUE(server.Start(0, false, error)) << Narrow(error);
     if (!server.CodecAvailable(codec)) {
