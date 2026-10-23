@@ -28,6 +28,8 @@ using Microsoft::WRL::ComPtr;
 namespace {
 
 constexpr wchar_t kWindowClass[] = L"GazeoraLauncher";
+// Frame time while minimized and watched: the stream's 30 fps, as there's no vsync.
+constexpr DWORD kMinimizedFrameMs = 33;
 
 struct Renderer {
     ComPtr<ID3D11Device> device;
@@ -65,6 +67,13 @@ struct Renderer {
         ComPtr<ID3D11Texture2D> backBuffer;
         swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer));
         device->CreateRenderTargetView(backBuffer.Get(), nullptr, &target);
+    }
+
+    // The back buffer keeps its size while the window is minimized.
+    ImVec2 BufferSize() const {
+        DXGI_SWAP_CHAIN_DESC desc = {};
+        swapChain->GetDesc(&desc);
+        return {float(desc.BufferDesc.Width), float(desc.BufferDesc.Height)};
     }
 
     void Resize(UINT width, UINT height) {
@@ -212,11 +221,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     // Redraw only when something happens, so the launcher stays idle while a game runs.
     // Input keeps it drawing for a few frames (ImGui settles hover state over 2-3 frames);
     // otherwise it repaints twice a second to keep play time and capture stats fresh.
+    // Minimized, it only draws while someone watches it on the stream, which the phone's
+    // touches can then drive.
     int busyFrames = 3;
     bool running = true;
     while (running) {
         bool idle = busyFrames == 0 && !app->WantsContinuousFrames();
-        if (idle || IsIconic(hwnd)) {
+        bool minimized = IsIconic(hwnd);
+        bool drawing = !minimized || app->WantsFramesWhileMinimized();
+        if (idle || !drawing) {
             MsgWaitForMultipleObjectsEx(0, nullptr, 500, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
         }
         MSG msg;
@@ -233,12 +246,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
         }
 
         app->Tick();
-        if (IsIconic(hwnd)) {
+        if (!drawing) {
             continue;
         }
 
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
+        if (minimized) {
+            ImGui::GetIO().DisplaySize = g_renderer.BufferSize();  // the client area is 0 x 0
+        }
+        app->ApplyRemoteInput();
         ImGui::NewFrame();
         app->Draw();
         ImGui::Render();
@@ -249,7 +266,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
         g_renderer.context->ClearRenderTargetView(target, clear);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
         app->StreamWindow(g_renderer.swapChain.Get());
-        g_renderer.swapChain->Present(1, 0);
+        if (minimized) {
+            Sleep(kMinimizedFrameMs);  // nothing to present: pace like the stream
+        } else {
+            g_renderer.swapChain->Present(1, 0);
+        }
         if (busyFrames > 0) {
             --busyFrames;
         }

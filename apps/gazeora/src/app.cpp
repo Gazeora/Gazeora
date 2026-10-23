@@ -56,7 +56,9 @@ App::App(HWND hwnd, ID3D11Device* device, float dpiScale)
     m_stream.SetCodec(m_settings.LoadCodec());
     m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());
     m_stream.SetProtocol(m_settings.LoadProtocol());
+    m_stream.SetPointerSink(&m_remoteTouches);
     StartStream();
+    m_controls.Resume();
 }
 
 void App::StartStream() {
@@ -184,6 +186,8 @@ void App::SetupImGui() {
 }
 
 void App::Tick() {
+    m_controls.SetPhoneInVr(m_stream.AppViewers() > 0 && m_vr.enabled);
+    m_controls.SetGameRunning(GameRunning());
     if (m_logoDirty) {
         UpdateLogoFrame();  // here rather than in Draw: it uses the UI's device context
         m_logoDirty = false;
@@ -216,9 +220,34 @@ void App::Tick() {
     }
 }
 
+bool App::WantsFramesWhileMinimized() const {
+    return m_idlePicture == IdlePicture::Window && m_stream.Running() && m_stream.Viewers() > 0;
+}
+
+void App::ApplyRemoteInput() {
+    std::vector<PointerEvent> touches = m_remoteTouches.Take();
+    if (GameRunning()) {
+        return;  // dropped, not kept: they'd land all at once when the game closes
+    }
+    m_remoteInput.Apply(touches, ImGui::GetIO(), GetTickCount64());
+}
+
+bool App::GameRunning() const {
+    for (const auto& session : m_sessions) {
+        if (!session->Finished()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool App::WantsContinuousFrames() const {
-    if (!m_toasts.empty() || ImGui::GetIO().WantTextInput) {
+    if (!m_toasts.empty() || ImGui::GetIO().WantTextInput ||
+        ImGuiPointerInput::HasQueuedInput()) {
         return true;
+    }
+    if (m_page == Page::Controls && m_controls.Animating()) {
+        return true;  // the hand preview
     }
     for (const auto& session : m_sessions) {
         if (session->Snapshot().state == GameSession::State::Launching) {
@@ -282,6 +311,9 @@ void App::Draw() {
             break;
         case Page::Details:
             DrawDetails();
+            break;
+        case Page::Controls:
+            m_controls.Draw({m_fonts.title, m_fonts.heading, m_fonts.small});
             break;
         case Page::Settings:
             DrawSettings();

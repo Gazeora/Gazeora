@@ -12,10 +12,15 @@
 #include <vector>
 
 #include "game_session.h"
+#include "gazeora/input/hand_gesture_services.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "pages/controls_page.h"
+#include "remote/imgui_pointer_input.h"
+#include "remote/pointer_event_queue.h"
+#include "settings/controls_settings.h"
 #include "settings/stream_settings.h"
 #include "textures.h"
 
@@ -45,6 +50,12 @@ public:
 
     // True while something animates or changes faster than idle repaints show it.
     bool WantsContinuousFrames() const;
+    // Whether to keep drawing while minimized: someone watches this window on the stream.
+    bool WantsFramesWhileMinimized() const;
+
+    // The phone's touches since the last frame, onto this window's UI only. Call between the
+    // platform backend's NewFrame and ImGui::NewFrame.
+    void ApplyRemoteInput();
 
     // After a frame is drawn, before it's presented: when no game is running, this window is
     // what streams (unless the logo is chosen), so the launcher can be seen from the headset.
@@ -55,7 +66,7 @@ public:
     void OnActivated();
 
 private:
-    enum class Page { Home, Library, Details, Settings };
+    enum class Page { Home, Library, Details, Controls, Settings };
     // What streams when no game is.
     enum class IdlePicture { Window, Logo };
     enum class Sort { RecentlyPlayed, Name, RecentlyAdded };
@@ -115,6 +126,8 @@ private:
     void SetIdlePicture(IdlePicture picture);
 
     GameSession* SessionFor(uint32_t gameId) const;
+    // A game is launching or running: the phone's touches and hand gestures are off.
+    bool GameRunning() const;
     const Texture& ArtFor(const Game& game);
     uint64_t AccentGradient();  // ImTextureID of the horizontal gradient
     std::vector<const Game*> SortedGames(Sort sort, const std::string& filter) const;
@@ -126,6 +139,10 @@ private:
     TextureCache m_textures;
     GameLibraryServices m_libraryServices{LibraryLocation::DefaultPath()};
     GameLibrary& m_library = m_libraryServices.Library();
+    // The phone's touches, while the stream isn't laid out for VR. Declared before m_stream,
+    // whose threads deliver them; each one wakes the UI thread to draw.
+    PointerEventQueue m_remoteTouches{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
+    ImGuiPointerInput m_remoteInput;
     FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
     std::wstring m_streamError;  // why it isn't running
     StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout
@@ -168,6 +185,12 @@ private:
     // Actions that add or remove games run after the frame is drawn, so the pages never
     // hold pointers into a library that changed under them.
     std::vector<std::function<void()>> m_deferred;
+
+    // Hand gestures and the Controls page; the page is declared last, as it holds references
+    // to the others.
+    input::HandGestureServices m_hands;
+    ControlsSettings m_controlsSettings;
+    ControlsPage m_controls{m_hands, m_controlsSettings, m_scale};
 };
 
 }  // namespace gazeora::app

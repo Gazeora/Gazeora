@@ -27,6 +27,7 @@ inline const ImU32 kTextFaint = IM_COL32(100, 106, 130, 255);
 inline const ImU32 kDanger = IM_COL32(244, 86, 112, 255);
 inline const ImU32 kDangerHover = IM_COL32(250, 112, 136, 255);
 inline const ImU32 kWarning = IM_COL32(250, 190, 70, 255);
+inline const ImU32 kSuccess = IM_COL32(74, 222, 128, 255);
 
 // Segoe Fluent Icons / Segoe MDL2 Assets code points, merged into every text font.
 #define ICON_HOME u8""
@@ -48,11 +49,12 @@ inline const ImU32 kWarning = IM_COL32(250, 190, 70, 255);
 #define ICON_CHECK u8""
 #define ICON_WARNING u8""
 #define ICON_EDIT u8""
+#define ICON_HAND u8""  // TouchPointer
 
 // Every glyph above, for building the font atlas.
 inline const char kAllIcons[] = ICON_HOME ICON_LIBRARY ICON_SETTINGS ICON_ADD ICON_PLAY ICON_BACK
     ICON_DELETE ICON_FOLDER ICON_PICTURE ICON_CAMERA ICON_SEARCH ICON_GAME ICON_REFRESH
-        ICON_CAPTURE ICON_CLOCK ICON_INFO ICON_CHECK ICON_WARNING ICON_EDIT;
+        ICON_CAPTURE ICON_CLOCK ICON_INFO ICON_CHECK ICON_WARNING ICON_EDIT ICON_HAND;
 
 ImU32 WithAlpha(ImU32 color, float alpha);
 ImU32 Shade(const float rgb[3], float brightness, float alpha = 1.0f);

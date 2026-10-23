@@ -9,22 +9,28 @@ add_executable(Gazeora WIN32
     src/game_session.cpp
     src/textures.cpp
     src/pages/chrome.cpp
+    src/pages/controls_page.cpp
     src/pages/details_page.cpp
     src/pages/home_page.cpp
     src/pages/library_page.cpp
     src/pages/settings_page.cpp
     src/platform/shell.cpp
     src/platform/usb_driver.cpp
+    src/remote/imgui_pointer_input.cpp
+    src/remote/pointer_event_queue.cpp
+    src/settings/controls_settings.cpp
     src/settings/settings_file.cpp
     src/settings/stream_settings.cpp
+    src/ui/hand_preview.cpp
     src/ui/logo_frame.cpp
     src/ui/text_format.cpp
     src/ui/theme.cpp
+    src/ui/tracking_status_line.cpp
     src/ui/widgets.cpp
     resources/gazeora.rc)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(Gazeora PRIVATE
-    gazeora_host_lib gazeora_library imgui
+    gazeora_host_lib gazeora_library gazeora_input imgui
     d3d11 dxgi dwmapi windowscodecs shell32 ole32 uuid
     crypt32 wintrust setupapi)  # the USB driver install
 if(NOT MSVC)

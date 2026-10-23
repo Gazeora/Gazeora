@@ -59,6 +59,7 @@ void App::DrawSidebar() {
     const NavItem items[] = {
         {ICON_HOME, "Home", Page::Home},
         {ICON_LIBRARY, "Library", Page::Library},
+        {ICON_HAND, "Controls", Page::Controls},
         {ICON_SETTINGS, "Settings", Page::Settings},
     };
     float width = ImGui::GetContentRegionAvail().x;
