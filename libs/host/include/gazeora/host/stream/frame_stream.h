@@ -20,6 +20,8 @@
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_output.h"
 #include "gazeora/host/stream/net.h"
+#include "gazeora/host/stream/pointer_gate.h"
+#include "gazeora/host/stream/pointer_input_receiver.h"
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_overlay.h"
 #include "gazeora/host/stream/stream_protocol.h"
@@ -121,6 +123,11 @@ public:
     // frames back applies it (TextureReader::SetVrLayout), once per frame.
     void SetVrLayout(const VrLayout& vr);
     VrLayout GetVrLayout();
+
+    // Where the Gazeora app's touches go (pointer_message.h), from the server's threads: over
+    // the network on kPointerPort, or on the USB cable. Only while the VR layout is off; null
+    // drops them. `sink` must outlive the server.
+    void SetPointerSink(PointerEventSink* sink) { m_pointerGate.SetTarget(sink); }
 
     // The streaming details drawn into every frame streamed, live or idle (stream_overlay.h).
     void SetOverlay(const OverlaySettings& overlay);
@@ -263,6 +270,9 @@ private:
 
     std::mutex m_vrMutex;
     VrLayout m_vr;
+
+    PointerGate m_pointerGate;
+    PointerInputReceiver m_pointerReceiver{m_pointerGate, m_log};
 
     std::mutex m_overlayMutex;
     OverlaySettings m_overlay;

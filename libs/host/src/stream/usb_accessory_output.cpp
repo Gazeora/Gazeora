@@ -9,6 +9,8 @@
 #include <cstring>
 #include <vector>
 
+#include "gazeora/host/stream/pointer_message.h"
+
 namespace gazeora {
 
 // The open accessory interface: its bulk endpoint each way. Results are libusb's codes.
@@ -629,6 +631,36 @@ void UsbAccessoryOutput::Connected(std::unique_ptr<UsbAccessoryPipe> pipe, std::
     SetStatus(L"Connected to " + Widen(m_phoneName) + L". Waiting for the Gazeora app on it");
 }
 
+void UsbAccessoryOutput::Hear(const FrameHeader& header, const uint8_t* payload, uint64_t now) {
+    PointerEventSink* pointer = m_pointerSink;
+    PointerEvent event;
+    switch (header.type) {
+        case FrameMessage::Hello:
+            if (!m_watching) {
+                m_log.Write("the Gazeora app on %s said hello: streaming to it",
+                            m_phoneName.c_str());
+                m_keyFrameWanted = true;
+            }
+            m_watching = true;
+            m_lastHelloMs = now;
+            SetStatus(L"Streaming to " + Widen(m_phoneName));
+            break;
+        case FrameMessage::KeyFrameRequest:
+            m_keyFrameWanted = true;
+            break;
+        case FrameMessage::Bye:
+            m_watching = false;
+            break;
+        case FrameMessage::Pointer:
+            if (pointer && PointerMessage::Read(payload, header.tail, event)) {
+                pointer->OnPointer(event);
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 void UsbAccessoryOutput::ReadFromPhone(uint64_t now) {
     uint8_t buffer[16384];  // accessory reads come in whole USB transfers
     int got = 0;
@@ -642,21 +674,8 @@ void UsbAccessoryOutput::ReadFromPhone(uint64_t now) {
     FrameHeader header;
     while (header.Read(reinterpret_cast<const uint8_t*>(m_inbox.data()), m_inbox.size()) &&
            m_inbox.size() >= kFrameHeaderSize + header.tail) {
+        Hear(header, reinterpret_cast<const uint8_t*>(m_inbox.data()) + kFrameHeaderSize, now);
         m_inbox.erase(0, kFrameHeaderSize + header.tail);
-        if (header.type == FrameMessage::Hello) {
-            if (!m_watching) {
-                m_log.Write("the Gazeora app on %s said hello: streaming to it",
-                            m_phoneName.c_str());
-                m_keyFrameWanted = true;
-            }
-            m_watching = true;
-            m_lastHelloMs = now;
-            SetStatus(L"Streaming to " + Widen(m_phoneName));
-        } else if (header.type == FrameMessage::KeyFrameRequest) {
-            m_keyFrameWanted = true;
-        } else if (header.type == FrameMessage::Bye) {
-            m_watching = false;
-        }
     }
     if (m_inbox.size() >= kFrameHeaderSize && !header.Read(
             reinterpret_cast<const uint8_t*>(m_inbox.data()), m_inbox.size())) {

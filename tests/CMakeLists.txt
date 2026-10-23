@@ -39,6 +39,7 @@ gazeora_add_test(gazeora_host_tests
         host/encode/video_encoder_test.cpp
         host/stream/bitrate_controller_test.cpp
         host/stream/frame_stream_test.cpp
+        host/stream/pointer_input_test.cpp
         host/stream/rtcp_test.cpp
         host/stream/rtp_video_test.cpp
         host/stream/rtsp_message_test.cpp

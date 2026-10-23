@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "gazeora/host/stream/bitrate_controller.h"
+#include "gazeora/host/stream/pointer_event_sink.h"
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_protocol.h"
 #include "gazeora/host/stream/video_pipeline.h"
@@ -52,6 +53,9 @@ public:
     virtual bool NeedsUsbDriver() const { return false; }
     // The phones it can't switch without that driver on them (USB only).
     virtual std::vector<UsbPhone> PhonesNeedingDriver() const { return {}; }
+    // Where touches the players send on the output's own link go (USB only: the network's go
+    // to PointerInputReceiver). Set before Start.
+    virtual void SetPointerSink(PointerEventSink* sink) { (void)sink; }
 };
 
 // The output for `protocol`; null for the RTSP ones, which the server handles itself.

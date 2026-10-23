@@ -21,6 +21,9 @@ add_library(gazeora_host_lib STATIC
     src/stream/http_ts_output.cpp
     src/stream/net.cpp
     src/stream/packet_pacer.cpp
+    src/stream/pointer_gate.cpp
+    src/stream/pointer_input_receiver.cpp
+    src/stream/pointer_message.cpp
     src/stream/rtcp.cpp
     src/stream/rtp_video.cpp
     src/stream/rtsp_connection.cpp

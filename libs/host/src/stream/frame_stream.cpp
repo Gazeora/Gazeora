@@ -14,6 +14,7 @@
 
 #include "gazeora/host/stream/packet_pacer.h"
 #include "gazeora/host/stream/player_identity.h"
+#include "gazeora/host/stream/pointer_message.h"
 #include "gazeora/host/stream/rtcp.h"
 #include "gazeora/host/stream/rtp_video.h"
 #include "gazeora/host/stream/rtsp_connection.h"
@@ -144,6 +145,7 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     m_runningProtocol = protocol;
     m_output = CreateFrameOutput(protocol, m_log);
     if (m_output) {
+        m_output->SetPointerSink(&m_pointerGate);
         if (!m_output->Start(bindAddress, port, error)) {
             Stop();
             return false;
@@ -161,6 +163,11 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     if (!m_discovery.Start(bindAddress, m_discoveryPort, [this] { return Describe(); },
                            discoveryError)) {
         m_log.Write("the Android app can't search for this PC: %ls", discoveryError.c_str());
+    }
+    std::wstring pointerError;
+    if (!m_pointerReceiver.Start(bindAddress, kPointerPort, pointerError)) {
+        m_log.Write("touches from the Android app won't reach this PC: %ls",
+                    pointerError.c_str());
     }
     m_log.Write("streaming over %s", ProtocolName(protocol));
     m_running = true;
@@ -236,6 +243,7 @@ void FrameStreamServer::Stop() {
     }
     ReapConnections(true);
     m_discovery.Stop();
+    m_pointerReceiver.Stop();
     if (m_output) {
         m_output->Stop();
         m_output.reset();
@@ -326,6 +334,7 @@ OverlaySettings FrameStreamServer::GetOverlay() {
 void FrameStreamServer::SetVrLayout(const VrLayout& vr) {
     std::lock_guard<std::mutex> lock(m_vrMutex);
     m_vr = vr;
+    m_pointerGate.SetVrOn(vr.enabled);
 }
 
 VrLayout FrameStreamServer::GetVrLayout() {

@@ -28,11 +28,15 @@ namespace gazeora {
 // The player says hello once a second (UDP: which is how the PC knows where to send; a
 // player silent for kPlayerTimeoutMs is dropped), asks for a key frame when it starts or
 // lost a frame, and says bye when it stops.
+//
+// While the picture is shown flat (not VR), the app sends its touches as Pointer messages
+// (pointer_message.h): over USB on the same cable, over the network to kPointerPort.
 enum class FrameMessage : uint8_t {
     Frame = 1,            // PC to player
     Hello = 2,            // player to PC
     KeyFrameRequest = 3,  // player to PC
     Bye = 4,              // player to PC
+    Pointer = 5,          // player to PC
 };
 
 constexpr size_t kFrameHeaderSize = 24;
