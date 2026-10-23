@@ -30,7 +30,8 @@
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
 #include "gazeora/host/launch/launcher.h"
-#include "gazeora/library/game_library.h"
+#include "gazeora/library/game_library_services.h"
+#include "gazeora/library/platform/library_location.h"
 
 namespace {
 
@@ -291,7 +292,8 @@ bool SaveLibraryOrReport(gazeora::GameLibrary& library) {
 }
 
 int CmdList() {
-    gazeora::GameLibrary library;
+    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath());
+    gazeora::GameLibrary& library = services.Library();
     if (!LoadLibraryOrReport(library)) {
         return 1;
     }
@@ -302,7 +304,7 @@ int CmdList() {
     wprintf(L"%4ls  %-32ls  %-9ls  %-8ls  %-14ls  %ls\n", L"ID", L"NAME", L"PLAYTIME",
             L"CAPTURE", L"LAUNCH", L"PATH");
     for (const gazeora::Game& game : library.Games()) {
-        gazeora::LaunchSpec spec = gazeora::ToLaunchSpec(game);
+        gazeora::LaunchSpec spec = services.LaunchSpecs().Create(game);
         std::wstring via = spec.steamAppId.empty() ? L"exe" : L"steam " + spec.steamAppId;
         wprintf(L"%4u  %-32ls  %-9ls  %-8ls  %-14ls  %ls\n", game.id, game.name.c_str(),
                 FormatPlaytime(game.playtimeSeconds).c_str(), game.captureOnLaunch ? L"on" : L"off",
@@ -316,6 +318,7 @@ int CmdAdd(const std::vector<std::wstring>& args) {
         fwprintf(stderr, L"add: missing path to the game's .exe or .lnk\n");
         return 1;
     }
+    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath());
     gazeora::Game game;
     std::wstring path = FullPath(args[0]);
     for (size_t i = 1; i < args.size(); ++i) {
@@ -336,7 +339,7 @@ int CmdAdd(const std::vector<std::wstring>& args) {
 
     if (EndsWithI(path, L".lnk")) {
         gazeora::Game resolved = game;
-        if (!gazeora::ResolveShortcut(path, resolved)) {
+        if (!services.Shortcuts().Resolve(path, resolved)) {
             fwprintf(stderr, L"add: '%ls' does not point at a program\n", path.c_str());
             return 1;
         }
@@ -352,7 +355,7 @@ int CmdAdd(const std::vector<std::wstring>& args) {
         return 1;
     }
 
-    gazeora::GameLibrary library;
+    gazeora::GameLibrary& library = services.Library();
     if (!LoadLibraryOrReport(library)) {
         return 1;
     }
@@ -365,7 +368,8 @@ int CmdAdd(const std::vector<std::wstring>& args) {
 }
 
 int CmdRemove(const std::wstring& key) {
-    gazeora::GameLibrary library;
+    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath());
+    gazeora::GameLibrary& library = services.Library();
     if (!LoadLibraryOrReport(library)) {
         return 1;
     }
@@ -384,7 +388,8 @@ int CmdRemove(const std::wstring& key) {
 }
 
 int CmdLaunch(const std::wstring& key, bool forceCapture) {
-    gazeora::GameLibrary library;
+    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath());
+    gazeora::GameLibrary& library = services.Library();
     if (!LoadLibraryOrReport(library)) {
         return 1;
     }
@@ -393,13 +398,13 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
         fwprintf(stderr, L"no single game matches '%ls' (see GazeoraCLI list)\n", key.c_str());
         return 1;
     }
-    gazeora::LaunchSpec spec = gazeora::ToLaunchSpec(*game);
+    gazeora::LaunchSpec spec = services.LaunchSpecs().Create(*game);
     bool capture = forceCapture || game->captureOnLaunch;
     uint32_t id = game->id;
     std::wstring name = game->name;
     bool throughSteam = !spec.steamAppId.empty();
 
-    game->lastPlayed = gazeora::UnixNow();
+    game->lastPlayed = services.Clock().NowUnixSeconds();
     SaveLibraryOrReport(library);
 
     std::wstring error;
