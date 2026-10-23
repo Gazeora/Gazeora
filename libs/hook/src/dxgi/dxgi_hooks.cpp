@@ -1,6 +1,8 @@
 #include "gazeora/hook/dxgi/dxgi_hooks.h"
 
-#include <d3d10.h>
+// d3d10_1.h, which includes d3d10.h: the Windows SDK refuses d3d10_1.h after d3d10.h, and
+// another of its headers here brings it in.
+#include <d3d10_1.h>
 #include <d3d11.h>
 #include <d3d12.h>
 #include <dxgi1_2.h>

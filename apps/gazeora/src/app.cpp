@@ -135,7 +135,7 @@ void App::SetupImGui() {
     };
     m_fonts.body = addFont("segoeui.ttf", 14.0f, true);  // first font = default
     m_fonts.bold = addFont("seguisb.ttf", 14.0f, true);
-    m_fonts.small = addFont("segoeui.ttf", 12.0f, true);
+    m_fonts.caption = addFont("segoeui.ttf", 12.0f, true);
     m_fonts.heading = addFont("seguisb.ttf", 17.0f, true);
     m_fonts.title = addFont("segoeuib.ttf", 26.0f, true);
     m_fonts.hugeIcon = addFont("segoeui.ttf", 44.0f, true);
@@ -314,7 +314,7 @@ void App::Draw() {
             DrawDetails();
             break;
         case Page::Controls:
-            m_controls.Draw({m_fonts.title, m_fonts.heading, m_fonts.small});
+            m_controls.Draw({m_fonts.title, m_fonts.heading, m_fonts.caption});
             break;
         case Page::Settings:
             DrawSettings();

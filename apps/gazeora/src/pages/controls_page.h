@@ -18,7 +18,7 @@ public:
     struct Fonts {
         ImFont* title;
         ImFont* heading;
-        ImFont* small;
+        ImFont* caption;
     };
 
     ControlsPage(input::HandGestureServices& hands, const ControlsSettings& store, float scale);

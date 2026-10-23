@@ -3,6 +3,7 @@
 #include "gazeora/host/stream/rtp_video.h"
 #include "gazeora/host/stream/ts_muxer.h"
 #include "host/stream/software_only_encoder.h"
+#include "gazeora/common/text/utf8.h"
 
 #include <gtest/gtest.h>
 #include <ws2tcpip.h>
@@ -34,7 +35,7 @@ protected:
         server.SetProtocol(protocol);
         server.SetDiscoveryPort(0);  // any free port, so tests running at once don't collide
         std::wstring error;
-        ASSERT_TRUE(server.Start(0, false, error)) << std::string(error.begin(), error.end());
+        ASSERT_TRUE(server.Start(0, false, error)) << Utf8::FromWide(error);
         ASSERT_NE(server.Port(), 0);
         base = "rtsp://127.0.0.1:" + std::to_string(server.Port()) + "/";
     }
@@ -265,8 +266,9 @@ TEST_F(FrameStreamTest, DescribeCarriesParameterSetsBeforeAnyoneWatches) {
 TEST_F(FrameStreamTest, TcpPlayerThatFallsBehindResumesOnAKeyFrame) {
     StartServer(StreamProtocol::RtspTcp);
     Connect();
-    int small = 16 * 1024;
-    setsockopt(rtsp, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char*>(&small), sizeof(small));
+    int smallBuffer = 16 * 1024;
+    setsockopt(rtsp, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char*>(&smallBuffer),
+               sizeof(smallBuffer));
     std::string setup =
         Request("SETUP", base + "track1", "Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\n");
     std::string session = Header(setup, "Session");
@@ -452,7 +454,7 @@ TEST_F(FrameStreamTest, StreamsLiveFramesOverUdp) {
     EXPECT_GT(ReceiveFrame(&types), 0);
     EXPECT_TRUE(Has(types, kNalIdrSlice));
     EXPECT_TRUE(server.LastError().empty())
-        << std::string(server.LastError().begin(), server.LastError().end());
+        << Utf8::FromWide(server.LastError());
     EXPECT_FALSE(server.EncoderName().empty());
 }
 

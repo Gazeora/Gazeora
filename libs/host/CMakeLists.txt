@@ -47,11 +47,43 @@ target_include_directories(gazeora_host_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/i
 target_link_libraries(gazeora_host_lib PUBLIC gazeora_common d3d11 d3dcompiler dxgi
     ws2_32 iphlpapi mfplat mfuuid winmm ole32 uuid gdi32
     PRIVATE libusb setupapi winusb)
+if(MSVC)
+    # The Windows SDK declares the Media Foundation codecs' CLSIDs (wmcodecdsp.h) and defines
+    # them here; MinGW has no such library, so with it they're instantiated in the sources
+    # (initguid.h).
+    target_link_libraries(gazeora_host_lib PUBLIC wmcodecdspuuid)
+endif()
 
 # OpenMP splits the per-frame pixel loops (NV12 conversion, read-back) over a few cores.
 if(MSVC)
-    find_package(OpenMP REQUIRED)
+    find_package(OpenMP REQUIRED COMPONENTS CXX)  # the OpenMP code is all C++
     target_link_libraries(gazeora_host_lib PRIVATE OpenMP::OpenMP_CXX)
+    # MSVC's OpenMP runtime is a DLL only, which Visual Studio has for shipping beside the
+    # programs: copied into bin\ and installed with them, so they run without the redistributable.
+    file(TO_CMAKE_PATH "$ENV{VCToolsRedistDir}" GAZEORA_VC_REDIST_DIR)
+    file(GLOB GAZEORA_VCOMP_CANDIDATES
+        "${GAZEORA_VC_REDIST_DIR}/${GAZEORA_ARCH}/Microsoft.VC*.OpenMP/vcomp140.dll")
+    if(NOT GAZEORA_VCOMP_CANDIDATES)
+        # cl.exe is in VC\Tools\MSVC\<version>\bin\Host<arch>\<arch>\, the runtimes in VC\Redist.
+        get_filename_component(GAZEORA_VC_DIR "${CMAKE_CXX_COMPILER}/../../../../../.." ABSOLUTE)
+        file(GLOB GAZEORA_VCOMP_CANDIDATES
+            "${GAZEORA_VC_DIR}/Redist/MSVC/*/${GAZEORA_ARCH}/Microsoft.VC*.OpenMP/vcomp140.dll")
+        list(SORT GAZEORA_VCOMP_CANDIDATES ORDER DESCENDING)  # the newest first
+    endif()
+    if(GAZEORA_VCOMP_CANDIDATES)
+        list(GET GAZEORA_VCOMP_CANDIDATES 0 GAZEORA_VCOMP_DLL)
+        message(STATUS "OpenMP runtime: ${GAZEORA_VCOMP_DLL}")
+        add_custom_target(gazeora_openmp_runtime
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GAZEORA_VCOMP_DLL}
+                ${GAZEORA_RUNTIME_DIR}
+            VERBATIM)
+        add_dependencies(gazeora_host_lib gazeora_openmp_runtime)
+        include(GNUInstallDirs)
+        install(FILES ${GAZEORA_VCOMP_DLL} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
+    else()
+        message(WARNING "vcomp140.dll not found: the programs will need the Visual C++ "
+                        "Redistributable installed to run")
+    endif()
 else()
     # Just the flag, to compile and to link: GCC's driver then links its OpenMP runtime itself,
     # statically like the rest (-static). FindOpenMP hands out the runtime DLL's import library

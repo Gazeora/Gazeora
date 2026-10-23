@@ -117,7 +117,7 @@ void ControlsPage::DrawSwitch() {
 }
 
 void ControlsPage::DrawCameraChoice(const Fonts& fonts) {
-    FieldLabel(fonts.small, "Camera");
+    FieldLabel(fonts.caption, "Camera");
     int chosen = ChosenCamera();
     ImGui::SetNextItemWidth(-S(kRefreshButtonWidth));
     const char* preview = m_cameras.empty() ? "No camera found" : nullptr;
@@ -140,7 +140,7 @@ void ControlsPage::DrawCameraChoice(const Fonts& fonts) {
 }
 
 void ControlsPage::DrawSpeed(const Fonts& fonts) {
-    FieldLabel(fonts.small, "Pointer speed");
+    FieldLabel(fonts.caption, "Pointer speed");
     HelpMarker(
         "How far your fingertip moves to cross the screen: the higher, the shorter. At 5, "
         "about 20 cm, the length of two and a half palms.",

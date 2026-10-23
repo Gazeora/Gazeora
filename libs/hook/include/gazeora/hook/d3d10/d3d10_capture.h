@@ -1,6 +1,6 @@
 #pragma once
 
-#include <d3d10.h>
+#include <d3d10_1.h>  // includes d3d10.h; the SDK refuses d3d10_1.h after it
 #include <d3d11.h>
 #include <dxgi.h>
 #include <wrl/client.h>

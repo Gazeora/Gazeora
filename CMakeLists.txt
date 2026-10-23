@@ -12,6 +12,14 @@ include(ClangFormat)       # format / format-check targets
 
 # Keep the executables and gazeora_hook.dll side by side; they load the DLL from their own folder.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+# Where they end up, for the files copied beside them: bin\, or bin\<config>\ with a multi-config
+# generator (Visual Studio, Ninja Multi-Config).
+get_property(GAZEORA_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(GAZEORA_MULTI_CONFIG)
+    set(GAZEORA_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>)
+else()
+    set(GAZEORA_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endif()
 
 add_subdirectory(libs)   # common, hook (gazeora_hook.dll), host, library
 add_subdirectory(apps)   # Gazeora.exe (launcher UI) and GazeoraCLI.exe

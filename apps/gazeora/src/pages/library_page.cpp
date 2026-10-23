@@ -157,10 +157,10 @@ void App::DrawGameCard(const Game& game, float width) {
     if (session) {
         const char* label = SessionLabel(session->Snapshot().state);
         ImVec2 textSize =
-            m_fonts.small->CalcTextSizeA(m_fonts.small->FontSize, FLT_MAX, 0.0f, label);
+            m_fonts.caption->CalcTextSizeA(m_fonts.caption->FontSize, FLT_MAX, 0.0f, label);
         ImVec2 badge = pos + ImVec2(S(10), S(10));
         draw->AddRectFilled(badge, badge + textSize + ImVec2(S(16), S(6)), kAccent, S(4));
-        draw->AddText(m_fonts.small, m_fonts.small->FontSize, badge + ImVec2(S(8), S(3)),
+        draw->AddText(m_fonts.caption, m_fonts.caption->FontSize, badge + ImVec2(S(8), S(3)),
                       kOnAccent, label);
     }
 
@@ -185,7 +185,7 @@ void App::DrawGameCard(const Game& game, float width) {
     TextEllipsis(draw, m_fonts.bold, ImVec2(pos.x + S(2), coverMax.y + S(8)),
                  hovered ? kText : WithAlpha(kText, 0.9f), U8(game.name), width - S(4));
     std::string subtitle = session ? "Playing now" : RelativeTime(game.lastPlayed);
-    draw->AddText(m_fonts.small, m_fonts.small->FontSize,
+    draw->AddText(m_fonts.caption, m_fonts.caption->FontSize,
                   ImVec2(pos.x + S(2), coverMax.y + S(28)), session ? kAccent : kTextDim,
                   subtitle.c_str());
 

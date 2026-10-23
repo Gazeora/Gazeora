@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/capture_client.h"
 #include "gazeora/host/launch/injector.h"
 #include "gazeora/host/launch/launcher.h"
@@ -44,7 +45,7 @@ TEST_P(CaptureTestAppTest, CapturesFramesFromTheTestApp) {
     LaunchedGame game;
     std::wstring error;
     ASSERT_TRUE(LaunchGameWithHook(spec, HookDllPathNextToExe(), client, game, error))
-        << std::string(error.begin(), error.end());
+        << Utf8::FromWide(error);
     client.SetCaptureEnabled(true);
     bool gotFrame = false;
     for (DWORD waited = 0; !gotFrame && waited < kFirstFrameTimeoutMs && game.Running();

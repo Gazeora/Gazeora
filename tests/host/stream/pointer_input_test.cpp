@@ -1,6 +1,7 @@
 #include "gazeora/host/stream/pointer_gate.h"
 #include "gazeora/host/stream/pointer_input_receiver.h"
 #include "gazeora/host/stream/pointer_message.h"
+#include "gazeora/common/text/utf8.h"
 
 #include <gtest/gtest.h>
 
@@ -122,7 +123,7 @@ TEST(PointerInputReceiverTest, HearsPointerDatagrams) {
     PointerInputReceiver receiver(sink, log);
     in_addr loopback;
     loopback.s_addr = htonl(INADDR_LOOPBACK);
-    ASSERT_TRUE(receiver.Start(loopback, 0, error)) << std::string(error.begin(), error.end());
+    ASSERT_TRUE(receiver.Start(loopback, 0, error)) << Utf8::FromWide(error);
 
     net::Socket phone(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
     sockaddr_in pc = {};

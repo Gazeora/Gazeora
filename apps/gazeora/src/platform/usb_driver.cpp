@@ -18,6 +18,8 @@
 #include <utility>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
+
 namespace gazeora::app {
 
 namespace {
@@ -51,7 +53,7 @@ std::string BuildInf(const std::vector<std::wstring>& phoneIds, const std::strin
         devices += std::string("%Accessory% = Install, ") + id + "\r\n";
     }
     for (const std::wstring& id : phoneIds) {
-        devices += "%Phone%" + std::string(kPhoneEntry) + std::string(id.begin(), id.end()) + "\r\n";
+        devices += "%Phone%" + std::string(kPhoneEntry) + Utf8::FromWide(id) + "\r\n";
     }
     return std::string(kPackageMarker) + " " + stamp +
            "\r\n"
@@ -324,6 +326,11 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
                                                        PFN_CDF_PARSE_ERROR_CALLBACK);
     auto enumAttributes = SystemFunction<EnumAttributes>(L"wintrust.dll",
                                                          "CryptCATCDFEnumAttributesWithCDFTag");
+    // Not in the Windows SDK's mscat.h either, so looked up the same way.
+    using EnumMembers = LPWSTR(WINAPI*)(CRYPTCATCDF*, LPWSTR, PFN_CDF_PARSE_ERROR_CALLBACK,
+                                        CRYPTCATMEMBER**, BOOL, LPVOID);
+    auto enumMembers =
+        SystemFunction<EnumMembers>(L"wintrust.dll", "CryptCATCDFEnumMembersByCDFTagEx");
 
     // The first thing the definition had wrong, and where.
     DWORD& failure = g_catalogFailure;
@@ -331,8 +338,9 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
     failure = 0;
     where.clear();
     PFN_CDF_PARSE_ERROR_CALLBACK onError = OnCatalogError;
-    CRYPTCATCDF* cdf =
-        enumAttributes ? CryptCATCDFOpen(const_cast<LPWSTR>(definition.c_str()), onError) : nullptr;
+    CRYPTCATCDF* cdf = enumAttributes && enumMembers
+                           ? CryptCATCDFOpen(const_cast<LPWSTR>(definition.c_str()), onError)
+                           : nullptr;
     if (!cdf) {
         error = ErrorText(L"Couldn't make the driver catalog", failure ? failure : GetLastError());
         DeleteFileW(definition.c_str());
@@ -344,7 +352,7 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
     }
     CRYPTCATMEMBER* member = nullptr;
     LPWSTR tag = nullptr;
-    while ((tag = CryptCATCDFEnumMembersByCDFTagEx(cdf, tag, onError, &member, TRUE, nullptr))) {
+    while ((tag = enumMembers(cdf, tag, onError, &member, TRUE, nullptr))) {
         attribute = nullptr;
         while ((attribute = enumAttributes(cdf, tag, member, attribute, onError))) {
         }

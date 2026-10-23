@@ -76,7 +76,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     bool starting = session && stats.state != GameSession::State::Running;
 
     ImVec2 cursor = pos + ImVec2(padding, padding);
-    draw->AddText(m_fonts.small, m_fonts.small->FontSize, cursor, starting ? kWarning : kAccent,
+    draw->AddText(m_fonts.caption, m_fonts.caption->FontSize, cursor, starting ? kWarning : kAccent,
                   starting ? "STARTING" : eyebrow);
     cursor.y += S(18);
     TextEllipsis(draw, m_fonts.title, cursor, kText, U8(game.name), textWidth);
@@ -240,7 +240,7 @@ void App::DrawSessionCard(const Game& game) {
             ImVec2 size(tileWidth, S(60));
             ImGui::Dummy(size);
             draw->AddRectFilled(p, p + size, kInset, S(8));
-            draw->AddText(m_fonts.small, m_fonts.small->FontSize, p + ImVec2(S(12), S(10)),
+            draw->AddText(m_fonts.caption, m_fonts.caption->FontSize, p + ImVec2(S(12), S(10)),
                           kTextDim, tiles[i].label);
             draw->AddText(m_fonts.heading, m_fonts.heading->FontSize, p + ImVec2(S(12), S(28)),
                           i == 0 ? kAccent : kText, tiles[i].value.c_str());
@@ -315,7 +315,7 @@ void App::DrawGameSettingsCard(Game& game) {
     CardTitle(m_fonts.heading, ICON_EDIT "  Game settings");
     float browseWidth = S(90);
 
-    FieldLabel(m_fonts.small, "Name");
+    FieldLabel(m_fonts.caption, "Name");
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputText("##name", &m_editName);
     if (ImGui::IsItemDeactivatedAfterEdit() && !m_editName.empty()) {
@@ -323,7 +323,7 @@ void App::DrawGameSettingsCard(Game& game) {
         SaveLibrary();
     }
 
-    FieldLabel(m_fonts.small, "Executable");
+    FieldLabel(m_fonts.caption, "Executable");
     std::string exe = U8(game.exePath);
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
     ImGui::InputText("##exe", &exe, ImGuiInputTextFlags_ReadOnly);
@@ -332,7 +332,7 @@ void App::DrawGameSettingsCard(Game& game) {
         ShowInExplorer(game.exePath);
     }
 
-    FieldLabel(m_fonts.small, "Launch arguments");
+    FieldLabel(m_fonts.caption, "Launch arguments");
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputTextWithHint("##args", "e.g. -dx12 -windowed", &m_editArgs);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
@@ -340,7 +340,7 @@ void App::DrawGameSettingsCard(Game& game) {
         SaveLibrary();
     }
 
-    FieldLabel(m_fonts.small, "Working directory");
+    FieldLabel(m_fonts.caption, "Working directory");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
     ImGui::InputTextWithHint("##workdir", "Defaults to the game's folder", &m_editWorkDir);
     if (ImGui::IsItemDeactivatedAfterEdit()) {
@@ -357,7 +357,7 @@ void App::DrawGameSettingsCard(Game& game) {
         }
     }
 
-    FieldLabel(m_fonts.small, "Launch through");
+    FieldLabel(m_fonts.caption, "Launch through");
     std::string autoLabel = m_editSteamAppId.empty()
                                 ? std::string("Automatic (run the exe)")
                                 : "Automatic (Steam, app " + U8(m_editSteamAppId) + ")";
@@ -374,7 +374,7 @@ void App::DrawGameSettingsCard(Game& game) {
         ImGui::PopStyleColor();
     }
 
-    FieldLabel(m_fonts.small, "Game process");
+    FieldLabel(m_fonts.caption, "Game process");
     HelpMarker("Set it if the exe is a launcher for another exe.", S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
     std::string processHint = "Defaults to " + U8(LaunchSpec{game.exePath}.GameProcessName());
@@ -384,7 +384,7 @@ void App::DrawGameSettingsCard(Game& game) {
         SaveLibrary();
     }
 
-    FieldLabel(m_fonts.small, "Cover art");
+    FieldLabel(m_fonts.caption, "Cover art");
     if (ImGui::Button(ICON_PICTURE "  Choose image...")) {
         std::vector<std::wstring> picked = PickFiles(m_hwnd, PickKind::Image);
         if (!picked.empty()) {
@@ -411,7 +411,7 @@ void App::DrawGameInfoCard(Game& game) {
     BeginCard("##info", m_scale);
     CardTitle(m_fonts.heading, ICON_INFO "  Info");
     auto row = [&](const char* label, const std::string& value) {
-        FieldLabel(m_fonts.small, label);
+        FieldLabel(m_fonts.caption, label);
         ImGui::TextUnformatted(value.c_str());
     };
     row("Playtime", PlaytimeText(game.playtimeSeconds));

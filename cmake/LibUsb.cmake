@@ -32,6 +32,8 @@ endforeach()
 
 if(MSVC)
     target_include_directories(libusb PRIVATE ${libusb_SOURCE_DIR}/msvc)
+    # Its own code, as released: compares an endpoint direction with a request type (C5287).
+    target_compile_options(libusb PRIVATE /wd5287)
 else()
     # What libusb's configure script works out on Windows with MinGW.
     set(LIBUSB_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR}/libusb_config)

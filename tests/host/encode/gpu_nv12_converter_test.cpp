@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/nv12_readback.h"
@@ -51,7 +52,7 @@ protected:
         std::wstring error;
         ComPtr<ID3D11Texture2D> nv12 =
             converter.Convert(warp.device.Get(), texture, width, height, error);
-        EXPECT_TRUE(nv12) << std::string(error.begin(), error.end());
+        EXPECT_TRUE(nv12) << Utf8::FromWide(error);
         std::vector<uint8_t> bytes;
         if (nv12) {
             Nv12Readback readback;

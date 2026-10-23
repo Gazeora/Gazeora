@@ -52,10 +52,10 @@ target_link_libraries(gazeora_input
 # onnxruntime.dll beside the executables and the models under models\, where RuntimeFiles
 # looks for them.
 add_custom_target(gazeora_input_runtime
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${GAZEORA_RUNTIME_DIR}/models
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ONNXRUNTIME_DLL}
-        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+        ${GAZEORA_RUNTIME_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${HAND_MODEL_FILES}
-        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/models
+        ${GAZEORA_RUNTIME_DIR}/models
     VERBATIM)
 add_dependencies(gazeora_input gazeora_input_runtime)

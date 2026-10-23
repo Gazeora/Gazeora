@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "support/d3d_test_util.h"
 
 using Microsoft::WRL::ComPtr;
@@ -54,7 +55,7 @@ protected:
     bool Send() {
         std::wstring error;
         bool sent = sender.Send(warp.device.Get(), frame.Get(), nullptr, error);
-        EXPECT_TRUE(sent) << std::string(error.begin(), error.end());
+        EXPECT_TRUE(sent) << Utf8::FromWide(error);
         return sent;
     }
 

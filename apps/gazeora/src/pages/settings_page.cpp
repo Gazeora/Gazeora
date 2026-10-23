@@ -65,7 +65,7 @@ void App::DrawSettings() {
 
     BeginCard("##library", m_scale, width);
     CardTitle(m_fonts.heading, ICON_LIBRARY "  Library");
-    FieldLabel(m_fonts.small, "Library file");
+    FieldLabel(m_fonts.caption, "Library file");
     HelpMarker("Shared with GazeoraCLI.", S(360));
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     ImGui::TextWrapped("%s  \xC2\xB7  %zu %s", U8(m_library.Path()).c_str(),
@@ -92,7 +92,7 @@ void App::DrawSettings() {
     CardTitle(m_fonts.heading, ICON_CAPTURE "  Capture");
     std::wstring dll = HookDllPathNextToExe();
     bool found = GetFileAttributesW(dll.c_str()) != INVALID_FILE_ATTRIBUTES;
-    FieldLabel(m_fonts.small, "Capture hook");
+    FieldLabel(m_fonts.caption, "Capture hook");
     ImGui::PushStyleColor(ImGuiCol_Text, found ? kAccent : kDanger);
     ImGui::TextUnformatted(found ? ICON_CHECK "  Found" : ICON_WARNING "  Missing - rebuild Gazeora");
     ImGui::PopStyleColor();
@@ -115,14 +115,14 @@ void App::DrawSettings() {
     help += "\n\nOn a weak link the bitrate drops, and recovers once the link is clean. 5 GHz "
             "Wi-Fi and a wired PC help most.\n\nLog: " +
             U8(StreamSettings::LogPath());
-    FieldLabel(m_fonts.small, "Protocol");
+    FieldLabel(m_fonts.caption, "Protocol");
     HelpMarker(help.c_str(), S(380));
     DrawProtocolChoice();
     if (m_stream.Running()) {
         DrawCodecChoice();
         DrawQualityChoice();
         DrawFrameRateChoice();
-        FieldLabel(m_fonts.small, "When no game is running, stream");
+        FieldLabel(m_fonts.caption, "When no game is running, stream");
         static const char* kIdlePictures[] = {"Gazeora (this window)", "The Gazeora logo"};
         int idle = int(m_idlePicture);
         ImGui::SetNextItemWidth(-FLT_MIN);
@@ -131,7 +131,7 @@ void App::DrawSettings() {
         }
         std::vector<std::wstring> urls = m_stream.Urls();
         if (!urls.empty()) {
-            FieldLabel(m_fonts.small, "Address");
+            FieldLabel(m_fonts.caption, "Address");
         }
         for (const std::wstring& url : urls) {
             std::string text = U8(url);
@@ -296,7 +296,7 @@ void App::DrawCodecChoice() {
         {VideoCodec::H265, "H.265 - sharper on weak Wi-Fi, newer devices only"},
     };
     VideoCodec current = m_stream.Codec();
-    FieldLabel(m_fonts.small, "Video codec");
+    FieldLabel(m_fonts.caption, "Video codec");
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##codec", kChoices[current == VideoCodec::H265].name)) {
         for (const Choice& choice : kChoices) {
@@ -334,7 +334,7 @@ void App::DrawQualityChoice() {
     for (const Choice& choice : kChoices) {
         if (choice.bitrate == current) shown = choice.name;
     }
-    FieldLabel(m_fonts.small, "Stream quality");
+    FieldLabel(m_fonts.caption, "Stream quality");
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##quality", shown)) {
         for (const Choice& choice : kChoices) {
@@ -368,7 +368,7 @@ void App::DrawFrameRateChoice() {
     for (const Choice& choice : kChoices) {
         if (choice.fps == current) shown = choice.name;
     }
-    FieldLabel(m_fonts.small, "Frame rate");
+    FieldLabel(m_fonts.caption, "Frame rate");
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##framerate", shown)) {
         for (const Choice& choice : kChoices) {
@@ -403,7 +403,7 @@ void App::DrawOverlayCard(float width) {
                S(380));
 
     ImGui::BeginDisabled(!m_overlay.enabled);
-    FieldLabel(m_fonts.small, "Details");
+    FieldLabel(m_fonts.caption, "Details");
     struct Detail {
         const char* label;
         bool* value;
@@ -423,7 +423,7 @@ void App::DrawOverlayCard(float width) {
         ImGui::EndTable();
     }
 
-    FieldLabel(m_fonts.small, "Your own text (a line under the details)");
+    FieldLabel(m_fonts.caption, "Your own text (a line under the details)");
     std::string text = U8(m_overlay.text);
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::InputTextWithHint("##overlaytext", "e.g. a name, or where it's streaming from",
@@ -437,20 +437,20 @@ void App::DrawOverlayCard(float width) {
     committed |= ImGui::IsItemDeactivatedAfterEdit();
 
     static const char* kCorners[] = {"Top left", "Top right", "Bottom left", "Bottom right"};
-    FieldLabel(m_fonts.small, "Corner");
+    FieldLabel(m_fonts.caption, "Corner");
     ImGui::SetNextItemWidth(S(220));
     int corner = int(m_overlay.corner);
     if (ImGui::Combo("##overlaycorner", &corner, kCorners, IM_ARRAYSIZE(kCorners))) {
         m_overlay.corner = OverlaySettings::Corner(corner);
         changed = true;
     }
-    FieldLabel(m_fonts.small, "Text size");
+    FieldLabel(m_fonts.caption, "Text size");
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::SliderInt("##overlaysize", &m_overlay.textSize, 50, 300, "%d%%")) {
         m_stream.SetOverlay(m_overlay);
     }
     committed |= ImGui::IsItemDeactivatedAfterEdit();
-    FieldLabel(m_fonts.small, "Background");
+    FieldLabel(m_fonts.caption, "Background");
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::SliderInt("##overlayopacity", &m_overlay.opacity, 0, 100, "%d%% opaque")) {
         m_stream.SetOverlay(m_overlay);
@@ -474,7 +474,7 @@ void App::DrawVrCard(float width) {
     // Sliders save when let go; the stream follows every step of the drag.
     auto slider = [&](const char* label, const char* id, float* value, float low, float high,
                       const char* format) {
-        FieldLabel(m_fonts.small, label);
+        FieldLabel(m_fonts.caption, label);
         ImGui::SetNextItemWidth(-FLT_MIN);
         if (ImGui::SliderFloat(id, value, low, high, format)) {
             m_stream.SetVrLayout(m_vr);
@@ -490,7 +490,7 @@ void App::DrawVrCard(float width) {
                S(380));
 
     if (m_vr.enabled) {
-        FieldLabel(m_fonts.small, "Lens correction done by");
+        FieldLabel(m_fonts.caption, "Lens correction done by");
         ImGui::SetNextItemWidth(-FLT_MIN);
         const char* where[] = {"The phone (Gazeora app): sharper",
                                "This PC: for other players, such as VLC"};
@@ -509,7 +509,7 @@ void App::DrawVrCard(float width) {
         for (int i = 0; i < IM_ARRAYSIZE(kLensPresets); ++i) {
             if (kLensPresets[i].k1 == m_vr.k1 && kLensPresets[i].k2 == m_vr.k2) lens = i;
         }
-        FieldLabel(m_fonts.small, "Viewer lenses");
+        FieldLabel(m_fonts.caption, "Viewer lenses");
         ImGui::SetNextItemWidth(-FLT_MIN);
         if (ImGui::BeginCombo("##vrlens", lens < IM_ARRAYSIZE(kLensPresets)
                                               ? kLensPresets[lens].name
@@ -532,7 +532,7 @@ void App::DrawVrCard(float width) {
             }
             char custom[32];
             snprintf(custom, sizeof(custom), "%.2f:1", m_vr.screenAspect);
-            FieldLabel(m_fonts.small, "Phone screen shape (landscape)");
+            FieldLabel(m_fonts.caption, "Phone screen shape (landscape)");
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::BeginCombo("##vrscreen",
                                   screen >= 0 ? kScreenPresets[screen].name : custom)) {
@@ -576,7 +576,7 @@ void App::DrawVrCard(float width) {
         }
 
         if (m_logoPreview) {
-            FieldLabel(m_fonts.small, "Preview of the idle frame");
+            FieldLabel(m_fonts.caption, "Preview of the idle frame");
             float previewWidth = ImGui::GetContentRegionAvail().x;
             ImGui::Image(reinterpret_cast<ImTextureID>(m_logoPreview.Get()),
                          ImVec2(previewWidth, previewWidth / m_logoPreviewAspect));

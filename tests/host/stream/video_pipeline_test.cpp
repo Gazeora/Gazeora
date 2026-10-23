@@ -6,6 +6,7 @@
 
 #include "gazeora/host/stream/video_pipeline.h"
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/encode/gpu_nv12_converter.h"
 #include "support/d3d_test_util.h"
 
@@ -226,7 +227,7 @@ protected:
         UINT width = 0, height = 0;
         std::wstring error;
         picture.nv12 = converter.Convert(warp.device.Get(), frame.Get(), width, height, error);
-        ASSERT_TRUE(picture.nv12) << std::string(error.begin(), error.end());
+        ASSERT_TRUE(picture.nv12) << Utf8::FromWide(error);
         picture.bgra.clear();
     }
 

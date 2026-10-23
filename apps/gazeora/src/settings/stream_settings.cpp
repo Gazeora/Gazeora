@@ -7,6 +7,7 @@
 #include <cwchar>
 #include <string>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "platform/shell.h"
 #include "settings/settings_file.h"
@@ -105,7 +106,7 @@ StreamProtocol StreamSettings::LoadProtocol() const {
     GetPrivateProfileStringW(L"stream", L"protocol", L"", text, 32, m_path.c_str());
     std::wstring wide(text);
     StreamProtocol protocol = StreamProtocol::RtspTcp;
-    ParseProtocolId(std::string(wide.begin(), wide.end()), protocol);  // ids are ASCII
+    ParseProtocolId(Utf8::FromWide(wide), protocol);  // ids are ASCII
     return protocol;
 }
 

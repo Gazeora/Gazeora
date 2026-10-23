@@ -16,6 +16,7 @@
 #include <tuple>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/gpu_nv12_converter.h"
 #include "gazeora/host/encode/video_encoder.h"
@@ -242,7 +243,7 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     if (!opened && hevc && !hardware) {
         GTEST_SKIP() << "no software H.265 encoder on this machine";
     }
-    ASSERT_TRUE(opened) << std::string(error.begin(), error.end());
+    ASSERT_TRUE(opened) << Utf8::FromWide(error);
     if (hardware != encoder.IsHardware()) {
         GTEST_SKIP() << "no " << (hardware ? "hardware " : "software ") << CodecName(codec)
                      << " encoder on this machine";
@@ -257,7 +258,7 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
         for (size_t p = 0; p < bgra.size(); ++p) bgra[p] = (p % 4 == 3) ? 255 : level;
         BgraToNv12(bgra.data(), 320, 320, 240, nv12);
         ASSERT_TRUE(encoder.Encode(nv12.data(), int64_t(i) * 333333, frames, error))
-            << std::string(error.begin(), error.end());
+            << Utf8::FromWide(error);
     }
     ASSERT_GE(frames.size(), 9u) << "an encoder may hold back one frame, not more";
     EXPECT_TRUE(frames[0].keyFrame);
@@ -357,7 +358,7 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
     std::wstring error;
     if (!encoder->Open(settings, error)) {
         GTEST_SKIP() << "no GPU " << CodecName(codec) << " encoder takes textures here: "
-                     << std::string(error.begin(), error.end());
+                     << Utf8::FromWide(error);
     }
     EXPECT_TRUE(encoder->IsHardware());
     EXPECT_TRUE(encoder->Matches(codec, 320, 240, device.Get()));
@@ -380,9 +381,9 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
         UINT width = 0, height = 0;
         ComPtr<ID3D11Texture2D> nv12 = converter.Convert(device.Get(), frame.Get(), width, height,
                                                          error);
-        ASSERT_TRUE(nv12) << std::string(error.begin(), error.end());
+        ASSERT_TRUE(nv12) << Utf8::FromWide(error);
         ASSERT_TRUE(encoder->EncodeTexture(nv12.Get(), int64_t(i) * 333333, frames, error))
-            << std::string(error.begin(), error.end());
+            << Utf8::FromWide(error);
     }
     ASSERT_GE(frames.size(), 9u) << "an encoder may hold back one frame, not more";
     EXPECT_TRUE(frames[0].keyFrame);

@@ -117,14 +117,22 @@ of Gazeora`).
 # MinGW-w64: the 64-bit compiler on PATH for x64, the 32-bit one (e.g. C:\msys64\mingw32\bin) for x86
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
+
+# MSVC, from a "Developer PowerShell for VS" (or after vcvarsall.bat x64 / x86)
+cmake -S . -B build-x64 -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+cmake --build build-x64
 ```
 
-In CLion, a toolchain per release does the same: the bundled MinGW for x64, a 32-bit MinGW for
-x86.
+In CLion, a toolchain per release does the same: the bundled MinGW or Visual Studio with the
+`amd64` architecture for x64, a 32-bit MinGW or Visual Studio with `x86` for x86. Visual Studio
+generators work too (`-G "Visual Studio 17 2022" -A x64`, or `-A Win32` for x86), with the
+programs in `bin/<config>/`.
 
 Everything is placed in `build/bin/`. Keep the executables and `gazeora_hook.dll` in the same
 folder, because the launcher loads the hook from its own directory. The same goes for
-`onnxruntime.dll` and the `models` folder, which hand gestures load from there.
+`onnxruntime.dll` and the `models` folder, which hand gestures load from there, and with MSVC
+for `vcomp140.dll`, its OpenMP runtime, which the build copies from Visual Studio's
+redistributable files so the programs run without the Visual C++ Redistributable.
 
 | Output | Description |
 |---|---|

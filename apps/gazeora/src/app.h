@@ -80,7 +80,7 @@ private:
     struct Fonts {
         ImFont* body = nullptr;
         ImFont* bold = nullptr;
-        ImFont* small = nullptr;
+        ImFont* caption = nullptr;  // labels and small print ("small" is a Windows macro)
         ImFont* heading = nullptr;
         ImFont* title = nullptr;
         ImFont* hugeIcon = nullptr;

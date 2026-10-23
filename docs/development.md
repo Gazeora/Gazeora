@@ -83,10 +83,10 @@ ones, each the whole of Gazeora. The compiler picks which (`GAZEORA_ARCH`, in
 refuses a game of the other bitness with a message naming the release that captures it.
 
 To test both on one PC, build both: the tests and the test app of each run as that release.
-With MinGW, use a 64-bit or a 32-bit toolchain (MSYS2's `mingw-w64-i686-gcc` for x86). Code
-that hands Win32 a callback must give it the callback calling convention (`CALLBACK` /
-`WINAPI`, `__stdcall` on x86): a lambda only converts to a `__cdecl` function pointer there, so
-callbacks are named functions.
+With MSVC, run `vcvarsall.bat x64` or `x86` first; with MinGW, use a 64-bit or a 32-bit
+toolchain (MSYS2's `mingw-w64-i686-gcc` for x86). Code that hands Win32 a callback must give it
+the callback calling convention (`CALLBACK` / `WINAPI`, `__stdcall` on x86): a lambda only
+converts to a `__cdecl` function pointer there, so callbacks are named functions.
 
 Headers live under each library's `include/gazeora/<module>/`, sources under `src/`, with the
 same subfolders, so `libs/host/src/stream/frame_stream.cpp` implements

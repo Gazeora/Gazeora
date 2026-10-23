@@ -115,14 +115,14 @@ void App::DrawSidebar() {
         bool launching = stats.state != GameSession::State::Running;
         draw->AddCircleFilled(inner + ImVec2(S(4), S(7)), S(3.5f),
                               launching ? kWarning : kAccent);
-        draw->AddText(m_fonts.small, m_fonts.small->FontSize, inner + ImVec2(S(14), 0),
+        draw->AddText(m_fonts.caption, m_fonts.caption->FontSize, inner + ImVec2(S(14), 0),
                       launching ? kWarning : kAccent,
                       launching ? SessionLabel(stats.state) : "NOW PLAYING");
         inner.y += S(20);
         TextEllipsis(draw, m_fonts.bold, inner, kText, game ? U8(game->name) : "Game",
                      size.x - S(24));
         inner.y += S(20);
-        draw->AddText(m_fonts.small, m_fonts.small->FontSize, inner, kTextDim,
+        draw->AddText(m_fonts.caption, m_fonts.caption->FontSize, inner, kTextDim,
                       (ICON_CLOCK "  " + ClockText(stats.elapsedSeconds)).c_str());
         if (playing->Capture()) {
             inner.y += S(18);
@@ -135,7 +135,7 @@ void App::DrawSidebar() {
             } else {
                 snprintf(text, sizeof(text), ICON_CAPTURE "  %s", HookStateText(stats.hookState));
             }
-            TextEllipsis(draw, m_fonts.small, inner, kTextDim, text, size.x - S(24));
+            TextEllipsis(draw, m_fonts.caption, inner, kTextDim, text, size.x - S(24));
         }
     }
 
