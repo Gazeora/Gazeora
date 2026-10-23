@@ -121,8 +121,10 @@ possible:
   previous frame; the rest of the frame decodes normally. (FFmpeg, which VLC decodes with,
   ignores slices beyond the 32nd, so there are never more.)
 - **Key frames every second.** A key frame every second repairs whatever loss has smeared.
-- **Paced sending.** Each frame's packets are spread over about 20 ms, in bursts a millisecond
-  apart, instead of going out at once, so Wi-Fi access points and phones don't overflow.
+- **Paced sending.** Each frame's packets go out in bursts a millisecond apart instead of all at
+  once, so Wi-Fi access points and phones don't overflow: at four times the bitrate, and within
+  half a frame interval, so a frame is never still going out when the next is ready. A thread
+  of its own sends them while the next frame encodes.
 - **Adaptive bitrate.** Players report their packet loss in RTCP receiver reports. While a player
   reports 2% loss or more, the bitrate steps down from 8 to 6, 4.5 and 3 Mbit/s. Once the reports
   have been clean for 8 seconds it climbs back a step every 3 seconds. One player with a bad link

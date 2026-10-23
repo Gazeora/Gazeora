@@ -95,7 +95,7 @@ same subfolders, so `libs/host/src/stream/frame_stream.cpp` implements
 | `TsMuxer` | Frames into an MPEG transport stream, for HTTP. Pure logic |
 | `FrameHeader`, `ChunkFrame`, `StreamMessage` | The GZF1 wire format of the UDP and USB protocols (`frame_packet.h`) |
 | `DiscoveryResponder` | Answers the Android app's search for the PC |
-| `PacketPacer` | Spreads a frame's UDP packets over about 20 ms |
+| `PacingPlan`, `PacketSendQueue` | How to spread a frame's UDP packets (at 4x the bitrate, within half a frame interval), and the thread that sends them so, off the encode thread |
 | `rtcp`, `net`, `StreamLog` | RTCP reports, sockets, the stream log |
 
 RTSP methods are dispatched through a table in `frame_stream.cpp`; supporting another method

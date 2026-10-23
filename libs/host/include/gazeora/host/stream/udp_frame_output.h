@@ -12,7 +12,7 @@
 #include "gazeora/host/stream/frame_output.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/net.h"
-#include "gazeora/host/stream/packet_pacer.h"
+#include "gazeora/host/stream/packet_send_queue.h"
 
 namespace gazeora {
 
@@ -56,8 +56,9 @@ private:
     std::mutex m_playersMutex;
     std::map<uint64_t, Player> m_players;  // by address and port
 
+    // Sends the datagrams paced, off the encode thread; while started only.
+    std::unique_ptr<PacketSendQueue> m_sendQueue;
     // The encode thread's.
-    std::unique_ptr<PacketPacer> m_pacer;
     uint32_t m_frameNumber = 0;
     std::vector<std::string> m_datagrams;
 };

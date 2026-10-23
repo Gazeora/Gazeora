@@ -12,7 +12,7 @@
 #include <random>
 #include <utility>
 
-#include "gazeora/host/stream/packet_pacer.h"
+#include "gazeora/host/stream/packet_send_queue.h"
 #include "gazeora/host/stream/player_identity.h"
 #include "gazeora/host/stream/pointer_message.h"
 #include "gazeora/host/stream/rtcp.h"
@@ -226,6 +226,7 @@ bool FrameStreamServer::StartRtsp(in_addr bindAddress, uint16_t port, std::wstri
     WSAIoctl(m_rtcp.Get(), SIO_UDP_CONNRESET, &reportResets, sizeof(reportResets), nullptr, 0,
              &returned, nullptr, nullptr);
 
+    m_sendQueue = std::make_unique<PacketSendQueue>();
     m_port = rtspPort;
     m_log.Write("listening on port %u, RTP from UDP %u, RTCP %u", rtspPort, m_rtpPort,
                 m_rtcpPort);
@@ -249,6 +250,7 @@ void FrameStreamServer::Stop() {
         m_output.reset();
     }
     m_listen.Reset();
+    m_sendQueue.reset();  // before the sockets it sends on go
     m_rtp.Reset();
     m_rtcp.Reset();
     m_winsock.Shutdown();
@@ -687,8 +689,9 @@ bool FrameStreamServer::OnPlayPauseTeardown(RequestContext& context) {
     return connection.Send(response.Serialize());
 }
 
-void FrameStreamServer::SendPackets(const std::vector<std::string>& packets, bool keyFrame,
-                                    PacketPacer& pacer) {
+void FrameStreamServer::SendPackets(const VideoPipeline::EncodedFrame& frame) {
+    const std::vector<std::string>& packets = frame.packets;
+    const bool keyFrame = frame.keyFrame;
     uint64_t now = GetTickCount64();
     bool reportDue = now - m_lastReportMs >= kSenderReportIntervalMs;
     for (const std::string& packet : packets) {
@@ -744,23 +747,13 @@ void FrameStreamServer::SendPackets(const std::vector<std::string>& packets, boo
             }
         }
     }
-    size_t perBurst = PacketPacer::PacketsPerBurst(packets.size());
-    for (size_t first = 0; first < packets.size(); first += perBurst) {
-        if (first > 0) {
-            pacer.WaitForNextBurst();
-        }
-        size_t end = std::min(first + perBurst, packets.size());
-        for (const sockaddr_in& target : targets) {
-            for (size_t i = first; i < end; ++i) {
-                // A lost or refused packet only costs that frame.
-                sendto(m_rtp.Get(), packets[i].data(), int(packets[i].size()), 0,
-                       reinterpret_cast<const sockaddr*>(&target), sizeof(target));
-            }
-        }
-    }
-    for (const sockaddr_in& target : reportTargets) {
-        sendto(m_rtcp.Get(), report.data(), int(report.size()), 0,
-               reinterpret_cast<const sockaddr*>(&target), sizeof(target));
+    if (m_sendQueue) {
+        PacingPlan plan = PacingPlan::For(packets.size(), frame.annexB.size(), frame.bitrate,
+                                          frame.fps);
+        m_sendQueue->Enqueue(m_rtp.Get(), std::move(targets), packets, plan);
+        // Queued after the frame, so it follows the packets it counts.
+        m_sendQueue->Enqueue(m_rtcp.Get(), std::move(reportTargets), {report},
+                             PacingPlan::AtOnce(1));
     }
     if (reportDue) {
         m_lastReportMs = now;
@@ -860,7 +853,7 @@ void FrameStreamServer::AdaptQuality(uint64_t now) {
 }
 
 bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& picture,
-                                      PacketPacer& pacer, bool send) {
+                                      bool send) {
     VideoPipeline::Config config;
     config.codec = Codec();
     config.fps = kFrameRate;
@@ -912,7 +905,7 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
             if (m_output) {
                 m_output->Send(frame, m_bitrate, GetTickCount64());
             } else {
-                SendPackets(frame.packets, frame.keyFrame, pacer);
+                SendPackets(frame);
             }
         },
         fmtpChanged, error);
@@ -934,7 +927,6 @@ void FrameStreamServer::EncodeLoop() {
         SetLastError(L"Media Foundation is unavailable (Windows N without the Media Feature Pack?)");
         return;
     }
-    PacketPacer pacer;
     VideoPipeline pipeline(m_encoderFactory);
     Picture live, idle;
     Picture overlaid;  // the picture streamed with the overlay drawn on
@@ -998,7 +990,7 @@ void FrameStreamServer::EncodeLoop() {
                 frameRate.Add(now);
                 source = DrawOverlay(*source, overlaid, overlay, frameRate.PerSecond(now));
             }
-            StreamPicture(pipeline, *source, pacer, !probe);
+            StreamPicture(pipeline, *source, !probe);
             probed |= probe;
         }
     }

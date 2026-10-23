@@ -24,7 +24,8 @@ add_library(gazeora_host_lib STATIC
     src/stream/frame_stream.cpp
     src/stream/http_ts_output.cpp
     src/stream/net.cpp
-    src/stream/packet_pacer.cpp
+    src/stream/pacing_plan.cpp
+    src/stream/packet_send_queue.cpp
     src/stream/pointer_gate.cpp
     src/stream/pointer_input_receiver.cpp
     src/stream/pointer_message.cpp

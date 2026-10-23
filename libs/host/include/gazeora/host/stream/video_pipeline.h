@@ -31,6 +31,8 @@ public:
         VideoCodec codec;
         uint32_t width;
         uint32_t height;
+        uint32_t bitrate;  // the stream's, bits/s, for pacing its packets (PacingPlan)
+        uint32_t fps;
     };
     using FrameSink = std::function<void(const EncodedFrame& frame)>;
 

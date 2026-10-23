@@ -31,7 +31,7 @@
 namespace gazeora {
 
 class RtspConnection;
-class PacketPacer;
+class PacketSendQueue;
 struct RtspRequest;
 
 // Streams captured frames to players, over one protocol at a time (stream_protocol.h):
@@ -50,7 +50,7 @@ struct RtspRequest;
 //
 // The server coordinates; the work is done by its parts: FrameMailbox (frames in),
 // VideoPipeline (encoding, RTP), BitrateController (adapting to loss), RtspConnection (one
-// per RTSP player), FrameOutput (the other protocols), PacketPacer (spreading UDP packets),
+// per RTSP player), FrameOutput (the other protocols), PacketSendQueue (spreading UDP packets),
 // DiscoveryResponder and StreamLog.
 class FrameStreamServer : public LiveFrameSink {
 public:
@@ -204,7 +204,7 @@ private:
     void ReapConnections(bool all);
     void UpdateViewers();  // with m_sessionsMutex held
     // Sends a frame's packets to every player, and the RTCP sender report when one is due.
-    void SendPackets(const std::vector<std::string>& packets, bool keyFrame, PacketPacer& pacer);
+    void SendPackets(const VideoPipeline::EncodedFrame& frame);
     // Collects the loss players report in RTCP for the bitrate controller.
     void ReadReceiverReports(uint64_t now);
     void HeardFrom(const sockaddr_in& from, uint64_t now);  // a UDP player's report
@@ -212,8 +212,7 @@ private:
     uint32_t BitrateAt(int step) const;  // on the ladder, for the codec in use
     // Encodes one picture and streams it, or only encodes it when !send (for the parameter
     // sets). False if it couldn't be.
-    bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, PacketPacer& pacer,
-                       bool send);
+    bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, bool send);
     // `picture` with the overlay drawn on, when it's on: drawn in `target`, a copy, so the
     // picture itself can be encoded again. `picture` as it is otherwise, and for textures.
     const Picture* DrawOverlay(const Picture& picture, Picture& target, OverlayRenderer& renderer,
@@ -236,6 +235,8 @@ private:
     net::Socket m_listen;
     net::Socket m_rtp;
     net::Socket m_rtcp;  // bound so players' RTCP reports have somewhere to go
+    // Sends RTP and RTCP over UDP paced, off the encode thread. While RTSP runs only.
+    std::unique_ptr<PacketSendQueue> m_sendQueue;
     uint16_t m_rtpPort = 0;
     uint16_t m_rtcpPort = 0;
     std::atomic<uint16_t> m_port{0};

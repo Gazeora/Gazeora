@@ -114,7 +114,7 @@ bool VideoPipeline::Encode(const Picture& picture, const FrameSink& sink, bool& 
             m_annexB += nal;
         }
         sink(EncodedFrame{m_packets, m_annexB, timestamp, keyFrame, m_config.codec, size.width,
-                          size.height});
+                          size.height, m_config.bitrate, m_config.fps});
     }
     return true;
 }

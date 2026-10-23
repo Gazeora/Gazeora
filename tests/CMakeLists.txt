@@ -42,6 +42,8 @@ gazeora_add_test(gazeora_host_tests
         host/stream/bitrate_controller_test.cpp
         host/stream/frame_mailbox_test.cpp
         host/stream/frame_stream_test.cpp
+        host/stream/pacing_plan_test.cpp
+        host/stream/packet_send_queue_test.cpp
         host/stream/pointer_input_test.cpp
         host/stream/rtcp_test.cpp
         host/stream/rtp_video_test.cpp

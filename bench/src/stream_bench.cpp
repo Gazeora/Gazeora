@@ -14,7 +14,8 @@
 #include "bench_util.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_stream.h"
-#include "gazeora/host/stream/packet_pacer.h"
+#include "gazeora/host/stream/net.h"
+#include "gazeora/host/stream/packet_send_queue.h"
 #include "gazeora/host/stream/rtcp.h"
 
 namespace gazeora::bench {
@@ -53,18 +54,42 @@ TEST(Stream, FrameMailboxHandOff) {
           std::to_string(latency.size()) + " of 300 taken");
 }
 
-TEST(Stream, PacketPacerBurstGap) {
-    PrintHeader("PacketPacer::WaitForNextBurst, aiming for 1 ms");
-    PacketPacer pacer;
-    Stats s = Measure(500, [&] { pacer.WaitForNextBurst(); });
-    Print("gap between bursts", s);
-    for (size_t packets : {20, 150}) {
-        size_t perBurst = PacketPacer::PacketsPerBurst(packets);
-        size_t bursts = (packets + perBurst - 1) / perBurst;
-        PrintNote(std::to_string(packets) + "-packet frame",
-                  std::to_string(bursts) + " bursts, about " +
-                      FormatSeconds(double(bursts - 1) * s.mean) + " to send");
+TEST(Stream, PacketSendQueuePacing) {
+    PrintHeader("PacketSendQueue, 20 Mbit/s, frames to loopback");
+    net::WinsockRuntime winsock;
+    std::wstring error;
+    ASSERT_TRUE(winsock.Start(error)) << Narrow(error);
+    SOCKET sender = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    SOCKET receiver = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sockaddr_in target = {};
+    target.sin_family = AF_INET;
+    target.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    int length = sizeof(target);
+    ASSERT_EQ(bind(receiver, reinterpret_cast<sockaddr*>(&target), sizeof(target)), 0);
+    getsockname(receiver, reinterpret_cast<sockaddr*>(&target), &length);
+    PacketSendQueue queue;
+    for (uint32_t fps : {30u, 60u}) {
+        for (size_t count : {20, 78, 150}) {
+            std::vector<std::string> packets(count, std::string(1400, 'x'));
+            PacingPlan plan = PacingPlan::For(count, count * 1400, 20000000, fps);
+            std::vector<double> enqueue;
+            Stats s = Measure(30, [&] {
+                double start = QpcSeconds();
+                queue.Enqueue(sender, {target}, packets, plan);
+                enqueue.push_back(QpcSeconds() - start);
+                queue.Flush();
+            });
+            char name[64];
+            snprintf(name, sizeof(name), "%zu packets at %u fps, sent in", count, fps);
+            Print(name, s,
+                  std::to_string(plan.Bursts()) + " bursts of " +
+                      std::to_string(plan.PacketsPerBurst()) + ", planned " +
+                      FormatSeconds(double(plan.SpreadUs()) / 1e6) + "; Enqueue " +
+                      FormatSeconds(Stats::Of(enqueue).median));
+        }
     }
+    closesocket(sender);
+    closesocket(receiver);
 }
 
 // Opens the stream like a player over UDP: DESCRIBE, SETUP, PLAY.

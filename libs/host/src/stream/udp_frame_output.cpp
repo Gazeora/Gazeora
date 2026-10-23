@@ -36,6 +36,7 @@ bool UdpFrameOutput::Start(in_addr address, uint16_t port, std::wstring& error) 
              &returned, nullptr, nullptr);
     m_stopping = false;
     m_port = bound;
+    m_sendQueue = std::make_unique<PacketSendQueue>();
     m_log.Write("UDP frames on port %u", unsigned(bound));
     m_receiveThread = std::thread([this] { ReceiveLoop(); });
     return true;
@@ -46,6 +47,7 @@ void UdpFrameOutput::Stop() {
     if (m_receiveThread.joinable()) {
         m_receiveThread.join();
     }
+    m_sendQueue.reset();  // before the socket it sends on goes
     m_socket.Reset();
     m_port = 0;
     std::lock_guard<std::mutex> lock(m_playersMutex);
@@ -143,26 +145,13 @@ void UdpFrameOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateContr
     header.frameNumber = m_frameNumber++;
     header.timestamp = frame.timestamp;
     ChunkFrame(header, frame.annexB, m_datagrams);
-    if (targets.empty()) {
+    if (targets.empty() || !m_sendQueue) {
         return;
     }
-    if (!m_pacer) {
-        m_pacer = std::make_unique<PacketPacer>();  // on the thread that uses it
-    }
     // Spread like RTP: a key frame sent all at once overflows Wi-Fi buffers.
-    size_t perBurst = PacketPacer::PacketsPerBurst(m_datagrams.size());
-    for (size_t first = 0; first < m_datagrams.size(); first += perBurst) {
-        if (first > 0) {
-            m_pacer->WaitForNextBurst();
-        }
-        size_t end = std::min(first + perBurst, m_datagrams.size());
-        for (const sockaddr_in& target : targets) {
-            for (size_t i = first; i < end; ++i) {
-                sendto(m_socket.Get(), m_datagrams[i].data(), int(m_datagrams[i].size()), 0,
-                       reinterpret_cast<const sockaddr*>(&target), sizeof(target));
-            }
-        }
-    }
+    PacingPlan plan = PacingPlan::For(m_datagrams.size(), frame.annexB.size(), frame.bitrate,
+                                      frame.fps);
+    m_sendQueue->Enqueue(m_socket.Get(), std::move(targets), m_datagrams, plan);
 }
 
 }  // namespace gazeora

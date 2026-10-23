@@ -503,9 +503,11 @@ TEST_F(FrameStreamTest, SpreadsALargeFrameOverSeveralMilliseconds) {
         if (packet[1] & 0x80) break;
     }
     ASSERT_GE(packets, 32);
-    // Spread over about 20 ms; all at once would take well under a millisecond.
+    // Spread over half a frame interval (PacingPlan): about 8 ms at 60 fps; all at once would
+    // take well under a millisecond.
     double spreadMs = double(last.QuadPart - first.QuadPart) * 1000.0 / double(freq.QuadPart);
-    EXPECT_GE(spreadMs, 12.0) << packets << " packets";
+    EXPECT_GE(spreadMs, 6.0) << packets << " packets";
+    EXPECT_LT(spreadMs, 20.0) << packets << " packets";
 }
 
 TEST_F(FrameStreamTest, BacksOffWhenPlayersReportLossAndRecoversLater) {
