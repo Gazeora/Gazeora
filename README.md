@@ -144,6 +144,20 @@ redistributable files so the programs run without the Visual C++ Redistributable
 | `gazeora_*_tests.exe` | Unit tests (with `GAZEORA_BUILD_TESTS=ON`, the default) |
 | `gazeora_bench.exe` | Benchmarks of every stage, from capture to RTP packets (with `GAZEORA_BUILD_BENCH=ON`, the default) |
 
+### Installing
+
+`cmake --install` puts what Gazeora needs to run in `bin\` under the install folder, side by
+side as the programs expect: `Gazeora.exe`, `GazeoraCLI.exe`, `gazeora_hook.dll`,
+`onnxruntime.dll` and `models\` (and `vcomp140.dll` with MSVC). The README and the guides go in
+`share\doc\Gazeora`. Tests and benchmarks are never installed; the test apps and the stream
+probe are the `Tools` component, installed only when asked for.
+
+```powershell
+cmake --install build                             # to Program Files\Gazeora, x86: Program Files (x86)\Gazeora (as administrator)
+cmake --install build --prefix D:\Apps\Gazeora    # or anywhere else
+cmake --install build --component Tools           # then, if wanted, the test apps and the probe
+```
+
 ## Getting started
 
 Start `Gazeora.exe`, add games with **Add game** or by dragging exes or shortcuts onto the

@@ -59,3 +59,8 @@ add_custom_target(gazeora_input_runtime
         ${GAZEORA_RUNTIME_DIR}/models
     VERBATIM)
 add_dependencies(gazeora_input gazeora_input_runtime)
+
+# And the same beside the installed executables (cmake/Install.cmake).
+include(GNUInstallDirs)
+install(FILES ${ONNXRUNTIME_DLL} DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
+install(FILES ${HAND_MODEL_FILES} DESTINATION ${CMAKE_INSTALL_BINDIR}/models COMPONENT Runtime)

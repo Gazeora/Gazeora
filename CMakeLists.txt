@@ -6,6 +6,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # The compiler picks the release: a 64-bit one builds the x64 release (for 64-bit games), a
 # 32-bit one the x86 release (for 32-bit games). Each is the whole of Gazeora, built on its own.
 include(CompilerSettings)  # toolchain checks, GAZEORA_ARCH, static runtime, common definitions
+include(InstallPrefix)     # Program Files or Program Files (x86), by GAZEORA_ARCH
 include(MinHook)
 include(LibUsb)
 include(ClangFormat)       # format / format-check targets
@@ -35,3 +36,5 @@ option(GAZEORA_BUILD_BENCH "Build the benchmarks (gazeora_bench.exe)" ON)
 if(GAZEORA_BUILD_BENCH)
     add_subdirectory(bench)  # gazeora_bench.exe: run directly, in a Release build
 endif()
+
+include(Install)  # cmake --install: the programs and what they load, in one folder

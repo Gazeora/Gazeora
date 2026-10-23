@@ -70,7 +70,8 @@ apps/
 tools/                The test app and the stream probe
 tests/                GoogleTest suites, in the same folders as the code they test
 bench/                gazeora_bench, the benchmarks
-cmake/                Compiler settings, dependency fetching and formatting targets
+cmake/                Compiler settings, dependency fetching, formatting targets and the install
+                      rules (InstallPrefix.cmake, Install.cmake)
 ```
 
 ### x64 and x86 releases
@@ -79,8 +80,9 @@ The hook runs inside the game, so it has the game's bitness, and so does the pro
 injects it: `CreateRemoteThread` + `LoadLibraryW` only works between processes of the same
 bitness. So Gazeora is built twice, as two releases: x64 for 64-bit games and x86 for 32-bit
 ones, each the whole of Gazeora. The compiler picks which (`GAZEORA_ARCH`, in
-`CompilerSettings.cmake`), and so does what depends on it: the ONNX Runtime package. `InjectDll`
-refuses a game of the other bitness with a message naming the release that captures it.
+`CompilerSettings.cmake`), and so does what depends on it: the ONNX Runtime package, and the
+default install folder. `InjectDll` refuses a game of the other bitness with a message naming
+the release that captures it.
 
 To test both on one PC, build both: the tests and the test app of each run as that release.
 With MSVC, run `vcvarsall.bat x64` or `x86` first; with MinGW, use a 64-bit or a 32-bit
