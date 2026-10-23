@@ -1,6 +1,7 @@
 // VideoEncoder through Media Foundation: the GPU's hardware encoder when the driver offers
 // one, a software encoder otherwise (Microsoft's for H.264; for H.265 only if one is
-// installed, such as the HEVC Video Extensions).
+// installed, such as the HEVC Video Extensions). Opened with a device, only a GPU encoder that
+// takes that device's textures will do.
 #include "gazeora/host/encode/video_encoder.h"
 
 #include <windows.h>
@@ -18,6 +19,8 @@
 
 #include <algorithm>
 #include <cstring>
+
+#include "gazeora/host/encode/dxgi_device_manager.h"
 
 // MinGW's strmif.h declares ICodecAPI without the uuid that IID_PPV_ARGS needs.
 #ifdef __MINGW32__
@@ -88,8 +91,18 @@ public:
     void RequestKeyFrame() override { m_keyFrameRequested = true; }
     bool Encode(const uint8_t* nv12, int64_t time, std::vector<Frame>& out,
                 std::wstring& error) override;
+    bool EncodeTexture(ID3D11Texture2D* nv12, int64_t time, std::vector<Frame>& out,
+                       std::wstring& error) override;
 
 private:
+    // Opens a GPU encoder that takes textures on settings.device.
+    bool OpenForTextures(const Settings& settings, std::wstring& error);
+    // Gives the encoder `transform` the device, before its media types. False if it can't
+    // take it.
+    bool ShareDevice(IMFTransform* transform, IMFAttributes* attributes, std::wstring& error);
+    // Encodes the frame in `buffer`, as Encode and EncodeTexture do.
+    bool Submit(IMFMediaBuffer* buffer, int64_t time, std::vector<Frame>& out,
+                std::wstring& error);
     bool Configure(IMFTransform* transform, uint32_t fps, uint32_t bitrate, uint32_t keyInterval,
                    std::wstring& error);
     // Tries the registered encoders that match `flags` in order; true once one is set up.
@@ -103,6 +116,8 @@ private:
     ComPtr<IMFTransform> m_transform;
     ComPtr<ICodecAPI> m_codecApi;
     ComPtr<IMFMediaEventGenerator> m_events;  // async encoders only
+    DxgiDeviceManager m_deviceManager;         // opened with a device only
+    ComPtr<ID3D11Device> m_device;             // kept alive while Current() names it
     Settings m_settings;
     VideoCodec m_codec = VideoCodec::H264;
     std::wstring m_name;
@@ -151,6 +166,9 @@ bool MediaFoundationEncoder::Open(const Settings& settings, std::wstring& error)
         error = L"frame too small to encode";
         return false;
     }
+    if (settings.device) {
+        return OpenForTextures(settings, error);
+    }
 
     if (settings.preferHardware && OpenRegistered(MFT_ENUM_FLAG_HARDWARE, fps, bitrate, keyInterval, error)) {
         m_hardware = true;
@@ -178,6 +196,41 @@ bool MediaFoundationEncoder::Open(const Settings& settings, std::wstring& error)
             return false;
         }
         m_name = L"Microsoft H.264 software encoder";
+    }
+    return true;
+}
+
+bool MediaFoundationEncoder::OpenForTextures(const Settings& settings, std::wstring& error) {
+    if (!settings.preferHardware) {
+        error = L"textures need a GPU encoder";
+        return false;
+    }
+    if (!m_deviceManager.Open(settings.device, error)) {
+        return false;
+    }
+    m_device = settings.device;
+    if (!OpenRegistered(MFT_ENUM_FLAG_HARDWARE, settings.fps, settings.bitrate,
+                        settings.keyInterval, error)) {
+        if (error.empty()) error = L"no GPU encoder takes this device's textures";
+        Close();
+        return false;
+    }
+    m_hardware = true;
+    return true;
+}
+
+bool MediaFoundationEncoder::ShareDevice(IMFTransform* transform, IMFAttributes* attributes,
+                                         std::wstring& error) {
+    UINT32 aware = 0;
+    if (!attributes || FAILED(attributes->GetUINT32(MF_SA_D3D11_AWARE, &aware)) || !aware) {
+        error = L"the GPU encoder takes no D3D11 textures";
+        return false;
+    }
+    HRESULT hr = transform->ProcessMessage(MFT_MESSAGE_SET_D3D_MANAGER,
+                                           reinterpret_cast<ULONG_PTR>(m_deviceManager.Get()));
+    if (FAILED(hr)) {
+        error = HrText(L"giving the encoder the device", hr);
+        return false;
     }
     return true;
 }
@@ -216,13 +269,19 @@ bool MediaFoundationEncoder::Configure(IMFTransform* transform, uint32_t fps, ui
     ComPtr<IMFAttributes> attributes;
     ComPtr<IMFMediaEventGenerator> events;
     UINT32 async = 0;
-    if (SUCCEEDED(transform->GetAttributes(&attributes)) &&
-        SUCCEEDED(attributes->GetUINT32(MF_TRANSFORM_ASYNC, &async)) && async) {
+    if (FAILED(transform->GetAttributes(&attributes))) {
+        attributes.Reset();
+    }
+    if (attributes && SUCCEEDED(attributes->GetUINT32(MF_TRANSFORM_ASYNC, &async)) && async) {
         attributes->SetUINT32(MF_TRANSFORM_ASYNC_UNLOCK, TRUE);
         if (FAILED(transform->QueryInterface(IID_PPV_ARGS(&events)))) {
             error = L"async encoder without events";
             return false;
         }
+    }
+    // The device goes in before the media types: the encoder checks them against it.
+    if (m_deviceManager.IsOpen() && !ShareDevice(transform, attributes.Get(), error)) {
+        return false;
     }
 
     // Rate control and latency settings go in before the media types, which some encoders
@@ -323,6 +382,8 @@ void MediaFoundationEncoder::Close() {
     m_events.Reset();
     m_codecApi.Reset();
     m_transform.Reset();
+    m_deviceManager.Close();
+    m_device.Reset();
     m_name.clear();
     m_hardware = false;
 }
@@ -341,7 +402,6 @@ bool MediaFoundationEncoder::Encode(const uint8_t* nv12, int64_t time, std::vect
     }
     DWORD size = m_width * m_height * 3 / 2;
     ComPtr<IMFMediaBuffer> buffer;
-    ComPtr<IMFSample> sample;
     BYTE* data = nullptr;
     if (FAILED(MFCreateMemoryBuffer(size, &buffer)) ||
         FAILED(buffer->Lock(&data, nullptr, nullptr))) {
@@ -351,8 +411,35 @@ bool MediaFoundationEncoder::Encode(const uint8_t* nv12, int64_t time, std::vect
     memcpy(data, nv12, size);
     buffer->Unlock();
     buffer->SetCurrentLength(size);
+    return Submit(buffer.Get(), time, out, error);
+}
+
+bool MediaFoundationEncoder::EncodeTexture(ID3D11Texture2D* nv12, int64_t time,
+                                           std::vector<Frame>& out, std::wstring& error) {
+    if (!m_transform || !m_deviceManager.IsOpen()) {
+        error = L"encoder not open for textures";
+        return false;
+    }
+    ComPtr<IMFMediaBuffer> buffer;
+    ComPtr<IMF2DBuffer> planes;
+    DWORD length = 0;
+    HRESULT hr = MFCreateDXGISurfaceBuffer(__uuidof(ID3D11Texture2D), nv12, 0, FALSE, &buffer);
+    if (SUCCEEDED(hr) && SUCCEEDED(buffer.As(&planes)) &&
+        SUCCEEDED(planes->GetContiguousLength(&length))) {
+        buffer->SetCurrentLength(length);
+    }
+    if (FAILED(hr)) {
+        error = HrText(L"wrapping the texture for the encoder", hr);
+        return false;
+    }
+    return Submit(buffer.Get(), time, out, error);
+}
+
+bool MediaFoundationEncoder::Submit(IMFMediaBuffer* buffer, int64_t time, std::vector<Frame>& out,
+                                    std::wstring& error) {
+    ComPtr<IMFSample> sample;
     MFCreateSample(&sample);
-    sample->AddBuffer(buffer.Get());
+    sample->AddBuffer(buffer);
     sample->SetSampleTime(time);
     sample->SetSampleDuration(m_frameDuration);
     if (m_keyFrameRequested && m_codecApi) {

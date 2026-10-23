@@ -37,6 +37,7 @@ gazeora_add_test(gazeora_host_tests
         host/launch/launcher_test.cpp
         host/capture/capture_client_test.cpp
         host/capture/frame_dump_test.cpp
+        host/encode/gpu_nv12_converter_test.cpp
         host/encode/video_encoder_test.cpp
         host/stream/bitrate_controller_test.cpp
         host/stream/frame_stream_test.cpp

@@ -438,7 +438,8 @@ bool TextureReader::PrepareTarget(const D3D11_TEXTURE2D_DESC& source, UINT width
     scaled.Format = format;
     scaled.SampleDesc.Count = 1;
     scaled.Usage = D3D11_USAGE_DEFAULT;
-    scaled.BindFlags = D3D11_BIND_RENDER_TARGET;
+    // Also read in a pass: GpuNv12Converter takes it from here.
+    scaled.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     m_scaled.Reset();
     m_scaledView.Reset();
     if (FAILED(m_device->CreateTexture2D(&scaled, nullptr, &m_scaled)) ||
@@ -581,13 +582,12 @@ bool TextureReader::RenderStereo(ID3D11DeviceContext* context, ID3D11ShaderResou
     return true;
 }
 
-bool TextureReader::Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& width, UINT& height,
-                         std::vector<uint8_t>& bgra, std::wstring& error,
-                         const DepthFrame* depth) {
+ID3D11Texture2D* TextureReader::Compose(ID3D11Device* device, ID3D11Texture2D* texture,
+                                        std::wstring& error, const DepthFrame* depth) {
     m_stereo = false;
     if (!device || !texture) {
         error = L"no frame captured yet";
-        return false;
+        return nullptr;
     }
 
     D3D11_TEXTURE2D_DESC source;
@@ -595,7 +595,7 @@ bool TextureReader::Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& w
     Layout layout;
     if (!LayoutFor(source.Format, layout)) {
         error = L"readback does not support DXGI format " + std::to_wstring(source.Format);
-        return false;
+        return nullptr;
     }
     // The capture client recreates its device when the game moves to another adapter.
     if (m_device.Get() != device) {
@@ -623,8 +623,6 @@ bool TextureReader::Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& w
                   depth->encoding != kDepthNone && depth->width > 0 && depth->height > 0;
     ID3D11ShaderResourceView* view = CreateShaders() ? SourceView(texture, source) : nullptr;
 
-    ID3D11Texture2D* readFrom = texture;
-    D3D11_TEXTURE2D_DESC desc = source;
     if (m_vr.WarpOnPc()) {
         uint32_t vrWidth, vrHeight;
         m_vr.FrameSize(m_maxWidth ? m_maxWidth : 1920, m_maxHeight ? m_maxHeight : 1080, vrWidth,
@@ -640,25 +638,35 @@ bool TextureReader::Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& w
                     vrWidth, vrHeight, m_stereo ? Pass::WarpPair : Pass::Warp)) {
             error = L"the VR layout needs a GPU that runs D3D11 shaders";
             m_stereo = false;
-            return false;
+            return nullptr;
         }
-        readFrom = m_scaled.Get();
-        m_scaled->GetDesc(&desc);
-        layout = Layout::BGRA8;
-    } else if (stereo && RenderStereo(context.Get(), view, source, *depth, flatWidth / 2,
-                                      flatHeight, false)) {
-        m_stereo = true;
-        readFrom = m_scaled.Get();
-        m_scaled->GetDesc(&desc);
-        layout = Layout::BGRA8;
-    } else if (scale) {
-        // Without the GPU path, the full-size frame is read and the encoder scales it.
-        if (Render(context.Get(), view, source, flatWidth, flatHeight, Pass::Scale)) {
-            readFrom = m_scaled.Get();
-            m_scaled->GetDesc(&desc);
-            layout = Layout::BGRA8;
-        }
+        return m_scaled.Get();
     }
+    if (stereo && RenderStereo(context.Get(), view, source, *depth, flatWidth / 2, flatHeight,
+                               false)) {
+        m_stereo = true;
+        return m_scaled.Get();
+    }
+    // Without the GPU path, the full-size frame is read and the encoder scales it.
+    if (scale && Render(context.Get(), view, source, flatWidth, flatHeight, Pass::Scale)) {
+        return m_scaled.Get();
+    }
+    return texture;
+}
+
+bool TextureReader::Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& width, UINT& height,
+                         std::vector<uint8_t>& bgra, std::wstring& error,
+                         const DepthFrame* depth) {
+    ID3D11Texture2D* readFrom = Compose(device, texture, error, depth);
+    if (!readFrom) {
+        return false;
+    }
+    D3D11_TEXTURE2D_DESC desc;
+    readFrom->GetDesc(&desc);
+    Layout layout;
+    LayoutFor(desc.Format, layout);  // Compose only hands out formats it has a layout for
+    ComPtr<ID3D11DeviceContext> context;
+    device->GetImmediateContext(&context);
 
     desc.Usage = D3D11_USAGE_STAGING;
     desc.BindFlags = 0;

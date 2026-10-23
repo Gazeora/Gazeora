@@ -37,6 +37,10 @@ public:
                 std::wstring& error) override {
         return m_inner->Encode(nv12, time, out, error);
     }
+    bool EncodeTexture(ID3D11Texture2D* nv12, int64_t time, std::vector<Frame>& out,
+                       std::wstring& error) override {
+        return m_inner->EncodeTexture(nv12, time, out, error);
+    }
 
 private:
     std::unique_ptr<VideoEncoder> m_inner;

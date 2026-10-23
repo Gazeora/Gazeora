@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <d3d11.h>
 #include <gtest/gtest.h>
 #include <mfapi.h>
 #include <mferror.h>
@@ -16,6 +17,7 @@
 #include <vector>
 
 #include "gazeora/host/encode/color_convert.h"
+#include "gazeora/host/encode/gpu_nv12_converter.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/rtp_video.h"
 
@@ -319,6 +321,89 @@ INSTANTIATE_TEST_SUITE_P(
         return std::string(std::get<0>(info.param) == VideoCodec::H265 ? "H265" : "H264") +
                (std::get<1>(info.param) ? "Hardware" : "Software");
     });
+
+// The GPU path end to end, on this machine's GPU: frames converted to NV12 there and encoded
+// from the textures decode to the frames' brightness.
+class VideoEncoderTextureTest : public ::testing::TestWithParam<VideoCodec> {
+protected:
+    void SetUp() override {
+        CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        ASSERT_TRUE(SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_LITE)));
+        D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+                          D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+                          nullptr, 0, D3D11_SDK_VERSION, &device, nullptr, nullptr);
+    }
+    void TearDown() override {
+        device.Reset();
+        MFShutdown();
+        CoUninitialize();
+    }
+
+    ComPtr<ID3D11Device> device;
+};
+
+TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
+    const VideoCodec codec = GetParam();
+    if (!device) {
+        GTEST_SKIP() << "no hardware D3D11 device";
+    }
+    std::unique_ptr<VideoEncoder> encoder = CreateVideoEncoder();
+    VideoEncoder::Settings settings;
+    settings.codec = codec;
+    settings.width = 320;
+    settings.height = 240;
+    settings.bitrate = 2000000;
+    settings.device = device.Get();
+    std::wstring error;
+    if (!encoder->Open(settings, error)) {
+        GTEST_SKIP() << "no GPU " << CodecName(codec) << " encoder takes textures here: "
+                     << std::string(error.begin(), error.end());
+    }
+    EXPECT_TRUE(encoder->IsHardware());
+    EXPECT_TRUE(encoder->Matches(codec, 320, 240, device.Get()));
+
+    GpuNv12Converter converter;
+    std::vector<VideoEncoder::Frame> frames;
+    for (int i = 0; i < 10; ++i) {
+        uint32_t level = i < 5 ? 100 : 200;
+        std::vector<uint32_t> pixels(320 * 240, 0xFF000000 | level << 16 | level << 8 | level);
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = 320;
+        desc.Height = 240;
+        desc.MipLevels = desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        D3D11_SUBRESOURCE_DATA data = {pixels.data(), 320 * 4, 0};
+        ComPtr<ID3D11Texture2D> frame;
+        ASSERT_TRUE(SUCCEEDED(device->CreateTexture2D(&desc, &data, &frame)));
+        UINT width = 0, height = 0;
+        ComPtr<ID3D11Texture2D> nv12 = converter.Convert(device.Get(), frame.Get(), width, height,
+                                                         error);
+        ASSERT_TRUE(nv12) << std::string(error.begin(), error.end());
+        ASSERT_TRUE(encoder->EncodeTexture(nv12.Get(), int64_t(i) * 333333, frames, error))
+            << std::string(error.begin(), error.end());
+    }
+    ASSERT_GE(frames.size(), 9u) << "an encoder may hold back one frame, not more";
+    EXPECT_TRUE(frames[0].keyFrame);
+
+    ComPtr<IMFTransform> decoder = CreateDecoder(codec);
+    if (!decoder) {
+        GTEST_SKIP() << "encoded, but there's no " << CodecName(codec) << " decoder to check it";
+    }
+    std::vector<std::string> accessUnits;
+    for (const VideoEncoder::Frame& frame : frames) accessUnits.push_back(frame.annexB);
+    std::vector<double> luma = DecodeAverageLuma(decoder, codec, accessUnits);
+    ASSERT_GE(luma.size(), 8u);
+    EXPECT_NEAR(luma.front(), 102, 4);
+    EXPECT_NEAR(luma.back(), 188, 4);
+}
+
+INSTANTIATE_TEST_SUITE_P(Codecs, VideoEncoderTextureTest,
+                         ::testing::Values(VideoCodec::H264, VideoCodec::H265),
+                         [](const auto& info) {
+                             return std::string(info.param == VideoCodec::H265 ? "H265" : "H264");
+                         });
 
 }  // namespace
 }  // namespace gazeora

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <d3d11.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -9,7 +11,8 @@
 
 namespace gazeora {
 
-// A low-latency H.264 / H.265 encoder taking NV12 frames. No B-frames, so frames come out in
+// A low-latency H.264 / H.265 encoder taking NV12 frames, from memory or, when opened with a
+// device, as textures on that device's GPU. No B-frames, so frames come out in
 // the order they go in and players never have to reorder them. An interface, so the stream
 // doesn't depend on how frames are encoded: Media Foundation today (CreateVideoEncoder),
 // a vendor SDK or a test double tomorrow. Use one from a single thread.
@@ -29,6 +32,9 @@ public:
         uint32_t bitrate = 0;        // bits/s
         uint32_t keyInterval = 30;   // frames between key frames
         bool preferHardware = true;  // false skips the GPU encoders
+        // Set: frames come as NV12 textures on this device (EncodeTexture), straight to a GPU
+        // encoder on its adapter. Open fails if there's none that takes them.
+        ID3D11Device* device = nullptr;
     };
 
     virtual ~VideoEncoder() = default;
@@ -54,11 +60,20 @@ public:
     // usually exactly one, but an encoder may hold a frame back until the next one.
     virtual bool Encode(const uint8_t* nv12, int64_t time, std::vector<Frame>& out,
                         std::wstring& error) = 0;
+    // The same for an NV12 texture of the opened size, on the device it was opened with.
+    // Encoders without texture input refuse.
+    virtual bool EncodeTexture(ID3D11Texture2D* nv12, int64_t time, std::vector<Frame>& out,
+                               std::wstring& error) {
+        (void)nv12, (void)time, (void)out;
+        error = L"this encoder takes no textures";
+        return false;
+    }
 
-    // True if this encoder is open with exactly these codec and size.
-    bool Matches(VideoCodec codec, uint32_t width, uint32_t height) const {
+    // True if this encoder is open with exactly these codec, size and device.
+    bool Matches(VideoCodec codec, uint32_t width, uint32_t height,
+                 ID3D11Device* device = nullptr) const {
         return IsOpen() && Current().codec == codec && Current().width == width &&
-               Current().height == height;
+               Current().height == height && Current().device == device;
     }
 };
 

@@ -36,6 +36,11 @@ public:
     bool Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& width, UINT& height,
               std::vector<uint8_t>& bgra, std::wstring& error,
               const DepthFrame* depth = nullptr);
+    // Read's GPU half: draws the frame as it'll be streamed (scaled, warped, in 3D) and
+    // returns the texture holding it, the reader's own or `texture` itself when nothing had to
+    // be drawn. It stays valid until the next call. Null with `error` set if it can't be.
+    ID3D11Texture2D* Compose(ID3D11Device* device, ID3D11Texture2D* texture, std::wstring& error,
+                             const DepthFrame* depth = nullptr);
     // Whether the last frame read came out as a pair of views side by side.
     bool Stereo() const { return m_stereo; }
 

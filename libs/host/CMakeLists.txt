@@ -8,9 +8,13 @@ add_library(gazeora_host_lib STATIC
     # capture: receiving the hook's frames and reading them back from the GPU
     src/capture/capture_client.cpp
     src/capture/frame_dump.cpp
-    # encode: H.264 / H.265 through Media Foundation
+    # encode: H.264 / H.265 through Media Foundation, from memory or GPU textures
     src/encode/color_convert.cpp
+    src/encode/dxgi_device_manager.cpp
+    src/encode/gpu_nv12_converter.cpp
     src/encode/media_foundation_encoder.cpp
+    src/encode/nv12_readback.cpp
+    src/encode/nv12_texture_pool.cpp
     # stream: the stream server and its protocols (RTSP/RTP, UDP, HTTP, USB), discovery
     src/stream/bitrate_controller.cpp
     src/stream/discovery.cpp
