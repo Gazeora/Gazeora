@@ -113,6 +113,10 @@ void App::RemoveGame(uint32_t gameId) {
 void App::OpenDetails(uint32_t gameId) {
     m_detailsId = gameId;
     m_page = Page::Details;
+    if (ImGui::GetIO().NavVisible) {
+        m_panes.EnterPage();  // opened with a controller: on into the game's page
+        m_returnToGame = gameId;
+    }
 }
 
 void App::SaveLibrary() {

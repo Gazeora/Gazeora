@@ -11,12 +11,11 @@ namespace gazeora::app {
 
 // Adapter pattern: game controllers as ImGui's gamepad navigation, onto this window's UI only.
 // The d-pad or the left stick moves between controls, the bottom button presses, the right
-// one backs out; the shoulder buttons and the right stick go through as ImGui keys, for the
-// pages to switch and scroll with.
+// one backs out; the right stick goes through as ImGui keys, for the pages to scroll with.
 class ImGuiGamepadInput {
 public:
     // How many ImGui keys the controllers drive.
-    static constexpr size_t kKeyCount = 12;
+    static constexpr size_t kKeyCount = 10;
 
     // Between the platform backend's NewFrame and ImGui::NewFrame, like the phone's touches.
     // `connected`: whether any controller is, without which ImGui ignores them.

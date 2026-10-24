@@ -103,11 +103,18 @@ void App::DrawGameCard(const Game& game, float width) {
     float coverHeight = std::round(width * 4.0f / 3.0f);
     ImVec2 pos = ImGui::GetCursorScreenPos();
     ImVec2 size(width, coverHeight + S(48));
-    ImGui::InvisibleButton("##card", size);
+    // Clicked, or pressed with a controller: then it's focused, and its menu button opens the
+    // menu a right-click does.
+    bool pressed = NavButton("##card", size);
     bool hovered = ImGui::IsItemHovered();
-    bool clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
     if (hovered) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+    }
+    if (game.id == m_returnToGame && m_panes.FocusHereOnEntry()) {
+        m_returnToGame = 0;  // back from its page: focus lands here again, once
+    }
+    if (ImGui::IsItemFocused() && m_gamepadPresses.Pressed(input::GamepadButton::Start)) {
+        ImGui::OpenPopup("##context");
     }
     DrawGameContextMenu(game);
 
@@ -172,8 +179,10 @@ void App::DrawGameCard(const Game& game, float width) {
         float radius = S(24);
         ImVec2 mouse = ImGui::GetIO().MousePos;
         ImVec2 d = mouse - center;
-        overPlay = !session && d.x * d.x + d.y * d.y <= radius * radius;
-        if (!session) {
+        // The play button is the mouse's: a controller opens the game's page, as in Steam.
+        bool byMouse = !ImGui::GetIO().NavVisible;
+        overPlay = byMouse && !session && d.x * d.x + d.y * d.y <= radius * radius;
+        if (!session && byMouse) {
             draw->AddCircleFilled(center, radius, overPlay ? kAccentHover : kAccent, 48);
             float t = radius * 0.42f;
             draw->AddTriangleFilled(center + ImVec2(-t * 0.7f, -t), center + ImVec2(-t * 0.7f, t),
@@ -188,7 +197,7 @@ void App::DrawGameCard(const Game& game, float width) {
                   ImVec2(pos.x + S(2), coverMax.y + S(28)), session ? kAccent : kTextDim,
                   subtitle.c_str());
 
-    if (clicked) {
+    if (pressed) {
         if (overPlay) {
             Launch(game.id);
         } else {

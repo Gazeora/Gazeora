@@ -40,10 +40,10 @@ void App::DrawSidebar() {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kSidebarBg);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(12), S(20)));
-    ImGui::BeginChild("##sidebar", ImVec2(S(212), 0),
-                      ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened,
+    ImGui::BeginChild("##sidebar", ImVec2(S(212), 0), ImGuiChildFlags_AlwaysUseWindowPadding,
                       ImGuiWindowFlags_NoScrollbar);
     ImGui::PopStyleVar(2);
+    m_panes.MarkSidebar();
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, S(4)));
     ImDrawList* draw = ImGui::GetWindowDrawList();
 
@@ -67,8 +67,12 @@ void App::DrawSidebar() {
         ImVec2 p = ImGui::GetCursorScreenPos();
         ImVec2 size(width, S(38));
         ImGui::PushID(item.label);
-        if (ImGui::InvisibleButton("##nav", size)) {
+        if (NavButton("##nav", size)) {
             m_page = item.page;
+            m_returnToGame = 0;
+            if (ImGui::GetIO().NavVisible) {
+                m_panes.EnterPage();  // chosen with a controller: on into the page
+            }
         }
         bool hovered = ImGui::IsItemHovered();
         ImGui::PopID();
@@ -103,7 +107,7 @@ void App::DrawSidebar() {
         ImVec2 p(ImGui::GetCursorScreenPos().x, bottom - panelHeight);
         ImVec2 size(width, panelHeight);
         ImGui::SetCursorScreenPos(p);
-        if (ImGui::InvisibleButton("##nowplaying", size) && game) {
+        if (NavButton("##nowplaying", size) && game) {
             OpenDetails(game->id);
         }
         bool hovered = ImGui::IsItemHovered();
@@ -142,11 +146,11 @@ void App::DrawSidebar() {
 }
 
 void App::FollowGamepadPageKeys() {
-    int step = int(ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) -
-               int(ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false));
+    using input::GamepadButton;
+    int step = int(m_gamepadPresses.Pressed(GamepadButton::RightShoulder)) -
+               int(m_gamepadPresses.Pressed(GamepadButton::LeftShoulder));
     // Not while a slider is held or a popup is open: the page would change under them.
-    if (step == 0 || ImGui::IsAnyItemActive() ||
-        ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId)) {
+    if (step == 0 || m_gamepadBusy) {
         return;
     }
     Page shown = m_page == Page::Details ? Page::Library : m_page;
@@ -154,8 +158,18 @@ void App::FollowGamepadPageKeys() {
     for (int i = 0; i < count; ++i) {
         if (kNavItems[i].page == shown) {
             m_page = kNavItems[std::clamp(i + step, 0, count - 1)].page;
+            m_returnToGame = 0;
+            m_panes.EnterPage();
             return;
         }
+    }
+}
+
+void App::FollowGamepadBack() {
+    if (m_page == Page::Details && !m_gamepadBusy &&
+        m_gamepadPresses.Pressed(input::GamepadButton::East)) {
+        m_page = Page::Library;
+        m_panes.EnterPage();
     }
 }
 
