@@ -1,6 +1,8 @@
-# Ways to control the PC besides its own mouse and keyboard: hand gestures seen by a webcam.
+# Ways to control the PC besides its own mouse and keyboard: hand gestures seen by a webcam,
+# and game controllers.
 include(OnnxRuntime)
 include(HandModels)
+include(Sdl)
 
 add_library(gazeora_input STATIC
     # tracking: MediaPipe's palm detector and hand landmark model
@@ -29,11 +31,15 @@ add_library(gazeora_input STATIC
     src/gestures/pinch_reader.cpp
     src/gestures/pointer_precision.cpp
     src/gestures/wheel_drag.cpp
+    # gamepad: game controllers, whatever the make
+    src/gamepad/gamepad_state_filter.cpp
+    src/models/gamepad_state.cpp
     # services: the camera-to-pointer loop
     src/services/frame_rate_meter.cpp
+    src/services/gamepad_session.cpp
     src/services/hand_gesture_controller.cpp
     src/services/hand_gesture_session.cpp
-    # platform: Media Foundation, ONNX Runtime, SendInput
+    # platform: Media Foundation, ONNX Runtime, SendInput, SDL
     src/platform/camera_devices.cpp
     src/platform/media_foundation_camera.cpp
     src/platform/media_foundation_camera_catalog.cpp
@@ -41,13 +47,14 @@ add_library(gazeora_input STATIC
     src/platform/onnx_runtime_api.cpp
     src/platform/onnx_runtime_engine.cpp
     src/platform/runtime_files.cpp
+    src/platform/sdl_gamepad_driver.cpp
     src/platform/send_input_pointer.cpp)
 target_include_directories(gazeora_input
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(gazeora_input
     PUBLIC gazeora_common
-    PRIVATE onnxruntime_headers mf mfplat mfreadwrite mfuuid ole32)
+    PRIVATE onnxruntime_headers SDL3::SDL3-static mf mfplat mfreadwrite mfuuid ole32)
 
 # onnxruntime.dll beside the executables and the models under models\, where RuntimeFiles
 # looks for them.
