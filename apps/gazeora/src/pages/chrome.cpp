@@ -69,11 +69,11 @@ void App::DrawSidebar() {
         ImVec2 size(width, S(38));
         ImGui::PushID(item.label);
         if (NavButton("##nav", size)) {
-            m_page = item.page;
+            m_page = item.page;  // the focus stays here: right goes into the page
             m_returnToGame = 0;
-            if (ImGui::GetIO().NavVisible) {
-                m_panes.EnterPage();  // chosen with a controller: on into the page
-            }
+        }
+        if (selected) {
+            m_panes.FocusHereOnEntry();  // coming back to the sidebar lands on the open page
         }
         bool hovered = ImGui::IsItemHovered();
         ImGui::PopID();
@@ -160,18 +160,30 @@ void App::FollowGamepadPageKeys() {
         if (kNavItems[i].page == shown) {
             m_page = kNavItems[std::clamp(i + step, 0, count - 1)].page;
             m_returnToGame = 0;
-            m_panes.EnterPage();
+            // In the sidebar, the focus follows to the new page's entry; in the page, it goes
+            // to the new page's first control.
+            if (m_panes.InSidebar()) {
+                m_panes.ReturnToSidebar();
+            } else {
+                m_panes.EnterPage();
+            }
             return;
         }
     }
 }
 
 void App::FollowGamepadBack() {
-    if (m_page == Page::Details && !m_gamepadBusy &&
-        m_gamepadPresses.Pressed(input::GamepadButton::East)) {
-        m_page = Page::Library;
-        m_panes.EnterPage();
+    // A popup, a list, a held slider or the keyboard was open: the press closed that.
+    if (m_gamepadBusy || !m_gamepadPresses.Pressed(input::GamepadButton::East)) {
+        return;
     }
+    if (m_page == Page::Details) {
+        m_page = Page::Library;  // back onto the game, as in Steam
+        m_panes.EnterPage();
+        return;
+    }
+    // From the page to its entry in the sidebar; there, the focus just stays put.
+    m_panes.ReturnToSidebar();
 }
 
 void App::FollowTextInput() {
