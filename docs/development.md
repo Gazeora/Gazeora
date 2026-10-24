@@ -139,6 +139,11 @@ either replaces the other. To release:
    if the tag doesn't match `VERSION`, or if a release candidate isn't a pre-release (or a
    stable version is). To build the MSIs locally instead, run `--target gazeora_msi` in an x64
    and an x86 build folder.
+4. CI then sends the release to [gazeora.github.io](https://gazeora.github.io), which lists it
+   on its download page. Editing or deleting the release later updates the site too
+   (`.github/workflows/website.yml`). Both need the `GAZEORA_SITE_TOKEN` secret: a fine-grained
+   token for the Gazeora organization with access to `Gazeora/gazeora.github.io` only and
+   **Contents: Read and write**.
 
 When a candidate is good, set `VERSION` to `1.1.0` and release `v1.1.0` the same way.
 
