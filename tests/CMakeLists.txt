@@ -5,7 +5,8 @@
 #  - gazeora_host_tests:      host library and the shared protocol header
 #  - gazeora_transport_tests: real hook and host talking to each other in one process
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
-#  - gazeora_input_tests:     hand gesture control, with the real models on photos in input/data
+#  - gazeora_input_tests:     hand gesture control, with the real models on photos in input/data,
+#                             and game controllers
 #  - gazeora_installer_tests: the MSI's custom actions, on a fake installer session
 # D3D11 tests run on WARP, so no GPU is needed.
 
@@ -94,6 +95,10 @@ gazeora_add_test(gazeora_input_tests
         input/services/hand_gesture_controller_test.cpp
         input/services/hand_gesture_session_test.cpp
         input/services/synthetic_video_test.cpp
+        input/gamepad/gamepad_state_test.cpp
+        input/gamepad/gamepad_state_filter_test.cpp
+        input/services/gamepad_session_test.cpp
+        input/platform/sdl_gamepad_driver_test.cpp
     LIBS gazeora_input windowscodecs ole32)
 target_include_directories(gazeora_input_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/input)
 target_compile_definitions(gazeora_input_tests PRIVATE
