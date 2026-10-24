@@ -34,12 +34,14 @@ public:
     void Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
               uint64_t now) override;
     std::wstring Url(const std::wstring& host) const override;
+    bool Watching(const in_addr& address) override;
 
 private:
     // One HTTP connection. Its queue (RtspConnection is a plain non-blocking connection with
     // an output queue) takes the stream once the request asked for it.
     struct Player {
         std::unique_ptr<RtspConnection> connection;
+        in_addr address;
         bool streaming = false;
         bool app = false;  // the Gazeora app, by its User-Agent
         bool waitingForKeyFrame = true;

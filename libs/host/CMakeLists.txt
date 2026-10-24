@@ -46,7 +46,7 @@ add_library(gazeora_host_lib STATIC
 target_include_directories(gazeora_host_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(gazeora_host_lib PUBLIC gazeora_common d3d11 d3dcompiler dxgi
     ws2_32 iphlpapi mfplat mfuuid winmm ole32 uuid gdi32
-    PRIVATE libusb setupapi winusb)
+    PRIVATE libusb setupapi winusb bcrypt)
 if(MSVC)
     # The Windows SDK declares the Media Foundation codecs' CLSIDs (wmcodecdsp.h) and defines
     # them here; MinGW has no such library, so with it they're instantiated in the sources

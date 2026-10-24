@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <thread>
 
@@ -14,10 +15,14 @@
 namespace gazeora {
 
 // The app's touches over the network: GZF1 Pointer datagrams (pointer_message.h) on a UDP
-// port of their own, whichever protocol the frames go out on.
+// port of their own, whichever protocol the frames go out on. Only from the addresses `admits`
+// takes: anything else on the network could click around Gazeora otherwise.
 class PointerInputReceiver {
 public:
-    PointerInputReceiver(PointerEventSink& sink, StreamLog& log) : m_sink(sink), m_log(log) {}
+    using Admits = std::function<bool(const in_addr& address)>;
+
+    PointerInputReceiver(PointerEventSink& sink, StreamLog& log, Admits admits)
+        : m_sink(sink), m_log(log), m_admits(std::move(admits)) {}
     ~PointerInputReceiver() { Stop(); }
     PointerInputReceiver(const PointerInputReceiver&) = delete;
     PointerInputReceiver& operator=(const PointerInputReceiver&) = delete;
@@ -29,10 +34,11 @@ public:
 
 private:
     void Loop();
-    void Hear(const uint8_t* datagram, size_t size);
+    void Hear(const sockaddr_in& from, const uint8_t* datagram, size_t size);
 
     PointerEventSink& m_sink;
     StreamLog& m_log;
+    Admits m_admits;
     net::Socket m_socket;
     std::atomic<uint16_t> m_port{0};
     std::atomic<bool> m_stopping{false};

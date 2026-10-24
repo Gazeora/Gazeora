@@ -56,17 +56,21 @@ void PointerInputReceiver::Loop() {
         if (select(0, &readable, nullptr, nullptr, &timeout) != 1) {
             continue;
         }
-        int got = recv(m_socket.Get(), reinterpret_cast<char*>(datagram), sizeof(datagram), 0);
+        sockaddr_in from = {};
+        int fromLength = sizeof(from);
+        int got = recvfrom(m_socket.Get(), reinterpret_cast<char*>(datagram), sizeof(datagram), 0,
+                           reinterpret_cast<sockaddr*>(&from), &fromLength);
         if (got > 0) {
-            Hear(datagram, size_t(got));
+            Hear(from, datagram, size_t(got));
         }
     }
 }
 
-void PointerInputReceiver::Hear(const uint8_t* datagram, size_t size) {
+void PointerInputReceiver::Hear(const sockaddr_in& from, const uint8_t* datagram, size_t size) {
     FrameHeader header;
     PointerEvent event;
-    if (header.Read(datagram, size) && header.type == FrameMessage::Pointer &&
+    if (m_admits(from.sin_addr) && header.Read(datagram, size) &&
+        header.type == FrameMessage::Pointer &&
         PointerMessage::Read(datagram + kFrameHeaderSize, size - kFrameHeaderSize, event)) {
         m_sink.OnPointer(event);
     }

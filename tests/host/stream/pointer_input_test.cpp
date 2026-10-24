@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -111,15 +112,20 @@ TEST(PointerGateTest, PassesEventsOnOnlyWhileVrIsOff) {
     EXPECT_EQ(heard[0].wheelVertical, 3);
 }
 
-TEST(PointerInputReceiverTest, HearsPointerDatagrams) {
+TEST(PointerInputReceiverTest, HearsPointerDatagramsFromAdmittedAddressesOnly) {
     net::WinsockRuntime winsock;
     std::wstring error;
     ASSERT_TRUE(winsock.Start(error));
     RecordingSink sink;
     StreamLog log;
-    PointerInputReceiver receiver(sink, log);
     in_addr loopback;
     loopback.s_addr = htonl(INADDR_LOOPBACK);
+    std::atomic<bool> watching{false};
+    std::atomic<uint32_t> asked{0};
+    PointerInputReceiver receiver(sink, log, [&](const in_addr& address) {
+        asked = address.s_addr;
+        return watching.load();
+    });
     ASSERT_TRUE(receiver.Start(loopback, 0, error)) << Utf8::FromWide(error);
 
     net::Socket phone(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
@@ -127,12 +133,18 @@ TEST(PointerInputReceiverTest, HearsPointerDatagrams) {
     pc.sin_family = AF_INET;
     pc.sin_addr = loopback;
     pc.sin_port = htons(receiver.Port());
-    const std::string datagrams[] = {"not a pointer", PointerMessage::Write(Scroll(7, 0))};
-    for (const std::string& datagram : datagrams) {
+    auto send = [&](const std::string& datagram) {
         sendto(phone.Get(), datagram.data(), int(datagram.size()), 0,
                reinterpret_cast<const sockaddr*>(&pc), sizeof(pc));
-    }
+    };
+    // Not watching: dropped.
+    send(PointerMessage::Write(Scroll(5, 0)));
+    EXPECT_TRUE(sink.WaitFor(1).empty());
+    EXPECT_EQ(asked.load(), loopback.s_addr);
 
+    watching = true;
+    send("not a pointer");
+    send(PointerMessage::Write(Scroll(7, 0)));
     std::vector<PointerEvent> heard = sink.WaitFor(1);
     receiver.Stop();
     ASSERT_EQ(heard.size(), 1u);
