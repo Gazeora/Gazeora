@@ -12,9 +12,9 @@
 
 namespace gazeora::app {
 
-// Gazeora.exe run with one of these (a file for what went wrong, then any hardware IDs)
-// installs the driver or restores file transfer, and exits. The *Elevated functions run it
-// that way, as an administrator.
+// Gazeora.exe run with one of these (a pipe in the process that started it, for what went
+// wrong; then any hardware IDs) installs the driver or restores file transfer, and exits. The
+// *Elevated functions run it that way, as an administrator.
 constexpr wchar_t kInstallUsbDriverArgument[] = L"--install-usb-driver";
 constexpr wchar_t kRestoreFileTransferArgument[] = L"--restore-file-transfer";
 // Run by the uninstaller, already as an administrator.
@@ -46,7 +46,7 @@ bool InstallUsbDriverElevated(HWND owner, const std::vector<std::wstring>& phone
 bool RestoreFileTransferElevated(HWND owner, std::wstring& error);
 
 // For main: when the command line asks for one of the above, does it, writes what went wrong
-// to the result file and returns the exit code. -1 when the command line doesn't ask.
+// to that pipe and returns the exit code. -1 when the command line doesn't ask.
 int RunUsbDriverCommand();
 
 }  // namespace gazeora::app

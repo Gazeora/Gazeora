@@ -9,9 +9,13 @@
 #include <winioctl.h>
 #include <usbioctl.h>
 #include <shellapi.h>
+#include <objbase.h>
+#include <sddl.h>
+#include <tlhelp32.h>
 // clang-format on
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <cwchar>
 #include <string>
@@ -33,6 +37,31 @@ constexpr wchar_t kProvider[] = L"Microsoft Enhanced RSA and AES Cryptographic P
 // each installed one (as oemNN.inf).
 constexpr char kPackageMarker[] = "; Gazeora USB driver package";
 constexpr char kPhoneEntry[] = " = PhoneInstall, ";
+// What the elevated run writes back of what went wrong, at most: the pipe it goes through holds
+// more, so the write never waits on the reader (who reads once it has exited).
+constexpr size_t kMaxResultChars = 1024;
+constexpr DWORD kResultPipeBytes = 16384;
+
+// Whether `id` is a phone's hardware ID as UsbPhone gives it: USB\VID_xxxx&PID_xxxx, maybe
+// with &MI_xx. It goes into the INF as it is, so anything else (a line break, above all) could
+// add what it liked to a package this signs and trusts.
+bool IsPhoneHardwareId(const std::wstring& id) {
+    auto hex = [&](size_t at, size_t digits) {
+        for (size_t i = at; i < at + digits; ++i) {
+            wchar_t c = id[i];
+            if (!((c >= L'0' && c <= L'9') || (c >= L'A' && c <= L'F') ||
+                  (c >= L'a' && c <= L'f'))) {
+                return false;
+            }
+        }
+        return true;
+    };
+    bool device = id.size() >= 21 && _wcsnicmp(id.c_str(), L"USB\\VID_", 8) == 0 && hex(8, 4) &&
+                  _wcsnicmp(id.c_str() + 12, L"&PID_", 5) == 0 && hex(17, 4);
+    return device &&
+           (id.size() == 21 ||
+            (id.size() == 27 && _wcsnicmp(id.c_str() + 21, L"&MI_", 4) == 0 && hex(25, 2)));
+}
 
 // The driver package: WinUSB, Windows' own driver, for
 // - the accessory interface: on its own (18D1:2D00) or interface 0 next to adb and audio
@@ -199,17 +228,60 @@ bool WriteBytes(const std::wstring& path, const void* data, size_t size) {
     return ok;
 }
 
-std::wstring ReadText(const std::wstring& path) {
-    HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                              FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (file == INVALID_HANDLE_VALUE) {
+// What's waiting in the pipe, its writer gone: up to kMaxResultChars.
+std::wstring ReadPipe(HANDLE pipe) {
+    wchar_t buffer[kMaxResultChars] = {};
+    DWORD available = 0, read = 0;
+    if (!PeekNamedPipe(pipe, nullptr, 0, nullptr, &available, nullptr) || available == 0 ||
+        !ReadFile(pipe, buffer, std::min<DWORD>(available, sizeof(buffer)), &read, nullptr)) {
         return {};
     }
-    wchar_t buffer[1024] = {};
-    DWORD read = 0;
-    ReadFile(file, buffer, sizeof(buffer) - sizeof(wchar_t), &read, nullptr);
-    CloseHandle(file);
     return std::wstring(buffer, read / sizeof(wchar_t));
+}
+
+// The process that started this one: for a run as administrator, the one that asked for it.
+DWORD ParentProcessId() {
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+    DWORD self = GetCurrentProcessId(), parent = 0;
+    PROCESSENTRY32W entry = {sizeof(entry)};
+    for (BOOL ok = Process32FirstW(snapshot, &entry); ok && !parent;
+         ok = Process32NextW(snapshot, &entry)) {
+        if (entry.th32ProcessID == self) {
+            parent = entry.th32ParentProcessID;
+        }
+    }
+    CloseHandle(snapshot);
+    return parent;
+}
+
+// Writes `text` to the pipe whose write end is `handle` (as a number) in the process that
+// started this one (RunElevated). Only a pipe, and only out of that process: the number comes
+// from the command line, which anything could have written.
+void ReportToParent(const std::wstring& handle, const std::wstring& text) {
+    wchar_t* end = nullptr;
+    unsigned long long value = wcstoull(handle.c_str(), &end, 10);
+    DWORD parentId = ParentProcessId();
+    if (handle.empty() || *end || value == 0 || parentId == 0) {
+        return;
+    }
+    HANDLE parent = OpenProcess(PROCESS_DUP_HANDLE, FALSE, parentId);
+    if (!parent) {
+        return;
+    }
+    HANDLE pipe = nullptr;
+    if (DuplicateHandle(parent, reinterpret_cast<HANDLE>(uintptr_t(value)), GetCurrentProcess(),
+                        &pipe, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+        if (GetFileType(pipe) == FILE_TYPE_PIPE) {
+            DWORD written = 0;
+            size_t chars = std::min(text.size(), kMaxResultChars);
+            WriteFile(pipe, text.data(), DWORD(chars * sizeof(wchar_t)), &written, nullptr);
+        }
+        CloseHandle(pipe);
+    }
+    CloseHandle(parent);
 }
 
 // A self-signed code signing certificate, its key in `container` (machine-wide).
@@ -458,10 +530,39 @@ bool TrustCertificate(PCCERT_CONTEXT certificate, std::wstring& error) {
     return ok;
 }
 
-std::wstring TempFolder() {
-    wchar_t temp[MAX_PATH + 1];
-    DWORD length = GetTempPathW(MAX_PATH + 1, temp);
-    return std::wstring(temp, length);
+// A new folder only Windows and administrators can open, to put the driver package together in.
+// Not the user's temp folder: anything the user runs could swap the INF there between its
+// writing and its signing, and have its own package signed, trusted and installed. Windows' temp
+// folder lets users add to it but not move or delete what others made, and a random name can't
+// have been made ready beforehand.
+bool CreatePrivateFolder(std::wstring& folder, std::wstring& error) {
+    wchar_t windows[MAX_PATH];
+    UINT length = GetSystemWindowsDirectoryW(windows, MAX_PATH);
+    GUID id;
+    wchar_t name[40];
+    if (length == 0 || length >= MAX_PATH || FAILED(CoCreateGuid(&id)) ||
+        !StringFromGUID2(id, name, ARRAYSIZE(name))) {
+        error = ErrorText(L"Couldn't name a folder for the driver");
+        return false;
+    }
+    // Nothing inherited; full control for SYSTEM and Administrators, no one else.
+    PSECURITY_DESCRIPTOR descriptor = nullptr;
+    if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            L"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)", SDDL_REVISION_1, &descriptor, nullptr)) {
+        error = ErrorText(L"Couldn't secure a folder for the driver");
+        return false;
+    }
+    SECURITY_ATTRIBUTES attributes = {sizeof(attributes), descriptor, FALSE};
+    // The GUID without its braces, which the catalog definition's paths are better without.
+    folder = std::wstring(windows, length) + L"\\Temp\\GazeoraUsbDriver-" +
+             std::wstring(name + 1, wcslen(name) - 2);
+    bool made = CreateDirectoryW(folder.c_str(), &attributes);  // fails if it's there already
+    DWORD code = GetLastError();
+    LocalFree(descriptor);
+    if (!made) {
+        error = ErrorText((L"Couldn't make the folder " + folder).c_str(), code);
+    }
+    return made;
 }
 
 // Gazeora's driver packages in Windows' INF folder (oemNN.inf), by file name, with their text.
@@ -515,11 +616,18 @@ std::vector<std::wstring> PhoneIdsIn(const std::string& inf) {
 // Builds, signs and installs a package for the accessory and `phoneIds`, onto the devices
 // plugged in now, and removes Gazeora's earlier packages.
 bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& error) {
-    std::wstring folder = TempFolder() + L"GazeoraUsbDriver";
-    CreateDirectoryW(folder.c_str(), nullptr);
+    for (const std::wstring& id : phoneIds) {
+        if (!IsPhoneHardwareId(id)) {
+            error = L"Not a phone's hardware ID: " + id;
+            return false;
+        }
+    }
+    std::wstring folder;
+    if (!CreatePrivateFolder(folder, error)) {
+        return false;
+    }
     std::wstring inf = folder + L"\\" + kInfName;
     std::wstring cat = folder + L"\\" + kCatName;
-    DeleteFileW(cat.c_str());
     SYSTEMTIME now;
     GetSystemTime(&now);
     char stamp[32];
@@ -528,6 +636,7 @@ bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& err
     std::string text = BuildInf(phoneIds, stamp, now);
     if (!WriteBytes(inf, text.data(), text.size())) {
         error = ErrorText((L"Couldn't write the driver to " + folder).c_str());
+        RemoveDirectoryW(folder.c_str());
         return false;
     }
     std::vector<std::pair<std::wstring, std::string>> earlier = InstalledPackages();
@@ -752,9 +861,17 @@ bool RunElevated(HWND owner, const wchar_t* command, const std::wstring& argumen
                  const wchar_t* what, std::wstring& error) {
     wchar_t exe[MAX_PATH * 2];
     GetModuleFileNameW(nullptr, exe, ARRAYSIZE(exe));
-    std::wstring result = TempFolder() + L"gazeora_usb_driver_result.txt";
-    DeleteFileW(result.c_str());
-    std::wstring parameters = std::wstring(command) + L" \"" + result + L"\"" + arguments;
+    // What went wrong comes back through a pipe, whose write end the elevated run takes out of
+    // this process (ReportToParent). A file named on its command line would let anything that
+    // starts it have an administrator write wherever it liked.
+    HANDLE readEnd = nullptr, writeEnd = nullptr;
+    if (!CreatePipe(&readEnd, &writeEnd, nullptr, kResultPipeBytes)) {
+        error = ErrorText(L"Couldn't make a pipe for the result");
+        return false;
+    }
+    std::wstring parameters = std::wstring(command) + L" " +
+                              std::to_wstring(uint64_t(reinterpret_cast<uintptr_t>(writeEnd))) +
+                              arguments;
 
     SHELLEXECUTEINFOW info = {sizeof(info)};
     info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
@@ -767,18 +884,21 @@ bool RunElevated(HWND owner, const wchar_t* command, const std::wstring& argumen
         error = GetLastError() == ERROR_CANCELLED
                     ? std::wstring(what) + L" didn't happen: Windows needs an administrator's yes"
                     : ErrorText(L"Couldn't start as an administrator");
+        CloseHandle(readEnd);
+        CloseHandle(writeEnd);
         return false;
     }
     WaitForSingleObject(info.hProcess, INFINITE);
     DWORD code = 1;
     GetExitCodeProcess(info.hProcess, &code);
     CloseHandle(info.hProcess);
+    CloseHandle(writeEnd);
     if (code == 0) {
-        DeleteFileW(result.c_str());
+        CloseHandle(readEnd);
         return true;
     }
-    error = ReadText(result);
-    DeleteFileW(result.c_str());
+    error = ReadPipe(readEnd);
+    CloseHandle(readEnd);
     if (error.empty()) {
         error = std::wstring(what) + L" failed";
     }
@@ -791,7 +911,8 @@ std::vector<std::wstring> InstalledPhoneIds() {
     std::vector<std::wstring> ids;
     for (const auto& package : InstalledPackages()) {
         for (const std::wstring& id : PhoneIdsIn(package.second)) {
-            if (std::find(ids.begin(), ids.end(), id) == ids.end()) {
+            // Not carried into the next package if it isn't one.
+            if (IsPhoneHardwareId(id) && std::find(ids.begin(), ids.end(), id) == ids.end()) {
                 ids.push_back(id);
             }
         }
@@ -883,7 +1004,7 @@ int RunUsbDriverCommand() {
         return -1;
     }
     if (!ok && !result.empty()) {
-        WriteBytes(result, error.data(), error.size() * sizeof(wchar_t));
+        ReportToParent(result, error);
     }
     return ok ? 0 : 1;
 }
