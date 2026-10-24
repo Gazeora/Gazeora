@@ -20,7 +20,7 @@ install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
 # and theirs ask for them to travel with the program).
 install(FILES LICENSE NOTICE TRADEMARKS.md THIRD_PARTY_NOTICES.md
     DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
-foreach(dependency libusb minhook imgui nlohmann_json onnxruntime)
+foreach(dependency libusb minhook imgui sdl nlohmann_json onnxruntime)
     FetchContent_GetProperties(${dependency} SOURCE_DIR ${dependency}_dir)
 endforeach()
 set(GAZEORA_THIRD_PARTY_DIR ${CMAKE_INSTALL_DOCDIR}/third-party)
@@ -30,6 +30,8 @@ install(FILES ${minhook_dir}/LICENSE.txt
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME minhook-LICENSE.txt COMPONENT Runtime)
 install(FILES ${imgui_dir}/LICENSE.txt
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME imgui-LICENSE.txt COMPONENT Runtime)
+install(FILES ${sdl_dir}/LICENSE.txt
+    DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME sdl-LICENSE.txt COMPONENT Runtime)
 install(FILES ${nlohmann_json_dir}/LICENSE.MIT
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME nlohmann_json-LICENSE.txt COMPONENT Runtime)
 install(FILES ${onnxruntime_dir}/LICENSE
