@@ -11,9 +11,9 @@ controller the same standard layout. So a button does the same thing wherever it
 controller, not by what it's called. Several controllers can be connected at once; any of
 them drives.
 
-It works the way Steam's Big Picture does: the control the controller is on looks lifted a
-little, lighter and with a soft glow beneath it, and the sidebar and the page are two regions
-side by side.
+It works the way Steam's Big Picture does: the control the controller is on has a thin edge
+in the violet-to-cyan of the Play button, just inside its own border, and the sidebar and the
+page are two regions side by side.
 
 | Button | Does |
 |---|---|
