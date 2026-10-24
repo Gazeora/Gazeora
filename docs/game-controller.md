@@ -11,16 +11,17 @@ controller the same standard layout. So a button does the same thing wherever it
 controller, not by what it's called. Several controllers can be connected at once; any of
 them drives.
 
-It works the way Steam's Big Picture does: a bright outline shows which control has the
-focus, and the sidebar and the page are two regions side by side.
+It works the way Steam's Big Picture does: the control the controller is on looks lifted a
+little, lighter and with a soft glow beneath it, and the sidebar and the page are two regions
+side by side.
 
 | Button | Does |
 |---|---|
-| D-pad or left stick | Moves the focus. Right from the sidebar goes into the page, left from the page's edge back to the sidebar, each time to where you were |
-| Bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo) | Presses the focused control. On a game, opens its page; on a text box, starts typing |
-| Right face button (B, Circle, A) | Backs out: closes a list or menu, finishes typing, or goes from a game's page back to the library, onto that game |
+| D-pad or left stick | Moves the focus. Right from the sidebar goes into the page (where you were, or its top once the page has changed); left from the page's edge goes back to the sidebar, onto the open page |
+| Bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo) | Presses the focused control. In the sidebar, opens the page and stays in the sidebar; on a game, opens its page; on a text box, starts typing |
+| Right face button (B, Circle, A) | Backs out, a step at a time: first it closes what's open (a list, a menu, the keyboard, a slider being changed); then from a game's page back to the library, onto that game; from any other page to its entry in the sidebar. In the sidebar it stays put |
 | Menu / Options / + button | On a game: its menu (Play, Details, Open file location, Remove), as a right-click gives |
-| Left and right shoulder buttons (LB / RB, L1 / R1, L / R) | The previous and next page in the sidebar, starting at the page's first control |
+| Left and right shoulder buttons (LB / RB, L1 / R1, L / R) | The previous and next page. In the sidebar, the focus follows to the new page's entry; in a page, it goes to the new page's first control |
 | Right stick | Scrolls the page, faster the further it's pushed |
 
 Held, the d-pad and the left stick repeat. To change a slider, press the bottom button on it,
