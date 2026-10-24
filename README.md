@@ -195,3 +195,14 @@ see [Streaming](docs/streaming.md).
   phone on a cable rather than an emulator. A phone without USB debugging loses Windows' file
   transfer on this PC while it's set up for streaming.
 - The stream is unencrypted and unauthenticated. Anyone on the local network can watch it.
+
+## License
+
+Copyright (C) 2026 Nithin Aashik. Gazeora is free software under the
+[GNU GPL version 3](LICENSE): you can use it, study it, change it and share it. Versions you
+share must stay under the same license, with their source.
+
+[NOTICE](NOTICE) adds three terms, as the GPL's section 7 allows: modified versions keep the
+attribution "Gazeora by Nithin Aashik" in their About screen, are marked as modified, and
+don't use the Gazeora name or logo as their own ([TRADEMARKS.md](TRADEMARKS.md)). The
+components Gazeora is built with are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

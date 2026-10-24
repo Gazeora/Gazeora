@@ -1,0 +1,43 @@
+Gazeora
+Copyright (C) 2026 Nithin Aashik
+
+This program is free software: you can redistribute it and/or modify it under the terms of
+the GNU General Public License as published by the Free Software Foundation, version 3 of the
+License, with the additional terms below.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See
+the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program (the
+file LICENSE). If not, see <https://www.gnu.org/licenses/>.
+
+
+ADDITIONAL TERMS (GNU GPL version 3, section 7)
+
+These terms supplement the GNU General Public License version 3 for this program and every
+work based on it, as section 7 of that license allows.
+
+1. Author attribution (section 7(b)). Every copy and every modified version of this program
+   must keep, intact and legible:
+     a. this NOTICE file, and the copyright notices in the source files;
+     b. in the program's user interface, the attribution "Gazeora by Nithin Aashik", shown
+        wherever the program shows information about itself (in Gazeora, the About card on
+        the Settings page), together with a statement that the program is free software
+        under the GNU GPL version 3. A modified version that has no such place must show
+        the attribution in its main window, its help or its About screen.
+   You may restyle or translate the attribution, and add your own credits beside it, so long
+   as it stays reasonably visible and you do not obscure or remove it.
+
+2. Marking modified versions (section 7(c)). A modified version that you convey must be
+   clearly marked as different from the original Gazeora, both in its user interface and in
+   its source code (for example, "Based on Gazeora by Nithin Aashik"), and must not be
+   presented as the original program or as made or endorsed by Nithin Aashik.
+
+3. Name and logo (section 7(e)). This license gives no rights to use the name "Gazeora", its
+   logo or its icon as the name or branding of a modified version, except to say truthfully
+   that the version is based on Gazeora. See TRADEMARKS.md.
+
+Under section 7, anyone who receives this program may remove further restrictions that do not
+come from the author, but not these terms, which the author has added under section 7(b),
+7(c) and 7(e).
