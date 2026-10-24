@@ -17,6 +17,8 @@ namespace gazeora::app {
 // that way, as an administrator.
 constexpr wchar_t kInstallUsbDriverArgument[] = L"--install-usb-driver";
 constexpr wchar_t kRestoreFileTransferArgument[] = L"--restore-file-transfer";
+// Run by the uninstaller, already as an administrator.
+constexpr wchar_t kUninstallUsbDriverArgument[] = L"--uninstall-usb-driver";
 
 // Installs the driver for the accessory interface of any phone (the accessory IDs are
 // Google's, the same for all), and for the phones with `phoneIds` (UsbPhone::hardwareId) on
@@ -29,6 +31,10 @@ bool InstallUsbDriver(const std::vector<std::wstring>& phoneIds, std::wstring& e
 // Takes the driver off the phones it was installed on, so Windows' file transfer works with
 // them again; the accessory keeps it. Needs an administrator.
 bool RestoreFileTransfer(std::wstring& error);
+
+// Removes every driver package Gazeora installed and its certificate, and gives the phones
+// their own driver back. Nothing to do, and true, if none is installed. Needs an administrator.
+bool UninstallUsbDriver(std::wstring& error);
 
 // The phones the installed driver covers (hardware IDs); no administrator needed.
 std::vector<std::wstring> InstalledPhoneIds();

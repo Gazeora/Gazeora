@@ -814,6 +814,27 @@ bool RestoreFileTransfer(std::wstring& error) {
     return true;
 }
 
+bool UninstallUsbDriver(std::wstring& error) {
+    std::vector<std::pair<std::wstring, std::string>> packages = InstalledPackages();
+    if (packages.empty()) {
+        return true;
+    }
+    std::vector<std::wstring> phones = InstalledPhoneIds();
+    std::vector<std::wstring> serials = SerialsOf(phones);  // before their devices go
+    bool ok = true;
+    for (const auto& package : packages) {
+        if (!SetupUninstallOEMInfW(package.first.c_str(), SUOI_FORCEDELETE, nullptr)) {
+            error = ErrorText((L"Couldn't remove the driver package " + package.first).c_str());
+            ok = false;
+        }
+    }
+    ForgetCertificates();
+    ReinstallDevices(phones);
+    // Best effort: a phone streaming now gets file transfer back when it's plugged in again.
+    ReconnectAccessories(serials);
+    return ok;
+}
+
 bool InstallUsbDriverElevated(HWND owner, const std::vector<std::wstring>& phoneIds,
                               std::wstring& error) {
     std::wstring arguments;
@@ -834,17 +855,21 @@ int RunUsbDriverCommand() {
     if (!arguments) {
         return -1;
     }
-    bool install = count >= 2 && wcscmp(arguments[1], kInstallUsbDriverArgument) == 0;
-    bool restore = count >= 2 && wcscmp(arguments[1], kRestoreFileTransferArgument) == 0;
-    if (!install && !restore) {
-        LocalFree(arguments);
-        return -1;
-    }
+    std::wstring command = count >= 2 ? arguments[1] : L"";
     std::wstring result = count >= 3 ? arguments[2] : L"";
     std::vector<std::wstring> phoneIds(arguments + std::min(count, 3), arguments + count);
     LocalFree(arguments);
     std::wstring error;
-    bool ok = install ? InstallUsbDriver(phoneIds, error) : RestoreFileTransfer(error);
+    bool ok;
+    if (command == kInstallUsbDriverArgument) {
+        ok = InstallUsbDriver(phoneIds, error);
+    } else if (command == kRestoreFileTransferArgument) {
+        ok = RestoreFileTransfer(error);
+    } else if (command == kUninstallUsbDriverArgument) {
+        ok = UninstallUsbDriver(error);
+    } else {
+        return -1;
+    }
     if (!ok && !result.empty()) {
         WriteBytes(result, error.data(), error.size() * sizeof(wchar_t));
     }
