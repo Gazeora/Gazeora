@@ -7,7 +7,8 @@
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
 #  - gazeora_input_tests:     hand gesture control, with the real models on photos in input/data,
 #                             and game controllers
-#  - gazeora_app_tests:       the launcher's game controller support, on a headless ImGui
+#  - gazeora_app_tests:       the launcher's game controller support and on-screen keyboard,
+#                             on a headless ImGui
 #  - gazeora_installer_tests: the MSI's custom actions, on a fake installer session
 # D3D11 tests run on WARP, so no GPU is needed.
 
@@ -109,15 +110,25 @@ target_compile_definitions(gazeora_input_tests PRIVATE
 set(GAZEORA_APP_SOURCE_DIR ${PROJECT_SOURCE_DIR}/apps/gazeora/src)
 gazeora_add_test(gazeora_app_tests
     SOURCES
+        ${GAZEORA_APP_SOURCE_DIR}/gamepad/button_repeat.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_control.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_event_queue.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_presses.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/imgui_gamepad_input.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/gamepad/pane_navigation.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/keyboard/keyboard_layout.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/keyboard/on_screen_keyboard.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/controls_settings.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/settings_file.cpp
+        app/gamepad/button_repeat_test.cpp
         app/gamepad/gamepad_control_test.cpp
         app/gamepad/gamepad_event_queue_test.cpp
+        app/gamepad/gamepad_presses_test.cpp
         app/gamepad/imgui_gamepad_input_test.cpp
+        app/gamepad/pane_navigation_test.cpp
+        app/keyboard/keyboard_layout_test.cpp
+        app/keyboard/on_screen_keyboard_test.cpp
     LIBS gazeora_input gazeora_library imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
     ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)
