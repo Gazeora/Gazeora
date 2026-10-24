@@ -7,6 +7,7 @@
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
 #  - gazeora_input_tests:     hand gesture control, with the real models on photos in input/data,
 #                             and game controllers
+#  - gazeora_app_tests:       the launcher's game controller support, on a headless ImGui
 #  - gazeora_installer_tests: the MSI's custom actions, on a fake installer session
 # D3D11 tests run on WARP, so no GPU is needed.
 
@@ -103,3 +104,20 @@ gazeora_add_test(gazeora_input_tests
 target_include_directories(gazeora_input_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/input)
 target_compile_definitions(gazeora_input_tests PRIVATE
     GAZEORA_INPUT_TEST_DATA=L"${CMAKE_CURRENT_SOURCE_DIR}/input/data")
+
+# The launcher's own sources under test; the rest of Gazeora.exe stays out.
+set(GAZEORA_APP_SOURCE_DIR ${PROJECT_SOURCE_DIR}/apps/gazeora/src)
+gazeora_add_test(gazeora_app_tests
+    SOURCES
+        ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_control.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_event_queue.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/gamepad/imgui_gamepad_input.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/settings/controls_settings.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/settings/settings_file.cpp
+        app/gamepad/gamepad_control_test.cpp
+        app/gamepad/gamepad_event_queue_test.cpp
+        app/gamepad/imgui_gamepad_input_test.cpp
+    LIBS gazeora_input gazeora_library imgui shell32 ole32 uuid)
+target_include_directories(gazeora_app_tests PRIVATE
+    ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)
