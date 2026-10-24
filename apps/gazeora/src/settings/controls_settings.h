@@ -7,7 +7,8 @@
 namespace gazeora::app {
 
 // Repository pattern: the controls settings, in controls.ini next to the library file so
-// they're easy to edit by hand. Hand gestures in [hand_gestures].
+// they're easy to edit by hand. Hand gestures in [hand_gestures], game controllers in
+// [game_controller].
 class ControlsSettings {
 public:
     // The default location: next to LibraryLocation::DefaultPath().
@@ -17,12 +18,16 @@ public:
     // Off, with the first camera, unless saved otherwise.
     input::HandGestureSettings LoadHandGestures() const;
     void SaveHandGestures(const input::HandGestureSettings& settings) const;
+    // On unless saved off.
+    bool LoadGamepadEnabled() const;
+    void SaveGamepadEnabled(bool enabled) const;
 
     const std::wstring& Path() const { return m_path; }
 
 private:
-    std::wstring ReadText(const wchar_t* key) const;
-    void WriteText(const wchar_t* key, const std::wstring& value) const;
+    std::wstring ReadText(const wchar_t* section, const wchar_t* key) const;
+    void WriteText(const wchar_t* section, const wchar_t* key, const std::wstring& value) const;
+    void CreateFolder() const;
 
     std::wstring m_path;
 };

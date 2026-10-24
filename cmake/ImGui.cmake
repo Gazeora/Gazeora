@@ -23,3 +23,6 @@ target_link_libraries(imgui PUBLIC d3d11 d3dcompiler dwmapi)
 # ImVec2 arithmetic, for every file that includes imgui.h; defining it per file is easy to
 # get wrong once a file includes another ImGui header first.
 target_compile_definitions(imgui PUBLIC IMGUI_DEFINE_MATH_OPERATORS)
+# Game controllers reach the UI through the launcher's own SDL reader, which covers every make;
+# the Win32 backend reading XInput as well would press Xbox pads' buttons twice.
+target_compile_definitions(imgui PRIVATE IMGUI_IMPL_WIN32_DISABLE_GAMEPAD)

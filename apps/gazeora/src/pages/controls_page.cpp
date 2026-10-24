@@ -24,9 +24,10 @@ constexpr ImVec2 kCardItemSpacing(10.0f, 14.0f);
 }  // namespace
 
 ControlsPage::ControlsPage(input::HandGestureServices& hands, const ControlsSettings& store,
-                           float scale)
+                           GamepadCard& gamepad, float scale)
     : m_hands(hands),
       m_store(store),
+      m_gamepad(gamepad),
       m_scale(scale),
       m_settings(store.LoadHandGestures()),
       m_preview(scale) {}
@@ -62,7 +63,9 @@ void ControlsPage::Draw(const Fonts& fonts) {
     ImGui::Dummy(ImVec2(0, S(kTitleGap)));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                         ImVec2(S(kCardItemSpacing.x), S(kCardItemSpacing.y)));
-    DrawHandGestures(fonts, std::min(ImGui::GetContentRegionAvail().x, S(kMaxCardWidth)));
+    float width = std::min(ImGui::GetContentRegionAvail().x, S(kMaxCardWidth));
+    DrawHandGestures(fonts, width);
+    m_gamepad.Draw(fonts.heading, width);
     ImGui::PopStyleVar();
 }
 

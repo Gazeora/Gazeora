@@ -13,9 +13,13 @@ namespace gazeora::app {
 
 namespace {
 
-constexpr wchar_t kSection[] = L"hand_gestures";
+constexpr wchar_t kHandSection[] = L"hand_gestures";
 constexpr wchar_t kCamera[] = L"camera";
 constexpr wchar_t kSpeed[] = L"pointer_speed";
+constexpr wchar_t kGamepadSection[] = L"game_controller";
+constexpr wchar_t kEnabled[] = L"enabled";
+constexpr wchar_t kOn[] = L"1";
+constexpr wchar_t kOff[] = L"0";
 constexpr DWORD kMaxText = 1024;  // camera ids are device paths
 constexpr size_t kSpeedText = 32;
 
@@ -25,8 +29,8 @@ ControlsSettings::ControlsSettings() : m_path(SettingsFile::NextToLibrary(L"cont
 
 input::HandGestureSettings ControlsSettings::LoadHandGestures() const {
     input::HandGestureSettings settings;
-    settings.cameraId = ReadText(kCamera);
-    std::wstring speed = ReadText(kSpeed);
+    settings.cameraId = ReadText(kHandSection, kCamera);
+    std::wstring speed = ReadText(kHandSection, kSpeed);
     if (!speed.empty()) {
         settings.speed =
             std::clamp(float(_wtof(speed.c_str())), input::HandGestureSettings::kMinSpeed,
@@ -36,21 +40,35 @@ input::HandGestureSettings ControlsSettings::LoadHandGestures() const {
 }
 
 void ControlsSettings::SaveHandGestures(const input::HandGestureSettings& settings) const {
-    SHCreateDirectoryExW(nullptr, FolderOf(m_path).c_str(), nullptr);
+    CreateFolder();
     wchar_t speed[kSpeedText];
     swprintf(speed, kSpeedText, L"%.1f", settings.speed);
-    WriteText(kCamera, settings.cameraId);
-    WriteText(kSpeed, speed);
+    WriteText(kHandSection, kCamera, settings.cameraId);
+    WriteText(kHandSection, kSpeed, speed);
 }
 
-std::wstring ControlsSettings::ReadText(const wchar_t* key) const {
+bool ControlsSettings::LoadGamepadEnabled() const {
+    return ReadText(kGamepadSection, kEnabled) != kOff;
+}
+
+void ControlsSettings::SaveGamepadEnabled(bool enabled) const {
+    CreateFolder();
+    WriteText(kGamepadSection, kEnabled, enabled ? kOn : kOff);
+}
+
+std::wstring ControlsSettings::ReadText(const wchar_t* section, const wchar_t* key) const {
     wchar_t text[kMaxText];
-    GetPrivateProfileStringW(kSection, key, L"", text, kMaxText, m_path.c_str());
+    GetPrivateProfileStringW(section, key, L"", text, kMaxText, m_path.c_str());
     return text;
 }
 
-void ControlsSettings::WriteText(const wchar_t* key, const std::wstring& value) const {
-    WritePrivateProfileStringW(kSection, key, value.c_str(), m_path.c_str());
+void ControlsSettings::WriteText(const wchar_t* section, const wchar_t* key,
+                                 const std::wstring& value) const {
+    WritePrivateProfileStringW(section, key, value.c_str(), m_path.c_str());
+}
+
+void ControlsSettings::CreateFolder() const {
+    SHCreateDirectoryExW(nullptr, FolderOf(m_path).c_str(), nullptr);
 }
 
 }  // namespace gazeora::app

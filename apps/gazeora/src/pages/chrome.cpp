@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <iterator>
 
 #include <imgui.h>
 #include <imgui_stdlib.h>
@@ -28,11 +29,19 @@ using Microsoft::WRL::ComPtr;
 
 namespace gazeora::app {
 
+const App::NavItem App::kNavItems[] = {
+    {ICON_HOME, "Home", Page::Home},
+    {ICON_LIBRARY, "Library", Page::Library},
+    {ICON_HAND, "Controls", Page::Controls},
+    {ICON_SETTINGS, "Settings", Page::Settings},
+};
+
 void App::DrawSidebar() {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kSidebarBg);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(12), S(20)));
-    ImGui::BeginChild("##sidebar", ImVec2(S(212), 0), ImGuiChildFlags_AlwaysUseWindowPadding,
+    ImGui::BeginChild("##sidebar", ImVec2(S(212), 0),
+                      ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened,
                       ImGuiWindowFlags_NoScrollbar);
     ImGui::PopStyleVar(2);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, S(4)));
@@ -51,19 +60,8 @@ void App::DrawSidebar() {
                   "GAZEORA");
     ImGui::Dummy(ImVec2(0, S(44)));
 
-    struct NavItem {
-        const char* icon;
-        const char* label;
-        Page page;
-    };
-    const NavItem items[] = {
-        {ICON_HOME, "Home", Page::Home},
-        {ICON_LIBRARY, "Library", Page::Library},
-        {ICON_HAND, "Controls", Page::Controls},
-        {ICON_SETTINGS, "Settings", Page::Settings},
-    };
     float width = ImGui::GetContentRegionAvail().x;
-    for (const NavItem& item : items) {
+    for (const NavItem& item : kNavItems) {
         bool selected =
             m_page == item.page || (item.page == Page::Library && m_page == Page::Details);
         ImVec2 p = ImGui::GetCursorScreenPos();
@@ -141,6 +139,24 @@ void App::DrawSidebar() {
     ImGui::PopStyleVar();
     ImGui::EndChild();
     ImGui::PopStyleColor();
+}
+
+void App::FollowGamepadPageKeys() {
+    int step = int(ImGui::IsKeyPressed(ImGuiKey_GamepadR1, false)) -
+               int(ImGui::IsKeyPressed(ImGuiKey_GamepadL1, false));
+    // Not while a slider is held or a popup is open: the page would change under them.
+    if (step == 0 || ImGui::IsAnyItemActive() ||
+        ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId)) {
+        return;
+    }
+    Page shown = m_page == Page::Details ? Page::Library : m_page;
+    const int count = int(std::size(kNavItems));
+    for (int i = 0; i < count; ++i) {
+        if (kNavItems[i].page == shown) {
+            m_page = kNavItems[std::clamp(i + step, 0, count - 1)].page;
+            return;
+        }
+    }
 }
 
 void App::DrawToasts() {
