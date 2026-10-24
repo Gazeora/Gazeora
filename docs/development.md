@@ -20,7 +20,8 @@ block:
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
 | `gazeora_installer_tests` | The MSI's custom action that deletes the user's data on uninstall, against a fake installer session |
-| `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`) |
+| `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`); game controllers: steadying the sticks, the polling session, and SDL starting without a window |
+| `gazeora_app_tests` | The launcher's game controller support: ImGui navigation driven by controller states on a headless ImGui (across the sidebar and the page, pressing, the stick's hysteresis), the queue to the UI thread, and the switch in `controls.ini` |
 
 ## Benchmarks
 
@@ -57,16 +58,19 @@ libs/                 Libraries, in dependency order
     encode/               The VideoEncoder interface, Media Foundation behind it, BGRA to NV12
     stream/               The stream server, its protocols and what it's made of (see below)
   library/              The game library behind both front ends
-  input/                Hand gestures: webcam, hand tracking, gestures, the pointer
+  input/                Hand gestures (webcam, hand tracking, gestures, the pointer) and game
+                        controllers
     tracking/             MediaPipe's palm detector and hand landmark model, and following a hand
     gestures/             Finger aim, hand poses to steer, hold and click (a state machine), smoothing
-    services/             The camera-to-pointer loop and its background session
-    platform/             Media Foundation cameras, ONNX Runtime, SendInput
+    gamepad/              Steadying a controller's sticks
+    services/             The camera-to-pointer loop, the controller polling, their sessions
+    platform/             Media Foundation cameras, ONNX Runtime, SendInput, SDL controllers
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/ (one file per page), ui/ (theme, widgets),
                           platform/ (shell dialogs, the USB driver, games opened from
-                          Explorer) and settings/ (stream.ini)
+                          Explorer), gamepad/ (controllers to ImGui navigation) and
+                          settings/ (stream.ini, controls.ini)
     resources/            Icon and resource script
   cli/                  GazeoraCLI.exe
 tools/                The test app and the stream probe

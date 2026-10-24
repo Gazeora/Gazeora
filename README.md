@@ -56,6 +56,11 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   right index fingertip moves the pointer; with the left index up, folding the right index
   and opening it again clicks; with the left hand pinching, the right index scrolls. Runs
   MediaPipe's hand models on the CPU.
+- **Game controllers.** Any controller (Xbox, PlayStation, Nintendo Switch Pro and most
+  others, wired or Bluetooth) moves around the launcher: the d-pad or left stick between
+  controls, the bottom button to press, the shoulder buttons between pages. It works with the
+  window in front or on the stream, as in the headset, and lets go of the controller while a
+  game runs, so the game has it to itself.
 - **Touch from the phone.** While VR viewer mode is off, touches on the picture in the Android
   app control the Gazeora window, and only it: the PC's own mouse and other programs are left
   alone. A tap clicks and a finger moving scrolls. It works with Gazeora minimized too, as
@@ -103,6 +108,7 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.3,
   [Dear ImGui](https://github.com/ocornut/imgui) 1.91.5,
   [libusb](https://github.com/libusb/libusb) 1.0.29 (for the USB protocol),
+  [SDL](https://github.com/libsdl-org/SDL) 3.4.18 (for game controllers),
   [ONNX Runtime](https://github.com/microsoft/onnxruntime) 1.20.1 and MediaPipe's palm detection
   and hand landmark models as converted by the [OpenCV model zoo](https://github.com/opencv/opencv_zoo)
   (for hand gestures), and [GoogleTest](https://github.com/google/googletest) 1.15.2.
@@ -182,6 +188,7 @@ see [Streaming](docs/streaming.md).
 | [Streaming](docs/streaming.md) | Watching the stream, protocols, USB setup, overlay, codecs, Wi-Fi |
 | [VR viewer mode](docs/vr-viewer.md) | Lens correction and 3D from depth |
 | [Hand gestures](docs/hand-gestures.md) | Controlling the pointer with a webcam |
+| [Game controller](docs/game-controller.md) | Moving around the launcher with a gamepad |
 | [Command line](docs/command-line.md) | `GazeoraCLI` commands |
 | [Tools](docs/tools.md) | The stream probe and the test app |
 | [Installer](docs/installer.md) | Building the MSI, its features, uninstalling, silent installs |
