@@ -173,8 +173,8 @@ void App::DrawGameCard(const Game& game, float width) {
 
     // Hover: accent outline, dim the art, and a round play button in the middle.
     bool overPlay = false;
-    // The mouse's hover: outline, dimmed art and a play button. A controller's focus is lifted
-    // instead (FocusLift), and pressing opens the game's page, as in Steam.
+    // The mouse's hover: outline, dimmed art and a play button. A controller's focus has its
+    // own edge (FocusEdge), and pressing opens the game's page, as in Steam.
     bool byMouse = !ImGui::GetIO().NavVisible;
     if (hovered && byMouse) {
         draw->AddRectFilled(pos, coverMax, WithAlpha(kSidebarBg, 0.45f), rounding);

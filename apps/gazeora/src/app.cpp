@@ -19,7 +19,7 @@
 #include "gazeora/host/launch/injector.h"
 #include "platform/shell.h"
 #include "settings/stream_settings.h"
-#include "ui/focus_lift.h"
+#include "ui/focus_edge.h"
 #include "ui/gamepad_scroll.h"
 #include "ui/logo_frame.h"
 #include "ui/text_format.h"
@@ -182,7 +182,7 @@ void App::SetupImGui() {
     colors[ImGuiCol_SliderGrab] = c(kAccent);
     colors[ImGuiCol_SliderGrabActive] = c(kAccentHover);
     colors[ImGuiCol_TextSelectedBg] = c(WithAlpha(kAccent, 0.35f));
-    // No box around what a controller is on: FocusLift lifts it instead.
+    // ImGui's box around what a controller is on ran over its neighbors: FocusEdge instead.
     colors[ImGuiCol_NavCursor] = ImVec4(0, 0, 0, 0);
     colors[ImGuiCol_ScrollbarBg] = ImVec4(0, 0, 0, 0);
     colors[ImGuiCol_ScrollbarGrab] = c(kSecondary);
@@ -362,7 +362,7 @@ void App::Draw() {
     FollowTextInput();
     DrawKeyboard();
     m_panes.Follow();
-    FocusLift(m_scale).Draw();
+    FocusEdge(m_scale).Draw();
     m_gamepadBusy = ImGui::IsAnyItemActive() ||
                     ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) || m_keyboard.IsOpen();
 
