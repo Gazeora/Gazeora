@@ -16,9 +16,10 @@ cmake --build build --target gazeora_msi    # writes build\Gazeora-1.0.0-x64.msi
 
 The target builds what the MSI holds, stages it with `cmake --install` (the `Runtime` and
 `Tools` components) under `build\installer\stage`, and packs that. So the MSI holds exactly
-what the install rules list (see [Installing](../README.md#installing)). The version is the
-project version in `CMakeLists.txt`. With a signing certificate set (see `cmake/CodeSigning.cmake`),
-the programs, the custom-action DLL and the MSI are all signed.
+what the install rules list (see [Installing](../README.md#installing)). The version comes
+from the `VERSION` file (see [Releasing](development.md#releasing)). With a signing certificate
+set (see `cmake/CodeSigning.cmake`), the programs, the custom-action DLL and the MSI are all
+signed.
 
 To check the result against Windows Installer's rules:
 

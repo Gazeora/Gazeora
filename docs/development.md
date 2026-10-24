@@ -121,6 +121,20 @@ same subfolders, so `libs/host/src/stream/frame_stream.cpp` implements
 RTSP methods are dispatched through a table in `frame_stream.cpp`; supporting another method
 is one handler and one entry.
 
+## Releasing
+
+The version lives in one place: the `VERSION` file at the root, as `MAJOR.MINOR.PATCH`
+(Windows Installer compares only those three). From there it reaches the version info of
+`Gazeora.exe`, the About card on the Settings page and the MSI. To release:
+
+1. Change `VERSION`, for example to `1.1.0`, and commit it (`chore: release 1.1.0`). The next
+   build picks it up; there's no need to configure again.
+2. Build both releases and their MSIs (`--target gazeora_msi` in an x64 and an x86 build
+   folder).
+3. Tag the commit `v1.1.0` and push the tag.
+
+A newer MSI replaces the installed version, keeping the user's library and settings.
+
 ## Contributing
 
 How to report problems, the code rules and the pull request steps are in
