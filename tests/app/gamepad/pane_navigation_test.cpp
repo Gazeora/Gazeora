@@ -119,5 +119,29 @@ TEST_F(PaneNavigationTest, AControlCanClaimFocusOnEntry) {
     EXPECT_EQ(m_focused, "Details");
 }
 
+TEST_F(PaneNavigationTest, BackToTheSidebarLandsOnTheOpenPage) {
+    m_claimOnEntry = "Library";  // the open page's entry
+    m_panes.ReturnToSidebar();
+    Run(kSettleFrames);
+    EXPECT_EQ(m_focused, "Library");
+    EXPECT_TRUE(m_panes.InSidebar());
+}
+
+TEST_F(PaneNavigationTest, AChangedPageIsEnteredAtItsTop) {
+    Tap(GamepadButton::DpadDown);
+    EXPECT_EQ(m_focused, "Details");
+    Tap(GamepadButton::DpadLeft);
+    m_panes.PageChanged();
+    Tap(GamepadButton::DpadRight);
+    EXPECT_EQ(m_focused, "Play");
+}
+
+TEST_F(PaneNavigationTest, SettlesOnceFocusHasLanded) {
+    m_panes.EnterPage();
+    EXPECT_TRUE(m_panes.Settling());
+    Run(kSettleFrames);
+    EXPECT_FALSE(m_panes.Settling());
+}
+
 }  // namespace
 }  // namespace gazeora::app
