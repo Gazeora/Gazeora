@@ -18,6 +18,7 @@ include(InstallPrefix)     # Program Files or Program Files (x86), by GAZEORA_AR
 include(MinHook)
 include(LibUsb)
 include(ClangFormat)       # format / format-check targets
+include(CodeSigning)       # gazeora_sign(): Authenticode, when a certificate is given
 
 # Keep the executables and gazeora_hook.dll side by side; they load the DLL from their own folder.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

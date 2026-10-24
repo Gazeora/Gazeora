@@ -40,6 +40,7 @@ if(NOT MSVC)
     target_link_options(Gazeora PRIVATE -municode)  # wWinMain entry point
 endif()
 add_dependencies(Gazeora gazeora_hook)
+gazeora_sign(Gazeora)  # a named publisher, not "Unknown", when it asks to run as administrator
 
 # windres doesn't report what the .rc includes as its dependencies, so rebuild when they change.
 set_source_files_properties(resources/gazeora.rc PROPERTIES OBJECT_DEPENDS

@@ -5,3 +5,4 @@ if(NOT MSVC)
     target_link_options(GazeoraCLI PRIVATE -municode)  # wmain entry point
 endif()
 add_dependencies(GazeoraCLI gazeora_hook)
+gazeora_sign(GazeoraCLI)

@@ -34,6 +34,7 @@ add_library(gazeora_hook SHARED
     src/opengl/gl_capture.cpp
     src/opengl/gl_hooks.cpp)
 set_target_properties(gazeora_hook PROPERTIES PREFIX "")
+gazeora_sign(gazeora_hook)
 target_link_libraries(gazeora_hook PRIVATE gazeora_hook_core)
 if(MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
     # The static 32-bit runtime's _beginthreadex needs libmingw32's SEH handler, which only an
