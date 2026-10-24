@@ -189,7 +189,7 @@ void App::DrawSettings() {
     ImGui::TextUnformatted("CLI: GazeoraCLI.exe list | add | remove | launch | attach");
     ImGui::PopStyleColor();
     // Required in every version by NOTICE's additional terms (GPLv3 section 7(b)).
-    ImGui::TextUnformatted(GAZEORA_ATTRIBUTION "  \xC2\xB7  Version " GAZEORA_VERSION_STRING);
+    ImGui::TextUnformatted(GAZEORA_ATTRIBUTION "  \xC2\xB7  " GAZEORA_VERSION_STRING);
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     ImGui::TextWrapped("%s", GAZEORA_COPYRIGHT
                        ". Free software under the GNU GPL version 3, "

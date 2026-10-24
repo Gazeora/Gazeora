@@ -89,6 +89,20 @@ jobs:
             exit 1
           fi
 
+      - name: Check release candidates are pre-releases
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          case "$TAG" in
+            *-rc.*) wanted=true ;;
+            *) wanted=false ;;
+          esac
+          if [ "$PRERELEASE" != "$wanted" ]; then
+            echo "::error::$TAG must be published with pre-release set to $wanted"
+            exit 1
+          fi
+
       - uses: actions/download-artifact@v4
         with:
           pattern: gazeora-msi-*

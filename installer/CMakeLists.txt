@@ -1,6 +1,6 @@
 # The MSI installer (WiX 5, from the dotnet tool manifest at the repository root). Build the
 # gazeora_msi target: it stages `cmake --install` (the Runtime and Tools components) and packs
-# that into Gazeora-<version>-<arch>.msi in the build folder. Never part of the default build.
+# that into Gazeora-v<version>-<arch>.msi in the build folder. Never part of the default build.
 
 # Each release is a product of its own, so the two install side by side. Never change an
 # upgrade code, or a new MSI stops replacing the installed one. The MSI and Uninstall.exe both
@@ -26,7 +26,7 @@ set(GAZEORA_WIX_VERSION 5.0.2)  # keep in step with dotnet-tools.json
 set(GAZEORA_WIX_EXTENSIONS UI Util Firewall)
 set(GAZEORA_MSI_STAGE ${CMAKE_CURRENT_BINARY_DIR}/stage)
 set(GAZEORA_MSI_GENERATED ${CMAKE_CURRENT_BINARY_DIR}/generated)
-set(GAZEORA_MSI ${CMAKE_BINARY_DIR}/Gazeora-${PROJECT_VERSION}-${GAZEORA_ARCH}.msi)
+set(GAZEORA_MSI ${CMAKE_BINARY_DIR}/Gazeora-${GAZEORA_VERSION_LABEL}-${GAZEORA_ARCH}.msi)
 set(GAZEORA_WIX "${GAZEORA_DOTNET}" tool run wix --)
 
 set(extension_add)
