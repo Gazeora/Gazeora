@@ -19,6 +19,7 @@
 #include "gazeora/host/launch/injector.h"
 #include "platform/shell.h"
 #include "settings/stream_settings.h"
+#include "ui/gamepad_scroll.h"
 #include "ui/logo_frame.h"
 #include "ui/text_format.h"
 #include "ui/theme.h"
@@ -60,6 +61,7 @@ App::App(HWND hwnd, ID3D11Device* device, float dpiScale)
     m_stream.SetPointerSink(&m_remoteTouches);
     StartStream();
     m_controls.Resume();
+    m_gamepadControl.Resume();
 }
 
 void App::StartStream() {
@@ -92,6 +94,7 @@ App::~App() {
 void App::SetupImGui() {
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // fed by ApplyGamepadInput
 
     wchar_t windows[MAX_PATH];
     GetWindowsDirectoryW(windows, MAX_PATH);
@@ -189,6 +192,7 @@ void App::SetupImGui() {
 void App::Tick() {
     m_controls.SetPhoneInVr(m_stream.AppViewers() > 0 && m_vr.enabled);
     m_controls.SetGameRunning(GameRunning());
+    m_gamepadControl.SetGameRunning(GameRunning());
     if (m_logoDirty) {
         UpdateLogoFrame();  // here rather than in Draw: it uses the UI's device context
         m_logoDirty = false;
@@ -233,6 +237,20 @@ void App::ApplyRemoteInput() {
     m_remoteInput.Apply(touches, ImGui::GetIO(), GetTickCount64());
 }
 
+void App::ApplyGamepadInput() {
+    std::vector<input::GamepadState> states = m_gamepadEvents.Take();
+    ImGuiIO& io = ImGui::GetIO();
+    if (!GamepadDrivesWindow()) {
+        m_gamepadInput.Release(io);  // dropped, like touches while a game runs
+        return;
+    }
+    m_gamepadInput.Apply(states, m_gamepadControl.Connected(), io);
+}
+
+bool App::GamepadDrivesWindow() const {
+    return !GameRunning() && (GetForegroundWindow() == m_hwnd || WantsFramesWhileMinimized());
+}
+
 bool App::GameRunning() const {
     for (const auto& session : m_sessions) {
         if (!session->Finished()) {
@@ -243,7 +261,8 @@ bool App::GameRunning() const {
 }
 
 bool App::WantsContinuousFrames() const {
-    if (!m_toasts.empty() || ImGui::GetIO().WantTextInput || ImGuiPointerInput::HasQueuedInput()) {
+    if (!m_toasts.empty() || ImGui::GetIO().WantTextInput || ImGuiPointerInput::HasQueuedInput() ||
+        m_gamepadInput.Holding()) {
         return true;
     }
     if (m_page == Page::Controls && m_controls.Animating()) {
@@ -295,8 +314,12 @@ void App::Draw() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(32), S(26)));
-    ImGui::BeginChild("##content", ImVec2(0, 0), ImGuiChildFlags_AlwaysUseWindowPadding);
+    // Flattened, like the sidebar and the cards, so a controller moves across all of them.
+    ImGui::BeginChild("##content", ImVec2(0, 0),
+                      ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened);
     ImGui::PopStyleVar(2);
+    GamepadScroll(m_scale).Apply();
+    FollowGamepadPageKeys();
     if (m_page != m_shownPage || m_detailsId != m_shownDetailsId) {
         m_shownPage = m_page;
         m_shownDetailsId = m_detailsId;

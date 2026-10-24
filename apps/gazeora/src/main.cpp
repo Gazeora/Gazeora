@@ -274,6 +274,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
             ImGui::GetIO().DisplaySize = g_renderer.BufferSize();  // the client area is 0 x 0
         }
         app->ApplyRemoteInput();
+        app->ApplyGamepadInput();
         ImGui::NewFrame();
         app->Draw();
         ImGui::Render();

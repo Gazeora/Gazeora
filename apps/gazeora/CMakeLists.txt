@@ -8,9 +8,13 @@ add_executable(Gazeora WIN32
     src/app_actions.cpp
     src/game_session.cpp
     src/textures.cpp
+    src/gamepad/gamepad_control.cpp
+    src/gamepad/gamepad_event_queue.cpp
+    src/gamepad/imgui_gamepad_input.cpp
     src/pages/chrome.cpp
     src/pages/controls_page.cpp
     src/pages/details_page.cpp
+    src/pages/gamepad_card.cpp
     src/pages/home_page.cpp
     src/pages/library_page.cpp
     src/pages/settings_page.cpp
@@ -22,6 +26,8 @@ add_executable(Gazeora WIN32
     src/settings/controls_settings.cpp
     src/settings/settings_file.cpp
     src/settings/stream_settings.cpp
+    src/ui/gamepad_scroll.cpp
+    src/ui/gamepad_status_line.cpp
     src/ui/hand_preview.cpp
     src/ui/logo_frame.cpp
     src/ui/text_format.cpp

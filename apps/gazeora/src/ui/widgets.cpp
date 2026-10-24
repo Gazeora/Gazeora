@@ -129,13 +129,15 @@ bool Toggle(const char* id, bool* value, float scale) {
     return pressed;
 }
 
-// Section container with a rounded background. Pair with EndCard().
+// Section container with a rounded background. Pair with EndCard(). Flattened into the page,
+// so a controller moves in and out of it like any other control.
 void BeginCard(const char* id, float scale, float width) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kCardBg);
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f * scale);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20.0f * scale, 16.0f * scale));
     ImGui::BeginChild(id, ImVec2(width, 0.0f),
-                      ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding,
+                      ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding |
+                          ImGuiChildFlags_NavFlattened,
                       ImGuiWindowFlags_NoScrollbar);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f * scale, 6.0f * scale));
 }

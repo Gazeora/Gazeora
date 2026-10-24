@@ -6,13 +6,14 @@
 #include <vector>
 
 #include "gazeora/input/hand_gesture_services.h"
+#include "pages/gamepad_card.h"
 #include "settings/controls_settings.h"
 #include "ui/hand_preview.h"
 
 namespace gazeora::app {
 
 // The Controls page: ways to control the PC besides its own mouse and keyboard, which always
-// keep working. Hand gestures through a webcam, for now.
+// keep working. Hand gestures through a webcam, and game controllers.
 class ControlsPage {
 public:
     struct Fonts {
@@ -21,7 +22,8 @@ public:
         ImFont* caption;
     };
 
-    ControlsPage(input::HandGestureServices& hands, const ControlsSettings& store, float scale);
+    ControlsPage(input::HandGestureServices& hands, const ControlsSettings& store,
+                 GamepadCard& gamepad, float scale);
 
     // Lists the cameras.
     void Resume();
@@ -51,6 +53,7 @@ private:
 
     input::HandGestureServices& m_hands;
     const ControlsSettings& m_store;
+    GamepadCard& m_gamepad;
     float m_scale;
     input::HandGestureSettings m_settings;
     bool m_phoneInVr = false;

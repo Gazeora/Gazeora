@@ -12,12 +12,17 @@
 #include <vector>
 
 #include "game_session.h"
+#include "gamepad/gamepad_control.h"
+#include "gamepad/gamepad_event_queue.h"
+#include "gamepad/imgui_gamepad_input.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
+#include "gazeora/input/gamepad_services.h"
 #include "gazeora/input/hand_gesture_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
 #include "pages/controls_page.h"
+#include "pages/gamepad_card.h"
 #include "remote/imgui_pointer_input.h"
 #include "remote/pointer_event_queue.h"
 #include "settings/controls_settings.h"
@@ -56,6 +61,9 @@ public:
     // The phone's touches since the last frame, onto this window's UI only. Call between the
     // platform backend's NewFrame and ImGui::NewFrame.
     void ApplyRemoteInput();
+    // What game controllers did since the last frame, onto this window's UI only: while it's
+    // in front or the stream shows it, and no game runs. Call beside ApplyRemoteInput.
+    void ApplyGamepadInput();
 
     // After a frame is drawn, before it's presented: when no game is running, this window is
     // what streams (unless the logo is chosen), so the launcher can be seen from the headset.
@@ -70,6 +78,14 @@ private:
     // What streams when no game is.
     enum class IdlePicture { Window, Logo };
     enum class Sort { RecentlyPlayed, Name, RecentlyAdded };
+
+    // A sidebar entry, in the order the sidebar shows them.
+    struct NavItem {
+        const char* icon;
+        const char* label;
+        Page page;
+    };
+    static const NavItem kNavItems[];
 
     struct Toast {
         std::string text;
@@ -88,6 +104,8 @@ private:
 
     // Pages and sections.
     void DrawSidebar();
+    // The controller's shoulder buttons step through the sidebar's pages.
+    void FollowGamepadPageKeys();
     void DrawHome();
     void DrawLibrary();
     void DrawDetails();
@@ -129,6 +147,8 @@ private:
     GameSession* SessionFor(uint32_t gameId) const;
     // A game is launching or running: the phone's touches and hand gestures are off.
     bool GameRunning() const;
+    // Game controllers may drive this window: it's in front or streamed, and no game runs.
+    bool GamepadDrivesWindow() const;
     const Texture& ArtFor(const Game& game);
     uint64_t AccentGradient();  // ImTextureID of the horizontal gradient
     std::vector<const Game*> SortedGames(Sort sort, const std::string& filter) const;
@@ -187,11 +207,18 @@ private:
     // hold pointers into a library that changed under them.
     std::vector<std::function<void()>> m_deferred;
 
-    // Hand gestures and the Controls page; the page is declared last, as it holds references
-    // to the others.
+    // Hand gestures, game controllers and the Controls page; the page is declared last, as it
+    // holds references to the others.
     input::HandGestureServices m_hands;
     ControlsSettings m_controlsSettings;
-    ControlsPage m_controls{m_hands, m_controlsSettings, m_scale};
+    // What the controllers do, from their session's thread; declared before m_gamepads, whose
+    // thread delivers it. Each change wakes the UI thread to draw.
+    GamepadEventQueue m_gamepadEvents{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
+    input::GamepadServices m_gamepads{m_gamepadEvents};
+    ImGuiGamepadInput m_gamepadInput;
+    GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
+    GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
+    ControlsPage m_controls{m_hands, m_controlsSettings, m_gamepadCard, m_scale};
 };
 
 }  // namespace gazeora::app
