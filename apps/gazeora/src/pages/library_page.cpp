@@ -173,17 +173,18 @@ void App::DrawGameCard(const Game& game, float width) {
 
     // Hover: accent outline, dim the art, and a round play button in the middle.
     bool overPlay = false;
-    if (hovered) {
+    // The mouse's hover: outline, dimmed art and a play button. A controller's focus is lifted
+    // instead (FocusLift), and pressing opens the game's page, as in Steam.
+    bool byMouse = !ImGui::GetIO().NavVisible;
+    if (hovered && byMouse) {
         draw->AddRectFilled(pos, coverMax, WithAlpha(kSidebarBg, 0.45f), rounding);
         draw->AddRect(pos, coverMax, kAccent, rounding, 0, S(2));
         ImVec2 center = pos + ImVec2(width * 0.5f, coverHeight * 0.5f);
         float radius = S(24);
         ImVec2 mouse = ImGui::GetIO().MousePos;
         ImVec2 d = mouse - center;
-        // The play button is the mouse's: a controller opens the game's page, as in Steam.
-        bool byMouse = !ImGui::GetIO().NavVisible;
-        overPlay = byMouse && !session && d.x * d.x + d.y * d.y <= radius * radius;
-        if (!session && byMouse) {
+        overPlay = !session && d.x * d.x + d.y * d.y <= radius * radius;
+        if (!session) {
             draw->AddCircleFilled(center, radius, overPlay ? kAccentHover : kAccent, 48);
             float t = radius * 0.42f;
             draw->AddTriangleFilled(center + ImVec2(-t * 0.7f, -t), center + ImVec2(-t * 0.7f, t),
