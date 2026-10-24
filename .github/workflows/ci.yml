@@ -28,9 +28,10 @@ jobs:
 
   build:
     name: Build and test (${{ matrix.arch }})
+    needs: format
     runs-on: windows-latest
     strategy:
-      fail-fast: false
+      fail-fast: true  # one release failing cancels the other
       matrix:
         include:
           - arch: x64
@@ -67,7 +68,7 @@ jobs:
   publish:
     name: Attach MSIs to the release
     if: github.event_name == 'release'
-    needs: [format, build]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
