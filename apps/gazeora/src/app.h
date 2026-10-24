@@ -111,7 +111,7 @@ private:
     // Actions.
     void AddGamesFromDialog();
     void AddGamePaths(const std::vector<std::wstring>& paths);
-    void Launch(uint32_t gameId, bool capture);
+    void Launch(uint32_t gameId);
     void RemoveGame(uint32_t gameId);
     void OpenDetails(uint32_t gameId);
     void SaveLibrary();

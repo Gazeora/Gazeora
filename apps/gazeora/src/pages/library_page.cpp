@@ -190,7 +190,7 @@ void App::DrawGameCard(const Game& game, float width) {
 
     if (clicked) {
         if (overPlay) {
-            Launch(game.id, game.captureOnLaunch);
+            Launch(game.id);
         } else {
             OpenDetails(game.id);
         }
@@ -208,10 +208,7 @@ void App::DrawGameContextMenu(const Game& game) {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(S(8), S(10)));
     bool running = SessionFor(game.id) != nullptr;
     if (ImGui::MenuItem(ICON_PLAY "   Play", nullptr, false, !running)) {
-        Launch(game.id, game.captureOnLaunch);
-    }
-    if (ImGui::MenuItem(ICON_CAPTURE "   Play with capture", nullptr, false, !running)) {
-        Launch(game.id, true);
+        Launch(game.id);
     }
     ImGui::Separator();
     if (ImGui::MenuItem(ICON_INFO "   Details")) {
