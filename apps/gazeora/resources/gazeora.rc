@@ -1,1 +1,35 @@
+#include <winver.h>
+#include "version_info.h"  // generated from version_info.h.in
+
 IDI_GAZEORA ICON "gazeora.ico"
+
+// What Explorer's Properties > Details, Task Manager and the UAC prompt show for Gazeora.exe.
+// The UAC prompt's "Verified publisher" comes from the signature instead: see CodeSigning.cmake.
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION GAZEORA_VERSION_MAJOR, GAZEORA_VERSION_MINOR, GAZEORA_VERSION_PATCH, 0
+PRODUCTVERSION GAZEORA_VERSION_MAJOR, GAZEORA_VERSION_MINOR, GAZEORA_VERSION_PATCH, 0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"  // US English, Unicode
+        BEGIN
+            VALUE "CompanyName", GAZEORA_PUBLISHER
+            VALUE "FileDescription", "Gazeora"
+            VALUE "FileVersion", GAZEORA_VERSION_STRING
+            VALUE "InternalName", "Gazeora"
+            VALUE "LegalCopyright", GAZEORA_COPYRIGHT
+            VALUE "OriginalFilename", "Gazeora.exe"
+            VALUE "ProductName", "Gazeora"
+            VALUE "ProductVersion", GAZEORA_VERSION_STRING
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

@@ -23,6 +23,7 @@
 #include "ui/logo_frame.h"
 #include "ui/text_format.h"
 #include "ui/theme.h"
+#include "version_info.h"
 #include "ui/widgets.h"
 
 using Microsoft::WRL::ComPtr;
@@ -183,6 +184,12 @@ void App::DrawSettings() {
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     ImGui::Text("Gazeora game launcher and frame capture  \xC2\xB7  Dear ImGui %s", IMGUI_VERSION);
     ImGui::TextUnformatted("CLI: GazeoraCLI.exe list | add | remove | launch | attach");
+    ImGui::PopStyleColor();
+    // Required in every version by NOTICE's additional terms (GPLv3 section 7(b)).
+    ImGui::TextUnformatted(GAZEORA_ATTRIBUTION "  \xC2\xB7  Version " GAZEORA_VERSION_STRING);
+    ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
+    ImGui::TextWrapped("%s", GAZEORA_COPYRIGHT ". Free software under the GNU GPL version 3, "
+                             "with no warranty: see LICENSE and NOTICE.");
     ImGui::PopStyleColor();
     EndCard();
     ImGui::PopStyleVar();

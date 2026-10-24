@@ -29,6 +29,9 @@ add_executable(Gazeora WIN32
     src/ui/widgets.cpp
     resources/gazeora.rc)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# version_info.h, for gazeora.rc's version info.
+configure_file(resources/version_info.h.in ${CMAKE_CURRENT_BINARY_DIR}/version_info.h @ONLY)
+target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(Gazeora PRIVATE
     gazeora_host_lib gazeora_library gazeora_input imgui
     d3d11 dxgi dwmapi windowscodecs shell32 ole32 uuid
@@ -38,6 +41,6 @@ if(NOT MSVC)
 endif()
 add_dependencies(Gazeora gazeora_hook)
 
-# windres doesn't report the icon as a dependency of the .rc, so rebuild when it changes.
-set_source_files_properties(resources/gazeora.rc PROPERTIES
-    OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/resources/gazeora.ico)
+# windres doesn't report what the .rc includes as its dependencies, so rebuild when they change.
+set_source_files_properties(resources/gazeora.rc PROPERTIES OBJECT_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/gazeora.ico;${CMAKE_CURRENT_BINARY_DIR}/version_info.h")

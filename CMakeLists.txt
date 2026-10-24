@@ -1,7 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
-project(Gazeora LANGUAGES C CXX)
+project(Gazeora VERSION 1.0.0 LANGUAGES C CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+# The company name in the exe's version info. The publisher Windows shows in the UAC prompt is
+# the name on the signing certificate (CodeSigning.cmake).
+set(GAZEORA_PUBLISHER "Gazeora" CACHE STRING "Publisher named in the version info")
+# The copyright holder, named in the version info and in the About card's attribution, which
+# NOTICE's additional terms (GPLv3 section 7(b)) say every version keeps.
+set(GAZEORA_AUTHOR "Nithin Aashik")
+set(GAZEORA_COPYRIGHT_YEAR 2026)
 
 # The compiler picks the release: a 64-bit one builds the x64 release (for 64-bit games), a
 # 32-bit one the x86 release (for 32-bit games). Each is the whole of Gazeora, built on its own.
