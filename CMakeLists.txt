@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-project(Gazeora VERSION 1.0.0 LANGUAGES C CXX)
+include(cmake/Version.cmake)  # GAZEORA_VERSION, from the VERSION file
+project(Gazeora VERSION ${GAZEORA_VERSION} LANGUAGES C CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
