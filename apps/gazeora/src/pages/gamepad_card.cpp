@@ -12,9 +12,10 @@ constexpr float kHelpWidth = 380.0f;
 
 // Buttons by where they sit, as every make reads them; each make's own names in brackets.
 constexpr const char* kGuide[] = {
-    "Move: the d-pad or the left stick",
+    "Move: the d-pad or the left stick; left and right go between the menu and the page",
     "Select: the bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo)",
-    "Back: the right face button (B, Circle, A): closes a list or leaves a field",
+    "Back: the right face button (B, Circle, A): closes a list, or goes back from a game",
+    "Game options: the Menu or Options button on a game: play, details, remove",
     "Pages: the shoulder buttons (LB and RB, L1 and R1, L and R)",
     "Scroll: the right stick",
 };

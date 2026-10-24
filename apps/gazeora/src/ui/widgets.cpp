@@ -51,7 +51,7 @@ void TextEllipsis(ImDrawList* draw, ImFont* font, ImVec2 pos, ImU32 color, const
 bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg, ImFont* font,
                   float rounding, bool enabled) {
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    bool pressed = ImGui::InvisibleButton(label, size) && enabled;
+    bool pressed = NavButton(label, size) && enabled;
     bool hovered = enabled && ImGui::IsItemHovered();
     if (hovered) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -65,12 +65,16 @@ bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32
     return pressed;
 }
 
+bool NavButton(const char* id, ImVec2 size) {
+    return ImGui::InvisibleButton(id, size, ImGuiButtonFlags_EnableNav);
+}
+
 // Text-only button, e.g. "Back" or "View all".
 bool LinkButton(const char* label, ImFont* font, ImU32 color, ImU32 hoverColor) {
     const char* end = LabelEnd(label);
     ImVec2 size = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0.0f, label, end);
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    bool pressed = ImGui::InvisibleButton(label, size);
+    bool pressed = NavButton(label, size);
     bool hovered = ImGui::IsItemHovered();
     if (hovered) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -85,7 +89,7 @@ bool LinkButton(const char* label, ImFont* font, ImU32 color, ImU32 hoverColor) 
 bool AccentButton(const char* label, ImVec2 size, ImFont* font, float rounding,
                   ImTextureID gradient, bool enabled) {
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    bool pressed = ImGui::InvisibleButton(label, size) && enabled;
+    bool pressed = NavButton(label, size) && enabled;
     bool hovered = enabled && ImGui::IsItemHovered();
     if (hovered) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -113,7 +117,7 @@ bool AccentButton(const char* label, ImVec2 size, ImFont* font, float rounding,
 bool Toggle(const char* id, bool* value, float scale) {
     ImVec2 size(40.0f * scale, 22.0f * scale);
     ImVec2 pos = ImGui::GetCursorScreenPos();
-    bool pressed = ImGui::InvisibleButton(id, size);
+    bool pressed = NavButton(id, size);
     if (pressed) {
         *value = !*value;
     }
@@ -169,6 +173,11 @@ void HelpMarker(const char* text, float wrapWidth) {
     ImGui::PushStyleColor(ImGuiCol_Text, kTextFaint);
     ImGui::TextUnformatted(ICON_INFO);
     ImGui::PopStyleColor();
+    // A button over the icon, so a controller can land on it and show the text.
+    ImGui::SetCursorScreenPos(ImGui::GetItemRectMin());
+    ImGui::PushID(text);
+    NavButton("##help", ImGui::GetItemRectSize());
+    ImGui::PopID();
     if (ImGui::IsItemHovered()) {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(wrapWidth);

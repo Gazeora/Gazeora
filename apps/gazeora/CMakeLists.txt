@@ -8,9 +8,12 @@ add_executable(Gazeora WIN32
     src/app_actions.cpp
     src/game_session.cpp
     src/textures.cpp
+    src/gamepad/button_repeat.cpp
     src/gamepad/gamepad_control.cpp
     src/gamepad/gamepad_event_queue.cpp
+    src/gamepad/gamepad_presses.cpp
     src/gamepad/imgui_gamepad_input.cpp
+    src/gamepad/pane_navigation.cpp
     src/pages/chrome.cpp
     src/pages/controls_page.cpp
     src/pages/details_page.cpp

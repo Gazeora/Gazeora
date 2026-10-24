@@ -42,12 +42,11 @@ struct KeySource {
     bool analog;  // sent as it is; otherwise pressed or not
 };
 
-// The left face button stays out: ImGui holds it for a window switcher this UI has no use for.
+// Only what ImGui's navigation uses; the other buttons are the launcher's own (GamepadPresses).
+// The left face button would open ImGui's window switcher, which this UI has no use for.
 constexpr KeySource kKeys[] = {
     {ImGuiKey_GamepadFaceDown, Button<GamepadButton::South>, false},
     {ImGuiKey_GamepadFaceRight, Button<GamepadButton::East>, false},
-    {ImGuiKey_GamepadL1, Button<GamepadButton::LeftShoulder>, false},
-    {ImGuiKey_GamepadR1, Button<GamepadButton::RightShoulder>, false},
     {ImGuiKey_GamepadDpadUp, DpadOrStick<GamepadButton::DpadUp, GamepadAxis::LeftY, -1>, false},
     {ImGuiKey_GamepadDpadDown, DpadOrStick<GamepadButton::DpadDown, GamepadAxis::LeftY, 1>, false},
     {ImGuiKey_GamepadDpadLeft, DpadOrStick<GamepadButton::DpadLeft, GamepadAxis::LeftX, -1>, false},

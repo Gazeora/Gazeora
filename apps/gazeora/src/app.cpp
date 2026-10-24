@@ -242,8 +242,10 @@ void App::ApplyGamepadInput() {
     ImGuiIO& io = ImGui::GetIO();
     if (!GamepadDrivesWindow()) {
         m_gamepadInput.Release(io);  // dropped, like touches while a game runs
+        m_gamepadPresses.Clear();
         return;
     }
+    m_gamepadPresses.Update(states);
     m_gamepadInput.Apply(states, m_gamepadControl.Connected(), io);
 }
 
@@ -262,7 +264,7 @@ bool App::GameRunning() const {
 
 bool App::WantsContinuousFrames() const {
     if (!m_toasts.empty() || ImGui::GetIO().WantTextInput || ImGuiPointerInput::HasQueuedInput() ||
-        m_gamepadInput.Holding()) {
+        m_gamepadInput.Holding() || m_gamepadPresses.Holding()) {
         return true;
     }
     if (m_page == Page::Controls && m_controls.Animating()) {
@@ -309,17 +311,18 @@ void App::Draw() {
                      ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::PopStyleVar(3);
 
+    m_panes.Apply();
     DrawSidebar();
     ImGui::SameLine(0.0f, 0.0f);
 
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(32), S(26)));
-    // Flattened, like the sidebar and the cards, so a controller moves across all of them.
-    ImGui::BeginChild("##content", ImVec2(0, 0),
-                      ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened);
+    ImGui::BeginChild("##content", ImVec2(0, 0), ImGuiChildFlags_AlwaysUseWindowPadding);
     ImGui::PopStyleVar(2);
+    m_panes.MarkPage();
     GamepadScroll(m_scale).Apply();
     FollowGamepadPageKeys();
+    FollowGamepadBack();
     if (m_page != m_shownPage || m_detailsId != m_shownDetailsId) {
         m_shownPage = m_page;
         m_shownDetailsId = m_detailsId;
@@ -347,6 +350,9 @@ void App::Draw() {
     ImGui::End();
 
     DrawToasts();
+    m_panes.Follow();
+    m_gamepadBusy =
+        ImGui::IsAnyItemActive() || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId);
 
     std::vector<std::function<void()>> deferred;
     deferred.swap(m_deferred);

@@ -14,7 +14,9 @@
 #include "game_session.h"
 #include "gamepad/gamepad_control.h"
 #include "gamepad/gamepad_event_queue.h"
+#include "gamepad/gamepad_presses.h"
 #include "gamepad/imgui_gamepad_input.h"
+#include "gamepad/pane_navigation.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/input/gamepad_services.h"
@@ -106,6 +108,8 @@ private:
     void DrawSidebar();
     // The controller's shoulder buttons step through the sidebar's pages.
     void FollowGamepadPageKeys();
+    // Its right button goes back from a game's page to the library, as in Steam.
+    void FollowGamepadBack();
     void DrawHome();
     void DrawLibrary();
     void DrawDetails();
@@ -216,6 +220,13 @@ private:
     GamepadEventQueue m_gamepadEvents{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
     input::GamepadServices m_gamepads{m_gamepadEvents};
     ImGuiGamepadInput m_gamepadInput;
+    GamepadPresses m_gamepadPresses;
+    PaneNavigation m_panes;
+    // The game whose page a controller opened: going back focuses its card again.
+    uint32_t m_returnToGame = 0;
+    // Last frame, a popup was open or a control was held: the controller's buttons were
+    // theirs, not the pages'.
+    bool m_gamepadBusy = false;
     GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
     GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
     ControlsPage m_controls{m_hands, m_controlsSettings, m_gamepadCard, m_scale};

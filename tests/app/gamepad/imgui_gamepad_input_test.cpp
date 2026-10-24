@@ -151,12 +151,12 @@ TEST_F(ImGuiGamepadInputTest, TheRightStickGoesThroughAsItIsPushed) {
 
 TEST_F(ImGuiGamepadInputTest, ReleaseLetsGoOfEverythingHeld) {
     GamepadState held;
-    held.SetButton(GamepadButton::RightShoulder, true);
+    held.SetButton(GamepadButton::South, true);
     Apply(held);
-    EXPECT_TRUE(ImGui::IsKeyDown(ImGuiKey_GamepadR1));
+    EXPECT_TRUE(ImGui::IsKeyDown(ImGuiKey_GamepadFaceDown));
     m_input.Release(ImGui::GetIO());
     Run(kSettleFrames);
-    EXPECT_FALSE(ImGui::IsKeyDown(ImGuiKey_GamepadR1));
+    EXPECT_FALSE(ImGui::IsKeyDown(ImGuiKey_GamepadFaceDown));
     EXPECT_FALSE(m_input.Holding());
 }
 
