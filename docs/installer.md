@@ -1,7 +1,7 @@
 # Installer
 
-Gazeora ships as one MSI per release: `Gazeora-<version>-x64.msi` for 64-bit games and
-`Gazeora-<version>-x86.msi` for 32-bit ones. The two install side by side, as "Gazeora" and
+Gazeora ships as one MSI per release: `Gazeora-v<version>-x64.msi` for 64-bit games and
+`Gazeora-v<version>-x86.msi` for 32-bit ones. The two install side by side, as "Gazeora" and
 "Gazeora (32-bit)".
 
 ## Building the MSI
@@ -11,7 +11,7 @@ The MSI is built with [WiX](https://wixtoolset.org/) 5, which comes as a .NET to
 extensions on first use.
 
 ```powershell
-cmake --build build --target gazeora_msi    # writes build\Gazeora-1.0.0-x64.msi
+cmake --build build --target gazeora_msi    # writes build\Gazeora-v1.0.0-x64.msi
 ```
 
 The target builds what the MSI holds, stages it with `cmake --install` (the `Runtime` and
@@ -24,7 +24,7 @@ signed.
 To check the result against Windows Installer's rules:
 
 ```powershell
-dotnet wix msi validate build\Gazeora-1.0.0-x64.msi
+dotnet wix msi validate build\Gazeora-v1.0.0-x64.msi
 ```
 
 It warns about ICE61 only, because a rebuild of the same version may replace the installed one.
@@ -63,10 +63,10 @@ Upgrading to a newer MSI does neither: the library, the settings and the driver 
 Feature IDs and properties for `msiexec`:
 
 ```powershell
-msiexec /i Gazeora-1.0.0-x64.msi /qn                                   # everything that's on by default
-msiexec /i Gazeora-1.0.0-x64.msi /qn ADDLOCAL=Main,CommandLinePath     # only these features
-msiexec /i Gazeora-1.0.0-x64.msi /qn INSTALLFOLDER="D:\Apps\Gazeora"   # another folder
-msiexec /x Gazeora-1.0.0-x64.msi /qn REMOVEUSERDATA=1                  # uninstall, deleting the user's data
+msiexec /i Gazeora-v1.0.0-x64.msi /qn                                   # everything that's on by default
+msiexec /i Gazeora-v1.0.0-x64.msi /qn ADDLOCAL=Main,CommandLinePath     # only these features
+msiexec /i Gazeora-v1.0.0-x64.msi /qn INSTALLFOLDER="D:\Apps\Gazeora"   # another folder
+msiexec /x Gazeora-v1.0.0-x64.msi /qn REMOVEUSERDATA=1                  # uninstall, deleting the user's data
 ```
 
 The feature IDs are `Main`, `DesktopShortcut`, `CommandLinePath`, `OpenWith`, `Firewall` and

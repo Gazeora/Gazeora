@@ -158,7 +158,7 @@ cmake --install build --prefix D:\Apps\Gazeora    # or anywhere else
 cmake --install build --component Tools           # then, if wanted, the test apps and the probe
 ```
 
-To build the MSI installer instead (`build\Gazeora-<version>-<arch>.msi`), with shortcuts, PATH,
+To build the MSI installer instead (`build\Gazeora-v<version>-<arch>.msi`), with shortcuts, PATH,
 Explorer's **Open with Gazeora** and a firewall rule, see [Installer](docs/installer.md):
 
 ```powershell

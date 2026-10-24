@@ -124,16 +124,23 @@ is one handler and one entry.
 ## Releasing
 
 The version lives in one place: the `VERSION` file at the root, as `MAJOR.MINOR.PATCH`
-(Windows Installer compares only those three). From there it reaches the version info of
-`Gazeora.exe`, the About card on the Settings page and the MSI. To release:
+(`1.1.0`), or `MAJOR.MINOR.PATCH-rc.N` for a release candidate (`1.1.0-rc.1`). It is always
+shown with a `v` in front: `v1.1.0`, `v1.1.0-rc.1`. From there it reaches the version info of
+`Gazeora.exe`, the About card on the Settings page and the MSI's file name. Windows Installer
+compares only the three numbers, so `v1.1.0-rc.1` and `v1.1.0` install as the same version and
+either replaces the other. To release:
 
-1. Change `VERSION`, for example to `1.1.0`, and commit it (`chore: release 1.1.0`). The next
-   build picks it up; there's no need to configure again.
-2. Tag the commit `v1.1.0`, push the tag and publish a GitHub release for it.
+1. Change `VERSION`, for example to `1.1.0-rc.1`, and commit it (`chore: release v1.1.0-rc.1`).
+   The next build picks it up; there's no need to configure again.
+2. Publish a GitHub release titled `Gazeora v1.1.0-rc.1` with a new tag `v1.1.0-rc.1`. A
+   release candidate is published as a **pre-release**, a stable version as a normal release.
 3. CI (`.github/workflows/ci.yml`) builds and tests both releases and attaches
-   `Gazeora-1.1.0-x64.msi` and `Gazeora-1.1.0-x86.msi` to the release. It fails if the tag
-   doesn't match `VERSION`. To build the MSIs locally instead, run `--target gazeora_msi` in
-   an x64 and an x86 build folder.
+   `Gazeora-v1.1.0-rc.1-x64.msi` and `Gazeora-v1.1.0-rc.1-x86.msi` to the release. It fails
+   if the tag doesn't match `VERSION`, or if a release candidate isn't a pre-release (or a
+   stable version is). To build the MSIs locally instead, run `--target gazeora_msi` in an x64
+   and an x86 build folder.
+
+When a candidate is good, set `VERSION` to `1.1.0` and release `v1.1.0` the same way.
 
 CI also runs on every pull request, every Monday at 00:00 UTC, and by hand from the Actions tab
 (`workflow_dispatch`); the MSIs of each run are kept as workflow artifacts for 7 days (90 for a
