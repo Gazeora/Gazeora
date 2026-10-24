@@ -5,6 +5,8 @@ name: CI
 on:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1"  # every Monday, 00:00 UTC
   release:
     types: [published]
 
@@ -64,6 +66,7 @@ jobs:
           name: gazeora-msi-${{ matrix.arch }}
           path: build/Gazeora-*-${{ matrix.arch }}.msi
           if-no-files-found: error
+          retention-days: 7
 
   publish:
     name: Attach MSIs to the release

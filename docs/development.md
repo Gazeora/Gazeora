@@ -135,8 +135,8 @@ The version lives in one place: the `VERSION` file at the root, as `MAJOR.MINOR.
    doesn't match `VERSION`. To build the MSIs locally instead, run `--target gazeora_msi` in
    an x64 and an x86 build folder.
 
-CI also runs on every pull request, and by hand from the Actions tab (`workflow_dispatch`); the
-MSIs of each run are kept as workflow artifacts.
+CI also runs on every pull request, every Monday at 00:00 UTC, and by hand from the Actions tab
+(`workflow_dispatch`); the MSIs of each run are kept as workflow artifacts for 7 days.
 
 A newer MSI replaces the installed version, keeping the user's library and settings.
 
