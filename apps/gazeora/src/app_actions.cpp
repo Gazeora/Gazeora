@@ -28,6 +28,13 @@ using Microsoft::WRL::ComPtr;
 
 namespace gazeora::app {
 
+namespace {
+
+// The launcher always injects the capture hook; only the CLI can launch without it.
+constexpr bool kCaptureOnLaunch = true;
+
+}  // namespace
+
 void App::AddGamesFromDialog() { AddGamePaths(PickFiles(m_hwnd, PickKind::Games)); }
 
 void App::AddGamePaths(const std::vector<std::wstring>& paths) {
@@ -73,7 +80,7 @@ void App::AddGamePaths(const std::vector<std::wstring>& paths) {
     }
 }
 
-void App::Launch(uint32_t gameId, bool capture) {
+void App::Launch(uint32_t gameId) {
     Game* game = m_library.Find(gameId);
     if (!game) {
         return;
@@ -83,10 +90,10 @@ void App::Launch(uint32_t gameId, bool capture) {
         return;
     }
     m_sessions.push_back(std::make_unique<GameSession>(
-        gameId, m_libraryServices.LaunchSpecs().Create(*game), capture, &m_stream));
+        gameId, m_libraryServices.LaunchSpecs().Create(*game), kCaptureOnLaunch, &m_stream));
     game->lastPlayed = m_libraryServices.Clock().NowUnixSeconds();
     SaveLibrary();
-    ShowToast("Launching " + U8(game->name) + (capture ? " with capture" : ""));
+    ShowToast("Launching " + U8(game->name));
 }
 
 void App::RemoveGame(uint32_t gameId) {

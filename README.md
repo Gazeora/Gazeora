@@ -169,7 +169,7 @@ cmake --build build --target gazeora_msi
 
 Start `Gazeora.exe`, add games with **Add game**, by dragging exes or shortcuts onto the
 window or, once installed with the MSI, with **Open with Gazeora** on their right-click menu,
-and launch them with **Play with capture**. The game's session card shows the capture status,
+and launch them with **Play**; the capture hook always goes in. The game's session card shows the capture status,
 frame rate, resolution, graphics API and the stream address.
 
 Then open the stream address from **Settings → Frame stream** on a phone or another PC;

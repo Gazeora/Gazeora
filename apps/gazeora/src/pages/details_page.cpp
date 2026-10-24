@@ -98,7 +98,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
                                 : "RUNNING##play";
     if (AccentButton(playLabel, ImVec2(S(150), buttonHeight), m_fonts.bold, S(6), AccentGradient(),
                      !session)) {
-        Launch(game.id, game.captureOnLaunch);
+        Launch(game.id);
     }
     if (showDetails) {
         ImGui::SameLine(0.0f, S(10));
@@ -106,25 +106,6 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
                          WithAlpha(kText, 0.2f), kText, m_fonts.bold, S(6))) {
             OpenDetails(game.id);
         }
-    }
-
-    // Capture switch next to the buttons.
-    ImGui::SameLine(0.0f, S(20));
-    float toggleY = buttons.y + (buttonHeight - S(22)) * 0.5f;
-    ImGui::SetCursorScreenPos(ImVec2(ImGui::GetCursorScreenPos().x, toggleY));
-    bool capture = game.captureOnLaunch;
-    if (Toggle("##capture", &capture, m_scale)) {
-        if (Game* editable = m_library.Find(game.id)) {
-            editable->captureOnLaunch = capture;
-            SaveLibrary();
-        }
-    }
-    ImGui::SameLine(0.0f, S(10));
-    ImGui::SetCursorScreenPos(
-        ImVec2(ImGui::GetCursorScreenPos().x, toggleY + (S(22) - m_fonts.body->FontSize) * 0.5f));
-    ImGui::TextUnformatted("Capture");
-    if (ImGui::IsItemHovered()) {
-        ImGui::SetTooltip("Inject the Gazeora capture hook when the game starts.");
     }
 
     ImGui::SetCursorScreenPos(ImVec2(pos.x, max.y));
@@ -179,9 +160,7 @@ void App::DrawSessionCard(const Game& game) {
     if (!session) {
         CardTitle(m_fonts.heading, ICON_CAPTURE "  Gazeora capture");
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-        ImGui::TextUnformatted(game.captureOnLaunch
-                                   ? "On: the capture hook goes in when the game starts."
-                                   : "Off: the game starts normally.");
+        ImGui::TextUnformatted("The capture hook goes in when the game starts.");
         ImGui::PopStyleColor();
         EndCard();
         return;
