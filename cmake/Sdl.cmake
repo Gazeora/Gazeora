@@ -18,9 +18,3 @@ foreach(subsystem AUDIO GPU RENDER CAMERA HAPTIC POWER SENSOR DIALOG TRAY)
     set(SDL_${subsystem} OFF CACHE BOOL "" FORCE)
 endforeach()
 FetchContent_MakeAvailable(sdl)
-
-# Built the way its own build does: without the project's Windows API definitions.
-foreach(definition WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-    target_compile_options(SDL3-static PRIVATE
-        $<IF:$<C_COMPILER_ID:MSVC>,/U${definition},-U${definition}>)
-endforeach()
