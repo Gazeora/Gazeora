@@ -205,6 +205,11 @@ see [Streaming](docs/streaming.md).
   transfer on this PC while it's set up for streaming.
 - The stream is unencrypted and unauthenticated. Anyone on the local network can watch it.
 
+## Contributing
+
+Bug reports, game compatibility reports and pull requests are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 Copyright (C) 2026 Nithin Aashik. Gazeora is free software under the

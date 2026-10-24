@@ -123,6 +123,9 @@ is one handler and one entry.
 
 ## Contributing
 
+How to report problems, the code rules and the pull request steps are in
+[CONTRIBUTING.md](../CONTRIBUTING.md).
+
 The code is formatted with clang-format using the `.clang-format` file at the root. Run
 `cmake --build build --target format` to format everything, or `--target format-check` to
 check. The [pre-commit](https://pre-commit.com) configuration runs the same checks before each
