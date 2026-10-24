@@ -1,5 +1,5 @@
 # Builds and tests both releases (x64 and x86) and packs their MSIs. A published GitHub
-# release also gets the two MSIs attached.
+# release also gets the two MSIs attached, and then gazeora.github.io is told about it.
 name: CI
 
 on:
@@ -114,3 +114,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: gh release upload "$TAG" dist/*.msi --clobber --repo "$GITHUB_REPOSITORY"
+
+      # Once the MSIs are attached, so the website lists them with the release
+      - name: Tell the website
+        uses: Gazeora/gazeora.github.io/.github/actions/publish-release@main
+        with:
+          platform: windows
+          site-token: ${{ secrets.GAZEORA_SITE_TOKEN }}
