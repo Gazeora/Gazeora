@@ -18,8 +18,8 @@ void CoverUv(float texAspect, float rectAspect, ImVec2& uv0, ImVec2& uv1);
 void TextEllipsis(ImDrawList* draw, ImFont* font, ImVec2 pos, ImU32 color, const std::string& text,
                   float maxWidth);
 
-bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg,
-                  ImFont* font, float rounding, bool enabled = true);
+bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg, ImFont* font,
+                  float rounding, bool enabled = true);
 // Text-only button, e.g. "Back" or "View all".
 bool LinkButton(const char* label, ImFont* font, ImU32 color, ImU32 hoverColor);
 // Primary action: violet fading into cyan, brighter on hover. `gradient` is the

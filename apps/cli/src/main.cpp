@@ -134,8 +134,7 @@ void SaveFrame(gazeora::CaptureClient& client) {
     // frame.
     reader.Read(client.Device(), client.Frame(), width, height, bgra, error, client.Depth());
     if (reader.Read(client.Device(), client.Frame(), width, height, bgra, error, client.Depth()) &&
-        reader.Stereo() &&
-        gazeora::SaveBgraAsBmp(name + L"_3d.bmp", width, height, bgra, error)) {
+        reader.Stereo() && gazeora::SaveBgraAsBmp(name + L"_3d.bmp", width, height, bgra, error)) {
         wprintf(L"Saved %ls_3d.bmp\n", name.c_str());
     } else {
         fwprintf(stderr, L"Saving the 3D pair failed: %ls\n", error.c_str());
@@ -256,8 +255,7 @@ int CmdAttach(const std::wstring& target, const CaptureOptions& options) {
     return RunCaptureLoop(client, nullptr, options);
 }
 
-int CmdRun(const std::wstring& exe, const std::wstring& arguments,
-           const CaptureOptions& options) {
+int CmdRun(const std::wstring& exe, const std::wstring& arguments, const CaptureOptions& options) {
     gazeora::LaunchSpec spec;
     spec.exePath = FullPath(exe);
     spec.arguments = arguments;
@@ -301,8 +299,8 @@ int CmdList() {
         wprintf(L"No games yet. Add one with: GazeoraCLI add <game.exe>\n");
         return 0;
     }
-    wprintf(L"%4ls  %-32ls  %-9ls  %-8ls  %-14ls  %ls\n", L"ID", L"NAME", L"PLAYTIME",
-            L"CAPTURE", L"LAUNCH", L"PATH");
+    wprintf(L"%4ls  %-32ls  %-9ls  %-8ls  %-14ls  %ls\n", L"ID", L"NAME", L"PLAYTIME", L"CAPTURE",
+            L"LAUNCH", L"PATH");
     for (const gazeora::Game& game : library.Games()) {
         gazeora::LaunchSpec spec = services.LaunchSpecs().Create(game);
         std::wstring via = spec.steamAppId.empty() ? L"exe" : L"steam " + spec.steamAppId;
@@ -453,9 +451,9 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
         if (waitForGame) {
             wprintf(L"Waiting for %ls to start (Ctrl+C to stop)...\n",
                     spec.GameProcessName().c_str());
-            if (!gazeora::WaitForGameProcess(spec.GameProcessName(), ignorePid,
-                                             gazeora::kWaitForGameMs, 30000,
-                                             [] { return bool(g_quit); }, launched, error)) {
+            if (!gazeora::WaitForGameProcess(
+                    spec.GameProcessName(), ignorePid, gazeora::kWaitForGameMs, 30000,
+                    [] { return bool(g_quit); }, launched, error)) {
                 fwprintf(stderr, L"the game didn't start: %ls\n", error.c_str());
                 return 1;
             }
@@ -464,8 +462,7 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
                 fwprintf(stderr, L"attaching capture failed: %ls\n", error.c_str());
                 return 1;
             }
-            wprintf(L"Attached to %ls (PID %lu)\n", spec.GameProcessName().c_str(),
-                    launched.pid);
+            wprintf(L"Attached to %ls (PID %lu)\n", spec.GameProcessName().c_str(), launched.pid);
         }
 
         gazeora::HandOffDetector handOff(launched.pid, launched.process);

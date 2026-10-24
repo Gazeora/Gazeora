@@ -101,8 +101,7 @@ private:
     // take it.
     bool ShareDevice(IMFTransform* transform, IMFAttributes* attributes, std::wstring& error);
     // Encodes the frame in `buffer`, as Encode and EncodeTexture do.
-    bool Submit(IMFMediaBuffer* buffer, int64_t time, std::vector<Frame>& out,
-                std::wstring& error);
+    bool Submit(IMFMediaBuffer* buffer, int64_t time, std::vector<Frame>& out, std::wstring& error);
     bool Configure(IMFTransform* transform, uint32_t fps, uint32_t bitrate, uint32_t keyInterval,
                    std::wstring& error);
     // Tries the registered encoders that match `flags` in order; true once one is set up.
@@ -116,8 +115,8 @@ private:
     ComPtr<IMFTransform> m_transform;
     ComPtr<ICodecAPI> m_codecApi;
     ComPtr<IMFMediaEventGenerator> m_events;  // async encoders only
-    DxgiDeviceManager m_deviceManager;         // opened with a device only
-    ComPtr<ID3D11Device> m_device;             // kept alive while Current() names it
+    DxgiDeviceManager m_deviceManager;        // opened with a device only
+    ComPtr<ID3D11Device> m_device;            // kept alive while Current() names it
     Settings m_settings;
     VideoCodec m_codec = VideoCodec::H264;
     std::wstring m_name;
@@ -142,9 +141,8 @@ bool VideoEncoder::Available(VideoCodec codec) {
         return true;  // Microsoft's software encoder ships with Windows
     }
     IMFActivate** activates = nullptr;
-    UINT32 count = FindEncoders(codec, MFT_ENUM_FLAG_HARDWARE | MFT_ENUM_FLAG_SYNCMFT |
-                                           MFT_ENUM_FLAG_ASYNCMFT,
-                                &activates);
+    UINT32 count = FindEncoders(
+        codec, MFT_ENUM_FLAG_HARDWARE | MFT_ENUM_FLAG_SYNCMFT | MFT_ENUM_FLAG_ASYNCMFT, &activates);
     for (UINT32 i = 0; i < count; ++i) {
         activates[i]->Release();
     }
@@ -170,7 +168,8 @@ bool MediaFoundationEncoder::Open(const Settings& settings, std::wstring& error)
         return OpenForTextures(settings, error);
     }
 
-    if (settings.preferHardware && OpenRegistered(MFT_ENUM_FLAG_HARDWARE, fps, bitrate, keyInterval, error)) {
+    if (settings.preferHardware &&
+        OpenRegistered(MFT_ENUM_FLAG_HARDWARE, fps, bitrate, keyInterval, error)) {
         m_hardware = true;
         return true;
     }
@@ -236,7 +235,7 @@ bool MediaFoundationEncoder::ShareDevice(IMFTransform* transform, IMFAttributes*
 }
 
 bool MediaFoundationEncoder::OpenRegistered(UINT32 flags, uint32_t fps, uint32_t bitrate,
-                                  uint32_t keyInterval, std::wstring& error) {
+                                            uint32_t keyInterval, std::wstring& error) {
     IMFActivate** activates = nullptr;
     UINT32 count = FindEncoders(m_codec, flags, &activates);
     for (UINT32 i = 0; i < count; ++i) {
@@ -245,8 +244,8 @@ bool MediaFoundationEncoder::OpenRegistered(UINT32 flags, uint32_t fps, uint32_t
             Configure(transform.Get(), fps, bitrate, keyInterval, error)) {
             wchar_t* name = nullptr;
             UINT32 length = 0;
-            if (SUCCEEDED(
-                    activates[i]->GetAllocatedString(MFT_FRIENDLY_NAME_Attribute, &name, &length))) {
+            if (SUCCEEDED(activates[i]->GetAllocatedString(MFT_FRIENDLY_NAME_Attribute, &name,
+                                                           &length))) {
                 m_name = name;
                 CoTaskMemFree(name);
             }
@@ -264,7 +263,7 @@ bool MediaFoundationEncoder::OpenRegistered(UINT32 flags, uint32_t fps, uint32_t
 }
 
 bool MediaFoundationEncoder::Configure(IMFTransform* transform, uint32_t fps, uint32_t bitrate,
-                            uint32_t keyInterval, std::wstring& error) {
+                                       uint32_t keyInterval, std::wstring& error) {
     // Hardware encoders are asynchronous and refuse to work until unlocked.
     ComPtr<IMFAttributes> attributes;
     ComPtr<IMFMediaEventGenerator> events;
@@ -395,7 +394,7 @@ void MediaFoundationEncoder::SetBitrate(uint32_t bitrate) {
 }
 
 bool MediaFoundationEncoder::Encode(const uint8_t* nv12, int64_t time, std::vector<Frame>& out,
-                         std::wstring& error) {
+                                    std::wstring& error) {
     if (!m_transform) {
         error = L"encoder not open";
         return false;
@@ -479,7 +478,8 @@ bool MediaFoundationEncoder::Submit(IMFMediaBuffer* buffer, int64_t time, std::v
     return true;
 }
 
-bool MediaFoundationEncoder::PumpEvent(std::vector<Frame>& out, bool& gotOutput, std::wstring& error) {
+bool MediaFoundationEncoder::PumpEvent(std::vector<Frame>& out, bool& gotOutput,
+                                       std::wstring& error) {
     ComPtr<IMFMediaEvent> event;
     HRESULT hr = m_events->GetEvent(0, &event);  // blocks until the encoder has news
     if (FAILED(hr)) {
@@ -499,7 +499,8 @@ bool MediaFoundationEncoder::PumpEvent(std::vector<Frame>& out, bool& gotOutput,
     return true;
 }
 
-bool MediaFoundationEncoder::ReadOutput(std::vector<Frame>& out, bool& needMoreInput, std::wstring& error) {
+bool MediaFoundationEncoder::ReadOutput(std::vector<Frame>& out, bool& needMoreInput,
+                                        std::wstring& error) {
     MFT_OUTPUT_DATA_BUFFER output = {};
     ComPtr<IMFSample> ownSample;
     if (!m_providesSamples) {

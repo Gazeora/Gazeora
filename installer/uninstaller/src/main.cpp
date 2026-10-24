@@ -10,8 +10,9 @@ namespace {
 
 constexpr wchar_t kTitle[] = L"Uninstall " GAZEORA_PRODUCT_NAME;
 constexpr wchar_t kNotInstalled[] = GAZEORA_PRODUCT_NAME L" isn't installed.";
-constexpr wchar_t kNotStarted[] = L"Windows Installer didn't start. Uninstall " GAZEORA_PRODUCT_NAME
-                                  L" from Settings > Apps instead.";
+constexpr wchar_t kNotStarted[] =
+    L"Windows Installer didn't start. "
+    L"Uninstall " GAZEORA_PRODUCT_NAME L" from Settings > Apps instead.";
 
 }  // namespace
 

@@ -24,8 +24,7 @@ public:
         lastWidth = width;
         lastHeight = height;
     }
-    void PushTexture(uint32_t width, uint32_t height, ComPtr<ID3D11Texture2D> nv12,
-                     bool) override {
+    void PushTexture(uint32_t width, uint32_t height, ComPtr<ID3D11Texture2D> nv12, bool) override {
         ++texturesPushed;
         lastWidth = width;
         lastHeight = height;

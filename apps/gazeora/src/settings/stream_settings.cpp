@@ -126,17 +126,16 @@ namespace {
 // The [overlay] switches, by key, with where each one lives.
 struct OverlaySwitch {
     const wchar_t* key;
-    bool OverlaySettings::*field;
+    bool OverlaySettings::* field;
 };
 constexpr OverlaySwitch kOverlaySwitches[] = {
-    {L"enabled", &OverlaySettings::enabled},     {L"protocol", &OverlaySettings::protocol},
-    {L"viewers", &OverlaySettings::viewers},     {L"codec", &OverlaySettings::codec},
+    {L"enabled", &OverlaySettings::enabled},       {L"protocol", &OverlaySettings::protocol},
+    {L"viewers", &OverlaySettings::viewers},       {L"codec", &OverlaySettings::codec},
     {L"resolution", &OverlaySettings::resolution}, {L"frame_rate", &OverlaySettings::frameRate},
-    {L"bitrate", &OverlaySettings::bitrate},     {L"loss", &OverlaySettings::loss},
-    {L"encoder", &OverlaySettings::encoder},     {L"clock", &OverlaySettings::clock},
+    {L"bitrate", &OverlaySettings::bitrate},       {L"loss", &OverlaySettings::loss},
+    {L"encoder", &OverlaySettings::encoder},       {L"clock", &OverlaySettings::clock},
 };
-constexpr const wchar_t* kCorners[] = {L"top_left", L"top_right", L"bottom_left",
-                                       L"bottom_right"};
+constexpr const wchar_t* kCorners[] = {L"top_left", L"top_right", L"bottom_left", L"bottom_right"};
 
 }  // namespace
 
@@ -154,12 +153,10 @@ OverlaySettings StreamSettings::LoadOverlay() const {
             overlay.corner = OverlaySettings::Corner(i);
         }
     }
-    overlay.textSize = std::clamp(int(GetPrivateProfileIntW(L"overlay", L"text_size",
-                                                            overlay.textSize, file)),
-                                  50, 300);
-    overlay.opacity = std::clamp(int(GetPrivateProfileIntW(L"overlay", L"opacity",
-                                                           overlay.opacity, file)),
-                                 0, 100);
+    overlay.textSize = std::clamp(
+        int(GetPrivateProfileIntW(L"overlay", L"text_size", overlay.textSize, file)), 50, 300);
+    overlay.opacity = std::clamp(
+        int(GetPrivateProfileIntW(L"overlay", L"opacity", overlay.opacity, file)), 0, 100);
     GetPrivateProfileStringW(L"overlay", L"text", L"", text, 512, file);
     overlay.text = text;
     return overlay;

@@ -51,9 +51,8 @@ void STDMETHODCALLTYPE HookExecuteCommandLists(ID3D12CommandQueue* queue, UINT c
 
 // Hooks ExecuteCommandLists, found through a throwaway queue on `device`. `create`
 // is CreateHook at startup and CreateEnabledHook later on.
-bool HookQueueVTable(ID3D12Device* device,
-                     bool (*create)(const char*, void*, ExecuteCommandListsFn,
-                                    ExecuteCommandListsFn*)) {
+bool HookQueueVTable(ID3D12Device* device, bool (*create)(const char*, void*, ExecuteCommandListsFn,
+                                                          ExecuteCommandListsFn*)) {
     D3D12_COMMAND_QUEUE_DESC desc = {};
     desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
     ComPtr<ID3D12CommandQueue> queue;

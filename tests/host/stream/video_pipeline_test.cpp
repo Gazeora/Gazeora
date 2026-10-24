@@ -86,8 +86,7 @@ private:
 
 class VideoPipelineTest : public ::testing::Test {
 protected:
-    VideoPipelineTest()
-        : pipeline([this] { return std::make_unique<FakeEncoder>(calls); }) {
+    VideoPipelineTest() : pipeline([this] { return std::make_unique<FakeEncoder>(calls); }) {
         config.bitrate = 8000000;
         config.ssrc = 0x1234;
         picture.width = 64;

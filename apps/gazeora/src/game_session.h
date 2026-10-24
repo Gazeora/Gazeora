@@ -8,8 +8,8 @@
 #include <string>
 #include <thread>
 
-#include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/host/launch/launcher.h"
+#include "gazeora/host/stream/frame_stream.h"
 
 namespace gazeora::app {
 
@@ -42,7 +42,7 @@ public:
         uint32_t height = 0;
         uint32_t api = 0;
         int64_t skippedFrames = 0;
-        std::wstring streamError;  // why frames can't be streamed, if they can't
+        std::wstring streamError;   // why frames can't be streamed, if they can't
         bool stereoWanted = false;  // 3D is on (VrLayout::stereo)
         bool stereo = false;        // and the last frame streamed was in 3D
     };

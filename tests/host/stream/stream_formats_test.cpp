@@ -67,8 +67,8 @@ TEST(FramePacketTest, ChunksAFrameIntoDatagramsThatFit) {
     for (size_t i = 0; i < datagrams.size(); ++i) {
         EXPECT_LE(datagrams[i].size(), kMaxFrameDatagram);
         FrameHeader read;
-        ASSERT_TRUE(read.Read(reinterpret_cast<const uint8_t*>(datagrams[i].data()),
-                              datagrams[i].size()));
+        ASSERT_TRUE(
+            read.Read(reinterpret_cast<const uint8_t*>(datagrams[i].data()), datagrams[i].size()));
         EXPECT_EQ(read.frameNumber, 9u);
         EXPECT_EQ(read.tail, uint32_t(i) << 16 | 4u);
         joined += datagrams[i].substr(kFrameHeaderSize);
@@ -137,8 +137,8 @@ TEST_F(TsMuxerTest, KeyFramesComeAfterTheTablesAndCarryTheClock) {
 
     // The PAT and PMT end in a valid CRC: running it over the whole section gives 0.
     for (size_t p = 0; p < 2; ++p) {
-        const uint8_t* section = reinterpret_cast<const uint8_t*>(ts.data()) +
-                                 p * TsMuxer::kPacketSize + 5;
+        const uint8_t* section =
+            reinterpret_cast<const uint8_t*>(ts.data()) + p * TsMuxer::kPacketSize + 5;
         size_t length = 3 + ((section[1] & 0x0F) << 8 | section[2]);
         EXPECT_EQ(Crc32Mpeg2(section, length), 0u) << "section " << p;
     }

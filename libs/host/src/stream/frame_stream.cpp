@@ -158,14 +158,13 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     m_h265Available = VideoEncoder::Available(VideoCodec::H265);
     m_stopping = false;
     std::wstring discoveryError;
-    if (!m_discovery.Start(bindAddress, m_discoveryPort, [this] { return Describe(); },
-                           discoveryError)) {
+    if (!m_discovery.Start(
+            bindAddress, m_discoveryPort, [this] { return Describe(); }, discoveryError)) {
         m_log.Write("the Android app can't search for this PC: %ls", discoveryError.c_str());
     }
     std::wstring pointerError;
     if (!m_pointerReceiver.Start(bindAddress, kPointerPort, pointerError)) {
-        m_log.Write("touches from the Android app won't reach this PC: %ls",
-                    pointerError.c_str());
+        m_log.Write("touches from the Android app won't reach this PC: %ls", pointerError.c_str());
     }
     m_log.Write("streaming over %s", ProtocolName(protocol));
     m_running = true;
@@ -186,8 +185,8 @@ bool FrameStreamServer::StartRtsp(in_addr bindAddress, uint16_t port, std::wstri
     }
     // Don't let another program take the port over from under us.
     BOOL exclusive = TRUE;
-    setsockopt(m_listen.Get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-               reinterpret_cast<char*>(&exclusive), sizeof(exclusive));
+    setsockopt(m_listen.Get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<char*>(&exclusive),
+               sizeof(exclusive));
     sockaddr_in address = {};
     address.sin_family = AF_INET;
     address.sin_addr = bindAddress;
@@ -226,8 +225,7 @@ bool FrameStreamServer::StartRtsp(in_addr bindAddress, uint16_t port, std::wstri
 
     m_sendQueue = std::make_unique<PacketSendQueue>();
     m_port = rtspPort;
-    m_log.Write("listening on port %u, RTP from UDP %u, RTCP %u", rtspPort, m_rtpPort,
-                m_rtcpPort);
+    m_log.Write("listening on port %u, RTP from UDP %u, RTCP %u", rtspPort, m_rtpPort, m_rtcpPort);
     return true;
 }
 
@@ -400,7 +398,8 @@ void FrameStreamServer::AcceptLoop() {
         client.SetSendBuffer(kTcpSendBufferBytes);
         client.SetNonBlocking();
 
-        auto connection = std::make_unique<RtspConnection>(std::move(client), net::AddressText(peer));
+        auto connection =
+            std::make_unique<RtspConnection>(std::move(client), net::AddressText(peer));
         m_log.Write("%s connected", connection->Peer().c_str());
         RtspConnection* raw = connection.get();
         std::lock_guard<std::mutex> lock(m_connectionsMutex);
@@ -644,8 +643,8 @@ bool FrameStreamServer::OnSetup(RequestContext& context) {
         session.rtp.sin_port = htons(transport.rtpPort);
         session.rtcp = context.peer;
         session.rtcp.sin_port = htons(transport.rtcpPort);
-        replyTransport = "RTP/AVP;unicast;client_port=" + std::to_string(transport.rtpPort) +
-                         "-" + std::to_string(transport.rtcpPort) +
+        replyTransport = "RTP/AVP;unicast;client_port=" + std::to_string(transport.rtpPort) + "-" +
+                         std::to_string(transport.rtcpPort) +
                          ";server_port=" + std::to_string(m_rtpPort) + "-" +
                          std::to_string(m_rtcpPort);
         m_log.Write("%s set up RTP over UDP to ports %u-%u", connection.Peer().c_str(),
@@ -732,7 +731,8 @@ void FrameStreamServer::SendPackets(const VideoPipeline::EncodedFrame& frame) {
             } else {
                 session.waitingForKeyFrame = false;
                 ++session.framesSent;
-                connection.QueueInterleaved(session.channel, packets, reportNow ? &report : nullptr);
+                connection.QueueInterleaved(session.channel, packets,
+                                            reportNow ? &report : nullptr);
             }
             // Skipped frames count like the loss a UDP player reports, so the bitrate comes
             // down for a connection that can't keep up.
@@ -750,8 +750,8 @@ void FrameStreamServer::SendPackets(const VideoPipeline::EncodedFrame& frame) {
         }
     }
     if (m_sendQueue) {
-        PacingPlan plan = PacingPlan::For(packets.size(), frame.annexB.size(), frame.bitrate,
-                                          frame.fps);
+        PacingPlan plan =
+            PacingPlan::For(packets.size(), frame.annexB.size(), frame.bitrate, frame.fps);
         m_sendQueue->Enqueue(m_rtp.Get(), std::move(targets), packets, plan);
         // Queued after the frame, so it follows the packets it counts.
         m_sendQueue->Enqueue(m_rtcp.Get(), std::move(reportTargets), {report},
@@ -854,8 +854,7 @@ void FrameStreamServer::AdaptQuality(uint64_t now) {
     }
 }
 
-bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& picture,
-                                      bool send) {
+bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& picture, bool send) {
     VideoPipeline::Config config;
     config.codec = Codec();
     config.fps = FrameRate();
@@ -926,7 +925,8 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
 void FrameStreamServer::EncodeLoop() {
     EncodeThreadRuntime runtime;
     if (!runtime.MediaFoundation()) {
-        SetLastError(L"Media Foundation is unavailable (Windows N without the Media Feature Pack?)");
+        SetLastError(
+            L"Media Foundation is unavailable (Windows N without the Media Feature Pack?)");
         return;
     }
     VideoPipeline pipeline(m_encoderFactory);
@@ -935,7 +935,7 @@ void FrameStreamServer::EncodeLoop() {
     OverlayRenderer overlay;
     FrameRateCounter frameRate;
     uint64_t lastLiveMs = 0;
-    bool probed = false;  // the idle frame was encoded with no one watching
+    bool probed = false;      // the idle frame was encoded with no one watching
     uint64_t nextIdleMs = 0;  // on the 90 kHz clock's millisecond scale; GetTickCount64 is too
                               // coarse for 33 ms
 

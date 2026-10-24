@@ -18,8 +18,8 @@ using Direct3DCreate9Fn = IDirect3D9*(WINAPI*)(UINT);
 using Direct3DCreate9ExFn = HRESULT(WINAPI*)(UINT, IDirect3D9Ex**);
 using PresentFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND,
                                               const RGNDATA*);
-using PresentExFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DDevice9Ex*, const RECT*, const RECT*,
-                                                HWND, const RGNDATA*, DWORD);
+using PresentExFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DDevice9Ex*, const RECT*, const RECT*, HWND,
+                                                const RGNDATA*, DWORD);
 using SwapChainPresentFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DSwapChain9*, const RECT*,
                                                        const RECT*, HWND, const RGNDATA*, DWORD);
 using ResetFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
@@ -94,8 +94,7 @@ HRESULT Present(IDirect3DDevice9* device, IDirect3DSwapChain9* swap, Fn present)
 
 HRESULT STDMETHODCALLTYPE HookPresent(IDirect3DDevice9* device, const RECT* src, const RECT* dst,
                                       HWND window, const RGNDATA* dirty) {
-    return Present(device, nullptr,
-                   [&] { return g_origPresent(device, src, dst, window, dirty); });
+    return Present(device, nullptr, [&] { return g_origPresent(device, src, dst, window, dirty); });
 }
 
 HRESULT STDMETHODCALLTYPE HookPresentEx(IDirect3DDevice9Ex* device, const RECT* src,
@@ -108,9 +107,8 @@ HRESULT STDMETHODCALLTYPE HookPresentEx(IDirect3DDevice9Ex* device, const RECT* 
 HRESULT STDMETHODCALLTYPE HookSwapChainPresent(IDirect3DSwapChain9* swap, const RECT* src,
                                                const RECT* dst, HWND window, const RGNDATA* dirty,
                                                DWORD flags) {
-    return Present(nullptr, swap, [&] {
-        return g_origSwapChainPresent(swap, src, dst, window, dirty, flags);
-    });
+    return Present(nullptr, swap,
+                   [&] { return g_origSwapChainPresent(swap, src, dst, window, dirty, flags); });
 }
 
 // Reset fails while D3DPOOL_DEFAULT resources (our MSAA resolve target) exist.
@@ -176,8 +174,8 @@ bool HookVTables(Direct3DCreate9ExFn direct3DCreate9Ex, CreateFn create) {
     void* dev = device.Get();
     return create("IDirect3DDevice9::Present", VTableEntry(dev, kPresentSlot), &HookPresent,
                   &g_origPresent) &&
-           create("IDirect3DDevice9Ex::PresentEx", VTableEntry(dev, kPresentExSlot),
-                  &HookPresentEx, &g_origPresentEx) &&
+           create("IDirect3DDevice9Ex::PresentEx", VTableEntry(dev, kPresentExSlot), &HookPresentEx,
+                  &g_origPresentEx) &&
            create("IDirect3DSwapChain9::Present", VTableEntry(swap.Get(), kSwapChainPresentSlot),
                   &HookSwapChainPresent, &g_origSwapChainPresent) &&
            create("IDirect3DDevice9::Reset", VTableEntry(dev, kResetSlot), &HookReset,

@@ -106,21 +106,21 @@ struct SharedHeader {
     volatile LONG texSeq;
     uint32_t width;
     uint32_t height;
-    uint32_t format;  // DXGI_FORMAT
-    uint32_t api;        // GraphicsApi
-    uint32_t hostFlags;  // HostFlags, written by the host before injecting
-    LUID adapterLuid;                   // the host must open the textures on this adapter
-    uint64_t slotHandles[kFrameSlots];  // NT handles, valid in the game process
-    uint64_t frameFenceHandle;          // NT handle, valid in the game process
-    uint64_t hostFenceHandle;           // NT handle, valid in the game process
+    uint32_t format;                         // DXGI_FORMAT
+    uint32_t api;                            // GraphicsApi
+    uint32_t hostFlags;                      // HostFlags, written by the host before injecting
+    LUID adapterLuid;                        // the host must open the textures on this adapter
+    uint64_t slotHandles[kFrameSlots];       // NT handles, valid in the game process
+    uint64_t frameFenceHandle;               // NT handle, valid in the game process
+    uint64_t hostFenceHandle;                // NT handle, valid in the game process
     uint64_t depthSlotHandles[kFrameSlots];  // NT handles; 0 without depth slots
-    int64_t firstFrame;                 // first frame number written to these textures
+    int64_t firstFrame;                      // first frame number written to these textures
 
-    volatile LONG64 frameIndex;        // latest published frame number (written by hook)
-    volatile LONG64 writingFrame;      // frame the hook is about to write (hook)
-    volatile LONG64 hostReadingFrame;  // frame the host is about to read (host)
-    volatile LONG64 lastPresentQpc;    // QueryPerformanceCounter at capture time
-    volatile LONG64 skippedFrames;     // presents not captured because a slot was busy
+    volatile LONG64 frameIndex;             // latest published frame number (written by hook)
+    volatile LONG64 writingFrame;           // frame the hook is about to write (hook)
+    volatile LONG64 hostReadingFrame;       // frame the host is about to read (host)
+    volatile LONG64 lastPresentQpc;         // QueryPerformanceCounter at capture time
+    volatile LONG64 skippedFrames;          // presents not captured because a slot was busy
     DepthSlotInfo depthSlots[kFrameSlots];  // by slot, written by the hook with the frame
 
     char status[256];  // last human-readable status/error from the hook

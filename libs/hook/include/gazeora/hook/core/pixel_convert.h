@@ -10,14 +10,14 @@ namespace gazeora::hook {
 
 // Named by byte order in memory, lowest address first.
 enum class PixelLayout {
-    BGRA8,        // copied as is
-    BGRX8,        // alpha forced opaque
-    RGBA8,        // copied as is
-    RGBX8,        // alpha forced opaque
-    RGB10A2,      // copied as is (red in the low bits)
-    BGR10A2,      // red and blue swapped (blue in the low bits)
-    B5G6R5,       // expanded to BGRA8
-    B5G5R5X1,     // expanded to BGRA8
+    BGRA8,     // copied as is
+    BGRX8,     // alpha forced opaque
+    RGBA8,     // copied as is
+    RGBX8,     // alpha forced opaque
+    RGB10A2,   // copied as is (red in the low bits)
+    BGR10A2,   // red and blue swapped (blue in the low bits)
+    B5G6R5,    // expanded to BGRA8
+    B5G5R5X1,  // expanded to BGRA8
 };
 
 // The frame ring format for frames in `layout`.

@@ -27,8 +27,8 @@ public:
 
     // Creates the textures and fences on `device` and publishes them to the host; with
     // `depth`, the depth slots too (shared.h).
-    bool Create(ID3D11Device5* device, UINT width, UINT height, DXGI_FORMAT format,
-                GraphicsApi api, bool depth = false);
+    bool Create(ID3D11Device5* device, UINT width, UINT height, DXGI_FORMAT format, GraphicsApi api,
+                bool depth = false);
 
     // Announces that `frame` is about to be written into Slot(frame). False means skip it.
     bool Claim(LONG64 frame) const;

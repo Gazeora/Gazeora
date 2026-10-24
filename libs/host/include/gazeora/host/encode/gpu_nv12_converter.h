@@ -17,9 +17,8 @@ class GpuNv12Converter {
 public:
     // `source` as NV12, at its size rounded down to even (width x height), in a texture from
     // the pool. Null with `error` set if this device or format can't be converted here.
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> Convert(ID3D11Device* device,
-                                                    ID3D11Texture2D* source, UINT& width,
-                                                    UINT& height, std::wstring& error);
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> Convert(ID3D11Device* device, ID3D11Texture2D* source,
+                                                    UINT& width, UINT& height, std::wstring& error);
 
 private:
     // How the source's channels are stored, as the shader reads them back to bytes.

@@ -188,8 +188,8 @@ void RecordCopy(ID3D12GraphicsCommandList* list, ID3D12Resource* depth,
         bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         ComPtr<ID3D12Resource> buffer;
         if (total == 0 || FAILED(device->CreateCommittedResource(
-                              &heap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
-                              D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&buffer)))) {
+                              &heap, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COMMON,
+                              nullptr, IID_PPV_ARGS(&buffer)))) {
             return;
         }
         if (t.buffer) {
@@ -266,8 +266,7 @@ void STDMETHODCALLTYPE HookExecuteIndirect(ID3D12GraphicsCommandList* list,
                                            ID3D12Resource* arguments, UINT64 argumentOffset,
                                            ID3D12Resource* count, UINT64 countOffset) {
     if (t_bound.list == list) t_bound.draws += kIndirectDraws;
-    g_origExecuteIndirect(list, signature, maxCount, arguments, argumentOffset, count,
-                          countOffset);
+    g_origExecuteIndirect(list, signature, maxCount, arguments, argumentOffset, count, countOffset);
 }
 
 void STDMETHODCALLTYPE HookOMSetRenderTargets(ID3D12GraphicsCommandList* list, UINT count,
@@ -364,11 +363,10 @@ bool InstallDepthHooks(ID3D12Device* device, bool enable) {
                 &g_origDrawIndexedInstanced) &&
            Hook(enable, "ID3D12GraphicsCommandList::ExecuteIndirect", l, kExecuteIndirectSlot,
                 &HookExecuteIndirect, &g_origExecuteIndirect) &&
-           Hook(enable, "ID3D12Device::CreateDepthStencilView", device,
-                kCreateDepthStencilViewSlot, &HookCreateDepthStencilView,
-                &g_origCreateDepthStencilView) &&
-           Hook(enable, "ID3D12GraphicsCommandList::OMSetRenderTargets", l,
-                kOMSetRenderTargetsSlot, &HookOMSetRenderTargets, &g_origOMSetRenderTargets);
+           Hook(enable, "ID3D12Device::CreateDepthStencilView", device, kCreateDepthStencilViewSlot,
+                &HookCreateDepthStencilView, &g_origCreateDepthStencilView) &&
+           Hook(enable, "ID3D12GraphicsCommandList::OMSetRenderTargets", l, kOMSetRenderTargetsSlot,
+                &HookOMSetRenderTargets, &g_origOMSetRenderTargets);
 }
 
 bool TakeDepthCopy(ID3D12Device* device, UINT backBufferWidth, UINT backBufferHeight,

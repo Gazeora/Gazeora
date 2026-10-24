@@ -169,8 +169,8 @@ bool CaptureClient::OpenResources(const SharedHeader& snapshot) {
              SUCCEEDED(m_device->OpenSharedResource1(handles[i], IID_PPV_ARGS(&m_slots[i])));
         // Without depth the frames still go out, in 2D.
         if (ok && depthHandles[i] &&
-            FAILED(m_device->OpenSharedResource1(depthHandles[i],
-                                                 IID_PPV_ARGS(&m_depthSlots[i])))) {
+            FAILED(
+                m_device->OpenSharedResource1(depthHandles[i], IID_PPV_ARGS(&m_depthSlots[i])))) {
             m_depthSlots[i].Reset();
         }
     }

@@ -23,8 +23,8 @@
 #include "ui/logo_frame.h"
 #include "ui/text_format.h"
 #include "ui/theme.h"
-#include "version_info.h"
 #include "ui/widgets.h"
+#include "version_info.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -95,7 +95,8 @@ void App::DrawSettings() {
     bool found = GetFileAttributesW(dll.c_str()) != INVALID_FILE_ATTRIBUTES;
     FieldLabel(m_fonts.caption, "Capture hook");
     ImGui::PushStyleColor(ImGuiCol_Text, found ? kAccent : kDanger);
-    ImGui::TextUnformatted(found ? ICON_CHECK "  Found" : ICON_WARNING "  Missing - rebuild Gazeora");
+    ImGui::TextUnformatted(found ? ICON_CHECK "  Found"
+                                 : ICON_WARNING "  Missing - rebuild Gazeora");
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%s", U8(dll).c_str());
@@ -110,12 +111,14 @@ void App::DrawSettings() {
                        "captured. The Android app finds this PC by itself on the same network.";
     if (protocol != StreamProtocol::Udp && protocol != StreamProtocol::Usb) {
         // VLC buffers a second of any network stream by default; that's most of the delay.
-        help += "\n\nVLC buffers 1 s by default: lower its network caching (0-100 ms wired, "
-                "about 300 ms on Wi-Fi).";
+        help +=
+            "\n\nVLC buffers 1 s by default: lower its network caching (0-100 ms wired, "
+            "about 300 ms on Wi-Fi).";
     }
-    help += "\n\nOn a weak link the bitrate drops, and recovers once the link is clean. 5 GHz "
-            "Wi-Fi and a wired PC help most.\n\nLog: " +
-            U8(StreamSettings::LogPath());
+    help +=
+        "\n\nOn a weak link the bitrate drops, and recovers once the link is clean. 5 GHz "
+        "Wi-Fi and a wired PC help most.\n\nLog: " +
+        U8(StreamSettings::LogPath());
     FieldLabel(m_fonts.caption, "Protocol");
     HelpMarker(help.c_str(), S(380));
     DrawProtocolChoice();
@@ -188,13 +191,13 @@ void App::DrawSettings() {
     // Required in every version by NOTICE's additional terms (GPLv3 section 7(b)).
     ImGui::TextUnformatted(GAZEORA_ATTRIBUTION "  \xC2\xB7  Version " GAZEORA_VERSION_STRING);
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-    ImGui::TextWrapped("%s", GAZEORA_COPYRIGHT ". Free software under the GNU GPL version 3, "
-                             "with no warranty: see LICENSE and NOTICE.");
+    ImGui::TextWrapped("%s", GAZEORA_COPYRIGHT
+                       ". Free software under the GNU GPL version 3, "
+                       "with no warranty: see LICENSE and NOTICE.");
     ImGui::PopStyleColor();
     EndCard();
     ImGui::PopStyleVar();
 }
-
 
 void App::DrawProtocolChoice() {
     StreamProtocol current = m_stream.Protocol();
@@ -260,11 +263,13 @@ void App::DrawUsbDriverButton() {
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(S(380));
-        ImGui::TextUnformatted("Once per PC: WinUSB for phones in accessory mode. Windows asks "
-                               "for an administrator.");
+        ImGui::TextUnformatted(
+            "Once per PC: WinUSB for phones in accessory mode. Windows asks "
+            "for an administrator.");
         if (!phones.empty()) {
-            ImGui::TextUnformatted("Phones without USB debugging lose file transfer on this PC "
-                                   "until you restore it.");
+            ImGui::TextUnformatted(
+                "Phones without USB debugging lose file transfer on this PC "
+                "until you restore it.");
         }
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
@@ -273,8 +278,9 @@ void App::DrawUsbDriverButton() {
         ImGui::SameLine();
         if (ImGui::Button(ICON_REFRESH "  Restore file transfer")) {
             HWND owner = m_hwnd;
-            m_usbDriverDone = "File transfer restored. Those phones need USB debugging for the "
-                              "USB stream again.";
+            m_usbDriverDone =
+                "File transfer restored. Those phones need USB debugging for the "
+                "USB stream again.";
             m_usbDriverInstall = std::async(std::launch::async, [owner] {
                 std::wstring error;
                 RestoreFileTransferElevated(owner, error);
@@ -352,11 +358,12 @@ void App::DrawQualityChoice() {
         }
         ImGui::EndCombo();
     }
-    HelpMarker("The bitrate at full quality: more bits keep fine detail and motion sharp. H.265 "
-               "uses 70% of it for about the same picture. While the phone reports lost "
-               "packets, the stream steps down to as little as a quarter of it, and back up "
-               "once the link is clean. Applies at once.",
-               S(380));
+    HelpMarker(
+        "The bitrate at full quality: more bits keep fine detail and motion sharp. H.265 "
+        "uses 70% of it for about the same picture. While the phone reports lost "
+        "packets, the stream steps down to as little as a quarter of it, and back up "
+        "once the link is clean. Applies at once.",
+        S(380));
 }
 
 void App::DrawFrameRateChoice() {
@@ -386,11 +393,12 @@ void App::DrawFrameRateChoice() {
         }
         ImGui::EndCombo();
     }
-    HelpMarker("Frames streamed a second. 60 halves the wait for the next frame and moves "
-               "smoother; from the same stream quality each frame gets half the bits, so pick "
-               "a higher quality with it if the Wi-Fi allows. Games drawing fewer frames have "
-               "their last one sent again. Applies at once, with a key frame.",
-               S(380));
+    HelpMarker(
+        "Frames streamed a second. 60 halves the wait for the next frame and moves "
+        "smoother; from the same stream quality each frame gets half the bits, so pick "
+        "a higher quality with it if the Wi-Fi allows. Games drawing fewer frames have "
+        "their last one sent again. Applies at once, with a key frame.",
+        S(380));
 }
 
 void App::DrawOverlayCard(float width) {
@@ -405,9 +413,10 @@ void App::DrawOverlayCard(float width) {
     ImGui::SameLine();
     ImGui::TextUnformatted(m_overlay.enabled ? "Streaming details shown in the stream"
                                              : "Show streaming details in the stream");
-    HelpMarker("Draws the details you pick into the frames themselves, so every player shows "
-               "them: in a corner of the picture, or of each eye in VR mode.",
-               S(380));
+    HelpMarker(
+        "Draws the details you pick into the frames themselves, so every player shows "
+        "them: in a corner of the picture, or of each eye in VR mode.",
+        S(380));
 
     ImGui::BeginDisabled(!m_overlay.enabled);
     FieldLabel(m_fonts.caption, "Details");
@@ -416,10 +425,10 @@ void App::DrawOverlayCard(float width) {
         bool* value;
     };
     const Detail details[] = {
-        {"Protocol", &m_overlay.protocol},     {"Viewers", &m_overlay.viewers},
-        {"Codec", &m_overlay.codec},           {"Resolution", &m_overlay.resolution},
-        {"Frame rate", &m_overlay.frameRate},  {"Bitrate", &m_overlay.bitrate},
-        {"Packet loss", &m_overlay.loss},      {"Encoder", &m_overlay.encoder},
+        {"Protocol", &m_overlay.protocol},    {"Viewers", &m_overlay.viewers},
+        {"Codec", &m_overlay.codec},          {"Resolution", &m_overlay.resolution},
+        {"Frame rate", &m_overlay.frameRate}, {"Bitrate", &m_overlay.bitrate},
+        {"Packet loss", &m_overlay.loss},     {"Encoder", &m_overlay.encoder},
         {"PC clock", &m_overlay.clock},
     };
     if (ImGui::BeginTable("##overlaydetails", 3)) {
@@ -491,10 +500,11 @@ void App::DrawVrCard(float width) {
     };
 
     changed |= ImGui::Checkbox("Side by side for a phone in a VR viewer", &m_vr.enabled);
-    HelpMarker("Shows the picture once per eye, pre-distorted for the viewer's lenses. Play the "
-               "stream full screen in landscape. Changes apply live, so you can tune them with "
-               "the headset on.",
-               S(380));
+    HelpMarker(
+        "Shows the picture once per eye, pre-distorted for the viewer's lenses. Play the "
+        "stream full screen in landscape. Changes apply live, so you can tune them with "
+        "the headset on.",
+        S(380));
 
     if (m_vr.enabled) {
         FieldLabel(m_fonts.caption, "Lens correction done by");
@@ -506,11 +516,12 @@ void App::DrawVrCard(float width) {
             m_vr.lensOnPhone = onPc == 0;
             changed = true;
         }
-        HelpMarker("On the phone, the stream carries the game's picture as it is, every pixel "
-                   "for the game, and the app draws it into both eyes for its own screen. On "
-                   "this PC, frames go out already split and warped, so any player can show "
-                   "them.",
-                   S(380));
+        HelpMarker(
+            "On the phone, the stream carries the game's picture as it is, every pixel "
+            "for the game, and the app draws it into both eyes for its own screen. On "
+            "this PC, frames go out already split and warped, so any player can show "
+            "them.",
+            S(380));
 
         int lens = IM_ARRAYSIZE(kLensPresets);  // custom
         for (int i = 0; i < IM_ARRAYSIZE(kLensPresets); ++i) {
@@ -556,19 +567,20 @@ void App::DrawVrCard(float width) {
         slider("Barrel distortion (k1)", "##vrk1", &m_vr.k1, 0.0f, 1.0f, "%.3f");
         slider("Edge distortion (k2)", "##vrk2", &m_vr.k2, 0.0f, 1.0f, "%.3f");
         slider("Picture size", "##vrscale", &m_vr.imageScale, 0.3f, 1.5f, "%.2f");
-        slider("Lens separation (share of the screen width)", "##vrsep", &m_vr.lensSeparation,
-               0.3f, 0.7f, "%.3f");
+        slider("Lens separation (share of the screen width)", "##vrsep", &m_vr.lensSeparation, 0.3f,
+               0.7f, "%.3f");
         slider("Color fringe correction", "##vrchroma", &m_vr.chromaCorrection, 0.0f, 0.05f,
                "%.3f");
 
         ImGui::Dummy(ImVec2(0, S(4)));
         changed |= ImGui::Checkbox("3D from the game's depth", &m_vr.stereo);
-        HelpMarker("Gives each eye its own view of the scene, made from the game's depth buffer. "
-                   "The subject in the middle of the view sits at the screen; farther things go "
-                   "back, nearer ones come out. Works in D3D11 and D3D12 games while they draw "
-                   "a 3D scene; the logo and videos stay flat. Things drawn over the scene, "
-                   "like the HUD, take the depth of what's behind them.",
-                   S(380));
+        HelpMarker(
+            "Gives each eye its own view of the scene, made from the game's depth buffer. "
+            "The subject in the middle of the view sits at the screen; farther things go "
+            "back, nearer ones come out. Works in D3D11 and D3D12 games while they draw "
+            "a 3D scene; the logo and videos stay flat. Things drawn over the scene, "
+            "like the HUD, take the depth of what's behind them.",
+            S(380));
         if (m_vr.stereo) {
             slider("3D depth (how far back the distance goes)", "##vrdepth", &m_vr.stereoDepth,
                    0.002f, 0.04f, "%.3f");
@@ -594,6 +606,5 @@ void App::DrawVrCard(float width) {
     }
     EndCard();
 }
-
 
 }  // namespace gazeora::app

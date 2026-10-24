@@ -23,8 +23,7 @@ public:
                            bool stereo = false) = 0;
     // One NV12 frame on the GPU (GpuNv12Converter), width x height (even).
     virtual void PushTexture(uint32_t width, uint32_t height,
-                             Microsoft::WRL::ComPtr<ID3D11Texture2D> nv12,
-                             bool stereo = false) = 0;
+                             Microsoft::WRL::ComPtr<ID3D11Texture2D> nv12, bool stereo = false) = 0;
     // The last frame pushed, again, as the game hasn't drawn a new one.
     virtual void RepeatFrame() = 0;
 };

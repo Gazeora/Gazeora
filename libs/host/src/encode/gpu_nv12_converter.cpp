@@ -48,8 +48,7 @@ constexpr UINT kConstantsSize = 16;
 }  // namespace
 
 ComPtr<ID3D11Texture2D> GpuNv12Converter::Convert(ID3D11Device* device, ID3D11Texture2D* source,
-                                                  UINT& width, UINT& height,
-                                                  std::wstring& error) {
+                                                  UINT& width, UINT& height, std::wstring& error) {
     if (!device || !source) {
         error = L"no frame to convert";
         return nullptr;
@@ -120,24 +119,23 @@ bool GpuNv12Converter::Prepare(ID3D11Device* device, std::wstring& error) {
         return !m_failed;
     }
     auto compile = [&](const char* entry, const char* target, ComPtr<ID3DBlob>& blob) {
-        return SUCCEEDED(D3DCompile(kShader, sizeof(kShader) - 1, nullptr, nullptr, nullptr,
-                                    entry, target, 0, 0, &blob, nullptr));
+        return SUCCEEDED(D3DCompile(kShader, sizeof(kShader) - 1, nullptr, nullptr, nullptr, entry,
+                                    target, 0, 0, &blob, nullptr));
     };
     ComPtr<ID3DBlob> vs, luma, chroma;
     D3D11_BUFFER_DESC constants = {};
     constants.ByteWidth = kConstantsSize;
     constants.Usage = D3D11_USAGE_DEFAULT;
     constants.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    m_failed =
-        !compile("vs", "vs_4_0", vs) || !compile("luma", "ps_4_0", luma) ||
-        !compile("chroma", "ps_4_0", chroma) ||
-        FAILED(device->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr,
-                                          &m_vertexShader)) ||
-        FAILED(device->CreatePixelShader(luma->GetBufferPointer(), luma->GetBufferSize(), nullptr,
-                                         &m_lumaShader)) ||
-        FAILED(device->CreatePixelShader(chroma->GetBufferPointer(), chroma->GetBufferSize(),
-                                         nullptr, &m_chromaShader)) ||
-        FAILED(device->CreateBuffer(&constants, nullptr, &m_constants));
+    m_failed = !compile("vs", "vs_4_0", vs) || !compile("luma", "ps_4_0", luma) ||
+               !compile("chroma", "ps_4_0", chroma) ||
+               FAILED(device->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(),
+                                                 nullptr, &m_vertexShader)) ||
+               FAILED(device->CreatePixelShader(luma->GetBufferPointer(), luma->GetBufferSize(),
+                                                nullptr, &m_lumaShader)) ||
+               FAILED(device->CreatePixelShader(chroma->GetBufferPointer(), chroma->GetBufferSize(),
+                                                nullptr, &m_chromaShader)) ||
+               FAILED(device->CreateBuffer(&constants, nullptr, &m_constants));
     if (m_failed) {
         m_lumaShader.Reset();
         error = L"the NV12 shaders can't run on this GPU";

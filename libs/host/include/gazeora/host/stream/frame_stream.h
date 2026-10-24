@@ -45,8 +45,8 @@ struct RtspRequest;
 // Whatever the protocol, the PC answers the Android app's search for it (discovery.h).
 // Frames are pushed from the capture thread and encoded on the server's own thread; frames
 // arriving faster than they can be encoded are dropped, newest wins. They come as BGRA8 in
-// memory, or as NV12 textures that go to a GPU encoder without leaving the GPU. While no frame has been
-// pushed for a second, the idle frame (the logo) is streamed instead.
+// memory, or as NV12 textures that go to a GPU encoder without leaving the GPU. While no frame has
+// been pushed for a second, the idle frame (the logo) is streamed instead.
 //
 // The server coordinates; the work is done by its parts: FrameMailbox (frames in),
 // VideoPipeline (encoding, RTP), BitrateController (adapting to loss), RtspConnection (one
@@ -175,7 +175,7 @@ private:
         bool tcp = false;     // interleaved in the RTSP connection instead
         uint8_t channel = 0;  // interleaved channel for RTP; RTCP goes on the next one
         bool playing = false;
-        bool app = false;  // the Gazeora app, by its User-Agent
+        bool app = false;          // the Gazeora app, by its User-Agent
         bool needsReport = false;  // just started playing: send a sender report right away
         // Interleaved: frames that didn't fit the connection's backlog, and whether the
         // player has to wait for a key frame since.

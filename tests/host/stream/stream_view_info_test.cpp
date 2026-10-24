@@ -56,10 +56,10 @@ TEST(StreamViewInfoTest, LongTextsTakeSizeBytesOf255) {
 }
 
 TEST(StreamViewInfoTest, TellsPicturesFromTheRest) {
-    EXPECT_TRUE(IsPictureNal(VideoCodec::H264, "\x65"));   // IDR
-    EXPECT_TRUE(IsPictureNal(VideoCodec::H264, "\x41"));   // P slice
-    EXPECT_FALSE(IsPictureNal(VideoCodec::H264, "\x67"));  // SPS
-    EXPECT_FALSE(IsPictureNal(VideoCodec::H264, "\x06"));  // SEI
+    EXPECT_TRUE(IsPictureNal(VideoCodec::H264, "\x65"));                       // IDR
+    EXPECT_TRUE(IsPictureNal(VideoCodec::H264, "\x41"));                       // P slice
+    EXPECT_FALSE(IsPictureNal(VideoCodec::H264, "\x67"));                      // SPS
+    EXPECT_FALSE(IsPictureNal(VideoCodec::H264, "\x06"));                      // SEI
     EXPECT_TRUE(IsPictureNal(VideoCodec::H265, std::string("\x26\x01", 2)));   // IDR_W_RADL
     EXPECT_TRUE(IsPictureNal(VideoCodec::H265, std::string("\x02\x01", 2)));   // TRAIL_R
     EXPECT_FALSE(IsPictureNal(VideoCodec::H265, std::string("\x40\x01", 2)));  // VPS

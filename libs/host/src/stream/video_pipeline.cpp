@@ -15,8 +15,8 @@ VideoPipeline::VideoPipeline(EncoderFactory factory)
       m_parameterSets(*m_format),
       m_seq(uint16_t(std::random_device()())) {}
 
-bool VideoPipeline::Prepare(const Config& config, uint32_t width, uint32_t height,
-                            bool& reopened, std::wstring& error, ID3D11Device* device) {
+bool VideoPipeline::Prepare(const Config& config, uint32_t width, uint32_t height, bool& reopened,
+                            std::wstring& error, ID3D11Device* device) {
     reopened = false;
     if (!m_encoder) {
         m_encoder = m_factory();
@@ -92,8 +92,9 @@ bool VideoPipeline::Encode(const Picture& picture, const FrameSink& sink, bool& 
         SplitAnnexB(frame.annexB, m_nalUnits);
         // From the NAL units rather than the encoder's clean-point flag: an IDR (IRAP for
         // H.265) is what a player can start decoding from.
-        bool keyFrame = std::any_of(m_nalUnits.begin(), m_nalUnits.end(),
-                                    [&](const std::string& nal) { return m_format->IsKeyFrame(nal); });
+        bool keyFrame =
+            std::any_of(m_nalUnits.begin(), m_nalUnits.end(),
+                        [&](const std::string& nal) { return m_format->IsKeyFrame(nal); });
         fmtpChanged |= m_parameterSets.Update(m_nalUnits);
         // Every key frame carries the parameter sets, for players that join on it.
         if (keyFrame) {

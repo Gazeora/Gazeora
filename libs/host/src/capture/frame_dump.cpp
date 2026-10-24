@@ -337,18 +337,18 @@ bool TextureReader::CreateShaders() {
     constants.ByteWidth = 48;
     constants.Usage = D3D11_USAGE_DEFAULT;
     constants.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    m_shaderFailed =
-        !compile("", "vs", "vs_4_0", vs) || !compile(kScaleShader, "ps", "ps_4_0", ps) ||
-        !compile(kDecodeDepthShader, "ps", "ps_4_0", decode) ||
-        !compile(kMeanDepthShader, "ps", "ps_4_0", mean) ||
-        !compile(kStereoShader, "ps", "ps_4_0", stereo) ||
-        FAILED(m_device->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr,
-                                            &m_vertexShader)) ||
-        !pixelShader(ps, m_pixelShader) || !pixelShader(decode, m_decodeShader) ||
-        !pixelShader(mean, m_meanShader) || !pixelShader(stereo, m_stereoShader) ||
-        FAILED(m_device->CreateSamplerState(&sampler, &m_sampler)) ||
-        FAILED(m_device->CreateSamplerState(&pointSampler, &m_pointSampler)) ||
-        FAILED(m_device->CreateBuffer(&constants, nullptr, &m_constants));
+    m_shaderFailed = !compile("", "vs", "vs_4_0", vs) ||
+                     !compile(kScaleShader, "ps", "ps_4_0", ps) ||
+                     !compile(kDecodeDepthShader, "ps", "ps_4_0", decode) ||
+                     !compile(kMeanDepthShader, "ps", "ps_4_0", mean) ||
+                     !compile(kStereoShader, "ps", "ps_4_0", stereo) ||
+                     FAILED(m_device->CreateVertexShader(
+                         vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &m_vertexShader)) ||
+                     !pixelShader(ps, m_pixelShader) || !pixelShader(decode, m_decodeShader) ||
+                     !pixelShader(mean, m_meanShader) || !pixelShader(stereo, m_stereoShader) ||
+                     FAILED(m_device->CreateSamplerState(&sampler, &m_sampler)) ||
+                     FAILED(m_device->CreateSamplerState(&pointSampler, &m_pointSampler)) ||
+                     FAILED(m_device->CreateBuffer(&constants, nullptr, &m_constants));
     if (m_shaderFailed) {
         m_pixelShader.Reset();
         return false;
@@ -451,8 +451,7 @@ bool TextureReader::PrepareTarget(const D3D11_TEXTURE2D_DESC& source, UINT width
 }
 
 bool TextureReader::Render(ID3D11DeviceContext* context, ID3D11ShaderResourceView* view,
-                           const D3D11_TEXTURE2D_DESC& source, UINT width, UINT height,
-                           Pass pass) {
+                           const D3D11_TEXTURE2D_DESC& source, UINT width, UINT height, Pass pass) {
     if (!view || !PrepareTarget(source, width, height)) {
         return false;
     }
@@ -611,8 +610,8 @@ ID3D11Texture2D* TextureReader::Compose(ID3D11Device* device, ID3D11Texture2D* t
 
     // The frame's size flat: within the max size, keeping its shape.
     UINT flatWidth = source.Width, flatHeight = source.Height;
-    bool scale = m_maxWidth && m_maxHeight &&
-                 (source.Width > m_maxWidth || source.Height > m_maxHeight);
+    bool scale =
+        m_maxWidth && m_maxHeight && (source.Width > m_maxWidth || source.Height > m_maxHeight);
     if (scale) {
         double factor =
             std::min(double(m_maxWidth) / source.Width, double(m_maxHeight) / source.Height);
@@ -627,8 +626,8 @@ ID3D11Texture2D* TextureReader::Compose(ID3D11Device* device, ID3D11Texture2D* t
         uint32_t vrWidth, vrHeight;
         m_vr.FrameSize(m_maxWidth ? m_maxWidth : 1920, m_maxHeight ? m_maxHeight : 1080, vrWidth,
                        vrHeight);
-        m_stereo =
-            stereo && RenderStereo(context.Get(), view, source, *depth, flatWidth, flatHeight, true);
+        m_stereo = stereo &&
+                   RenderStereo(context.Get(), view, source, *depth, flatWidth, flatHeight, true);
         D3D11_TEXTURE2D_DESC pair = {};
         if (m_stereo) {
             m_pair->GetDesc(&pair);
@@ -642,8 +641,8 @@ ID3D11Texture2D* TextureReader::Compose(ID3D11Device* device, ID3D11Texture2D* t
         }
         return m_scaled.Get();
     }
-    if (stereo && RenderStereo(context.Get(), view, source, *depth, flatWidth / 2, flatHeight,
-                               false)) {
+    if (stereo &&
+        RenderStereo(context.Get(), view, source, *depth, flatWidth / 2, flatHeight, false)) {
         m_stereo = true;
         return m_scaled.Get();
     }
@@ -655,8 +654,7 @@ ID3D11Texture2D* TextureReader::Compose(ID3D11Device* device, ID3D11Texture2D* t
 }
 
 bool TextureReader::Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& width, UINT& height,
-                         std::vector<uint8_t>& bgra, std::wstring& error,
-                         const DepthFrame* depth) {
+                         std::vector<uint8_t>& bgra, std::wstring& error, const DepthFrame* depth) {
     ID3D11Texture2D* readFrom = Compose(device, texture, error, depth);
     if (!readFrom) {
         return false;

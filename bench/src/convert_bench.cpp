@@ -64,8 +64,9 @@ TEST(Convert, BgraToNv12) {
         }
         double cpuPerFrame = (CpuSeconds() - cpuStart) / kFrames;
         Stats s = Stats::Of(times);
-        Print(size.name, s, Throughput(double(bgra.size()), s.median) + ", CPU " +
-                                FormatSeconds(cpuPerFrame) + "/frame");
+        Print(size.name, s,
+              Throughput(double(bgra.size()), s.median) + ", CPU " + FormatSeconds(cpuPerFrame) +
+                  "/frame");
     }
 }
 

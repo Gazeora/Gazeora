@@ -149,8 +149,8 @@ void UdpFrameOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateContr
         return;
     }
     // Spread like RTP: a key frame sent all at once overflows Wi-Fi buffers.
-    PacingPlan plan = PacingPlan::For(m_datagrams.size(), frame.annexB.size(), frame.bitrate,
-                                      frame.fps);
+    PacingPlan plan =
+        PacingPlan::For(m_datagrams.size(), frame.annexB.size(), frame.bitrate, frame.fps);
     m_sendQueue->Enqueue(m_socket.Get(), std::move(targets), m_datagrams, plan);
 }
 

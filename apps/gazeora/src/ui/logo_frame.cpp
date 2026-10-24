@@ -48,7 +48,7 @@ std::vector<uint8_t> RenderLogoFrame(int width, int height) {
         DeleteObject(font);
     };
     int nameY = top + logo + height / 24;
-    drawLine(L"Gazeora", height / 12, FW_SEMIBOLD, RGB(236, 238, 246), nameY);  // kText
+    drawLine(L"Gazeora", height / 12, FW_SEMIBOLD, RGB(236, 238, 246), nameY);   // kText
     drawLine(L"Waiting for a game", height / 30, FW_NORMAL, RGB(152, 158, 182),  // kTextDim
              nameY + height / 9);
 

@@ -1,9 +1,9 @@
 // The stream server: the hand-off from the capture thread to the encode thread, the pacing of
-// UDP packets on the send thread, and the whole server end to end at 30 and 60 fps, from PushFrame to a player on loopback
-// receiving the frame's packets.
+// UDP packets on the send thread, and the whole server end to end at 30 and 60 fps, from PushFrame
+// to a player on loopback receiving the frame's packets.
+#include <gtest/gtest.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <gtest/gtest.h>
 
 #include <atomic>
 #include <cstdlib>
@@ -115,10 +115,10 @@ public:
         }
         std::string base = "rtsp://127.0.0.1:" + std::to_string(serverPort) + "/";
         Request("DESCRIBE " + base, "");
-        std::string setup = Request("SETUP " + base + "track1",
-                                    "Transport: RTP/AVP;unicast;client_port=" +
-                                        std::to_string(port) + "-" + std::to_string(port + 1) +
-                                        "\r\n");
+        std::string setup =
+            Request("SETUP " + base + "track1",
+                    "Transport: RTP/AVP;unicast;client_port=" + std::to_string(port) + "-" +
+                        std::to_string(port + 1) + "\r\n");
         size_t at = setup.find("\r\nSession: ");
         if (setup.rfind("RTSP/1.0 200", 0) != 0 || at == std::string::npos) {
             error = "SETUP failed: " + setup;
@@ -212,7 +212,7 @@ void BenchServer(VideoCodec codec, uint32_t fps) {
     constexpr int kMaxUncounted = 600;
     FrameStreamServer server;
     server.SetProtocol(StreamProtocol::RtspUdp);  // the player sets up RTP over UDP
-    server.SetDiscoveryPort(0);                    // any free port, beside a running Gazeora
+    server.SetDiscoveryPort(0);                   // any free port, beside a running Gazeora
     std::wstring error;
     ASSERT_TRUE(server.Start(0, false, error)) << Narrow(error);
     if (!server.CodecAvailable(codec)) {
@@ -228,7 +228,8 @@ void BenchServer(VideoCodec codec, uint32_t fps) {
     ASSERT_EQ(server.Viewers(), 1);
 
     std::vector<std::vector<uint8_t>> scenes(16);
-    for (size_t i = 0; i < scenes.size(); ++i) FillScene(scenes[i], size.width, size.height, int(i));
+    for (size_t i = 0; i < scenes.size(); ++i)
+        FillScene(scenes[i], size.width, size.height, int(i));
 
     std::atomic<bool> stop{false};
     std::atomic<uint32_t> firstCountedTimestamp{0};
@@ -286,8 +287,8 @@ void BenchServer(VideoCodec codec, uint32_t fps) {
 
     size_t packets = 0;
     for (size_t n : packetCounts) packets += n;
-    std::string label = std::string(CodecName(codec)) + " " + size.name + " " +
-                        std::to_string(fps) + " fps";
+    std::string label =
+        std::string(CodecName(codec)) + " " + size.name + " " + std::to_string(fps) + " fps";
     PrintNote(label, Narrow(server.EncoderName()) + ", " + std::to_string(last.size()) + " of " +
                          std::to_string(counted) + " frames arrived, " +
                          std::to_string(packetCounts.empty() ? 0 : packets / packetCounts.size()) +

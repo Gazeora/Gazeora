@@ -80,7 +80,8 @@ TEST(RtpH264Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
     std::vector<std::string> nals = {Nal(0x67, 20), Nal(0x68, 5), Nal(0x65, 3000, 'y')};
     uint16_t seq = 65530;
     std::vector<std::string> packets;
-    RtpPayloadFormat::For(VideoCodec::H264).Packetize(nals, 0x11223344, 0xCAFEF00D, 1400, seq, packets);
+    RtpPayloadFormat::For(VideoCodec::H264)
+        .Packetize(nals, 0x11223344, 0xCAFEF00D, 1400, seq, packets);
     // 2 single NAL packets, then 3000 bytes in fragments of up to 1386.
     ASSERT_EQ(packets.size(), 5u);
     EXPECT_EQ(seq, uint16_t(65530 + 5));
@@ -151,11 +152,11 @@ TEST(RtpH265Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
         return reinterpret_cast<const uint8_t*>(packets[i].data()) + 12;
     };
     EXPECT_EQ(payload(0)[0] >> 1, kHevcVps);
-    EXPECT_EQ(payload(3)[0] >> 1 & 0x3F, kHevcFu);  // payload header: type 49,
-    EXPECT_EQ(payload(3)[1], 0x01);                 // the original layer and temporal id
-    EXPECT_EQ(payload(3)[2], 0x80 | kHevcIdrWRadl); // start
-    EXPECT_EQ(payload(4)[2], kHevcIdrWRadl);        // middle
-    EXPECT_EQ(payload(5)[2], 0x40 | kHevcIdrWRadl); // end
+    EXPECT_EQ(payload(3)[0] >> 1 & 0x3F, kHevcFu);   // payload header: type 49,
+    EXPECT_EQ(payload(3)[1], 0x01);                  // the original layer and temporal id
+    EXPECT_EQ(payload(3)[2], 0x80 | kHevcIdrWRadl);  // start
+    EXPECT_EQ(payload(4)[2], kHevcIdrWRadl);         // middle
+    EXPECT_EQ(payload(5)[2], 0x40 | kHevcIdrWRadl);  // end
     for (size_t i = 0; i < packets.size(); ++i) {
         EXPECT_LE(packets[i].size(), 1400u);
         EXPECT_EQ((uint8_t(packets[i][1]) & 0x80) != 0, i + 1 == packets.size());
@@ -194,7 +195,8 @@ TEST(RtpH265Test, UnpacksAggregationPackets) {
 TEST(RtpH265Test, AFragmentWithoutItsStartIsRejected) {
     std::vector<std::string> packets;
     uint16_t seq = 0;
-    RtpPayloadFormat::For(VideoCodec::H265).Packetize({HevcNal(kHevcTrailR, 4000)}, 0, 0, 1400, seq, packets);
+    RtpPayloadFormat::For(VideoCodec::H265)
+        .Packetize({HevcNal(kHevcTrailR, 4000)}, 0, 0, 1400, seq, packets);
     ASSERT_EQ(packets.size(), 3u);
     RtpVideoDepacketizer depacketizer(VideoCodec::H265);
     std::string annexB;

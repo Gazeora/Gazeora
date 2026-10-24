@@ -62,11 +62,11 @@ void TsMuxer::Mux(VideoCodec codec, const std::string& annexB, uint32_t timestam
     }
 
     m_pes.clear();
-    const char header[] = {0, 0, 1, char(kVideoStreamId),
-                           0, 0,          // length: unbounded, as video PES packets may be
-                           char(0x80),    // marker bits
-                           char(0x80),    // PTS only
-                           5};            // header data length
+    const char header[] = {0,          0, 1, char(kVideoStreamId),
+                           0,          0,  // length: unbounded, as video PES packets may be
+                           char(0x80),     // marker bits
+                           char(0x80),     // PTS only
+                           5};             // header data length
     m_pes.append(header, sizeof(header));
     PutTimestamp(0x20, pts, m_pes);
     if (!StartsWithDelimiter(codec, annexB)) {
@@ -84,29 +84,49 @@ void TsMuxer::WriteTables(VideoCodec codec, std::string& out) {
     const uint8_t versionByte = uint8_t(0xC1 | (version << 1));
 
     uint8_t pat[] = {
-        0x00,                                          // table: program association
-        0xB0, 13,                                      // section syntax, length
-        0x00, 0x01,                                    // transport stream id
-        0xC1, 0x00, 0x00,                              // version 0, current; section 0 of 0
-        0x00, 0x01,                                    // program 1
-        uint8_t(0xE0 | (kPmtPid >> 8)), uint8_t(kPmtPid & 0xFF),
-        0, 0, 0, 0,                                    // CRC
+        0x00,  // table: program association
+        0xB0,
+        13,  // section syntax, length
+        0x00,
+        0x01,  // transport stream id
+        0xC1,
+        0x00,
+        0x00,  // version 0, current; section 0 of 0
+        0x00,
+        0x01,  // program 1
+        uint8_t(0xE0 | (kPmtPid >> 8)),
+        uint8_t(kPmtPid & 0xFF),
+        0,
+        0,
+        0,
+        0,  // CRC
     };
     uint32_t crc = Crc32Mpeg2(pat, sizeof(pat) - 4);
     for (int i = 0; i < 4; ++i) pat[sizeof(pat) - 4 + i] = uint8_t(crc >> (24 - 8 * i));
     WriteSection(kPatPid, pat, sizeof(pat), out);
 
     uint8_t pmt[] = {
-        0x02,                                                      // table: program map
-        0xB0, 18,                                                  // section syntax, length
-        0x00, 0x01,                                                // program 1
-        versionByte, 0x00, 0x00,                                   // section 0 of 0
-        uint8_t(0xE0 | (kVideoPid >> 8)), uint8_t(kVideoPid & 0xFF),  // PCR on the video
-        0xF0, 0x00,                                                // no program info
+        0x02,  // table: program map
+        0xB0,
+        18,  // section syntax, length
+        0x00,
+        0x01,  // program 1
+        versionByte,
+        0x00,
+        0x00,  // section 0 of 0
+        uint8_t(0xE0 | (kVideoPid >> 8)),
+        uint8_t(kVideoPid & 0xFF),  // PCR on the video
+        0xF0,
+        0x00,  // no program info
         codec == VideoCodec::H265 ? kStreamTypeH265 : kStreamTypeH264,
-        uint8_t(0xE0 | (kVideoPid >> 8)), uint8_t(kVideoPid & 0xFF),
-        0xF0, 0x00,                                                // no stream info
-        0, 0, 0, 0,                                                // CRC
+        uint8_t(0xE0 | (kVideoPid >> 8)),
+        uint8_t(kVideoPid & 0xFF),
+        0xF0,
+        0x00,  // no stream info
+        0,
+        0,
+        0,
+        0,  // CRC
     };
     crc = Crc32Mpeg2(pmt, sizeof(pmt) - 4);
     for (int i = 0; i < 4; ++i) pmt[sizeof(pmt) - 4 + i] = uint8_t(crc >> (24 - 8 * i));

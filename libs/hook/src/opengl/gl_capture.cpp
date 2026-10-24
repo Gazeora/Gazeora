@@ -232,11 +232,11 @@ void GLCapture::UploadFinishedReadbacks() {
         }
         readback.pending = false;
         m_gl.BindBuffer(gl::kPixelPackBuffer, readback.buffer);
-        if (auto* data = static_cast<const uint8_t*>(
-                m_gl.MapBuffer(gl::kPixelPackBuffer, gl::kReadOnly))) {
+        if (auto* data =
+                static_cast<const uint8_t*>(m_gl.MapBuffer(gl::kPixelPackBuffer, gl::kReadOnly))) {
             // glReadPixels rows run bottom to top.
-            m_bridge.UploadFrame(data, m_readbackWidth * 4, PixelLayout::BGRA8,
-                                 readback.presentQpc, true);
+            m_bridge.UploadFrame(data, m_readbackWidth * 4, PixelLayout::BGRA8, readback.presentQpc,
+                                 true);
             m_gl.UnmapBuffer(gl::kPixelPackBuffer);
         }
     }

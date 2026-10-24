@@ -9,8 +9,8 @@ void StreamFrameSender::SetVrLayout(const VrLayout& vr) {
     m_reader.SetVrLayout(vr);
 }
 
-bool StreamFrameSender::Send(ID3D11Device* device, ID3D11Texture2D* frame,
-                             const DepthFrame* depth, std::wstring& error) {
+bool StreamFrameSender::Send(ID3D11Device* device, ID3D11Texture2D* frame, const DepthFrame* depth,
+                             std::wstring& error) {
     if (m_latestSent && m_vr == m_sentLayout) {
         m_sink.RepeatFrame();
         return true;

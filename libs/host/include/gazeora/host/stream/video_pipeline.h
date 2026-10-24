@@ -16,8 +16,9 @@ namespace gazeora {
 
 // Pictures in, encoded frames out: NV12 conversion, encoding, parameter sets in front of
 // every key frame, RTP packetization. A picture already on the GPU as NV12 goes straight to a
-// GPU encoder that takes its device's textures, or is read back for one that doesn't. The encoder comes from a factory, so tests (and
-// other encoder back ends) can supply their own. Use from one thread.
+// GPU encoder that takes its device's textures, or is read back for one that doesn't. The encoder
+// comes from a factory, so tests (and other encoder back ends) can supply their own. Use from one
+// thread.
 class VideoPipeline {
 public:
     using EncoderFactory = std::function<std::unique_ptr<VideoEncoder>()>;
@@ -49,8 +50,8 @@ public:
 
     // Opens (or reopens) the encoder when the codec, size, frame rate or device changed, and
     // applies a new bitrate. `device` is the one the pictures' textures are on, null for
-    // pictures in memory. `reopened` tells whether a new encoder was opened. False with `error` set if no
-    // encoder could be opened.
+    // pictures in memory. `reopened` tells whether a new encoder was opened. False with `error` set
+    // if no encoder could be opened.
     bool Prepare(const Config& config, uint32_t width, uint32_t height, bool& reopened,
                  std::wstring& error, ID3D11Device* device = nullptr);
     void RequestKeyFrame();

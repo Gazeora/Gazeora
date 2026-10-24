@@ -44,9 +44,8 @@ constexpr char kPhoneEntry[] = " = PhoneInstall, ";
 std::string BuildInf(const std::vector<std::wstring>& phoneIds, const std::string& stamp,
                      const SYSTEMTIME& now) {
     char version[64];
-    snprintf(version, sizeof(version), "%02u/%02u/%04u,1.%u.%u.%u", now.wMonth, now.wDay,
-             now.wYear, now.wYear % 100, now.wMonth * 100 + now.wDay,
-             now.wHour * 100 + now.wMinute);
+    snprintf(version, sizeof(version), "%02u/%02u/%04u,1.%u.%u.%u", now.wMonth, now.wDay, now.wYear,
+             now.wYear % 100, now.wMonth * 100 + now.wDay, now.wHour * 100 + now.wMinute);
     std::string devices;
     for (const char* id : {"USB\\VID_18D1&PID_2D00", "USB\\VID_18D1&PID_2D01&MI_00",
                            "USB\\VID_18D1&PID_2D04&MI_00", "USB\\VID_18D1&PID_2D05&MI_00"}) {
@@ -66,15 +65,18 @@ std::string BuildInf(const std::vector<std::wstring>& phoneIds, const std::strin
            "ClassGUID = {88BAE032-5A81-49f0-BC3D-A4FF138216D6}\r\n"
            "Provider = %Gazeora%\r\n"
            "CatalogFile = gazeora_accessory.cat\r\n"
-           "DriverVer = " + std::string(version) +
+           "DriverVer = " +
+           std::string(version) +
            "\r\n"
            "\r\n"
            "[Manufacturer]\r\n"
            "%Gazeora% = Devices, NTamd64, NTarm64\r\n"
            "\r\n"
-           "[Devices.NTamd64]\r\n" + devices +
+           "[Devices.NTamd64]\r\n" +
+           devices +
            "\r\n"
-           "[Devices.NTarm64]\r\n" + devices +
+           "[Devices.NTarm64]\r\n" +
+           devices +
            "\r\n"
            "[Install]\r\n"
            "Include = winusb.inf\r\n"
@@ -159,15 +161,16 @@ using DiInstallDriverFunction = BOOL(WINAPI*)(HWND, LPCWSTR, DWORD, PBOOL);
 template <typename Function>
 Function SystemFunction(const wchar_t* dll, const char* name) {
     HMODULE module = LoadLibraryExW(dll, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-    return module ? reinterpret_cast<Function>(reinterpret_cast<void*>(GetProcAddress(module, name)))
-                  : nullptr;
+    return module
+               ? reinterpret_cast<Function>(reinterpret_cast<void*>(GetProcAddress(module, name)))
+               : nullptr;
 }
 
 std::wstring ErrorText(const wchar_t* what, DWORD code = GetLastError()) {
     wchar_t* text = nullptr;
-    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-                       FORMAT_MESSAGE_IGNORE_INSERTS,
-                   nullptr, code, 0, reinterpret_cast<wchar_t*>(&text), 0, nullptr);
+    FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr, code, 0, reinterpret_cast<wchar_t*>(&text), 0, nullptr);
     std::wstring message = std::wstring(what) + L": ";
     if (text) {
         message += text;
@@ -246,8 +249,8 @@ PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstr
     std::vector<BYTE> encodedUsage(usageSize);
     CryptEncodeObject(X509_ASN_ENCODING, X509_ENHANCED_KEY_USAGE, &usage, encodedUsage.data(),
                       &usageSize);
-    CERT_EXTENSION extension = {const_cast<LPSTR>(szOID_ENHANCED_KEY_USAGE), FALSE,
-                                {usageSize, encodedUsage.data()}};
+    CERT_EXTENSION extension = {
+        const_cast<LPSTR>(szOID_ENHANCED_KEY_USAGE), FALSE, {usageSize, encodedUsage.data()}};
     CERT_EXTENSIONS extensions = {1, &extension};
 
     CRYPT_KEY_PROV_INFO keyInfo = {};
@@ -300,20 +303,29 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
     // by their SHA-1 hash, which a SHA-256 catalog doesn't have.
     std::wstring text =
         L"[CatalogHeader]\r\n"
-        L"Name=" + std::wstring(kCatName) + L"\r\n"
-        L"ResultDir=" + folder + L"\r\n"
+        L"Name=" +
+        std::wstring(kCatName) +
+        L"\r\n"
+        L"ResultDir=" +
+        folder +
+        L"\r\n"
         L"PublicVersion=0x00000001\r\n"
         L"CatalogVersion=2\r\n"
         L"HashAlgorithms=SHA256\r\n"
         L"EncodingType=0x00010001\r\n"
         L"CATATTR1=0x10010001:OSAttr:2:10.0\r\n"
         L"[CatalogFiles]\r\n"
-        L"<hash>" + kInfName + L"=" + folder + L"\\" + kInfName + L"\r\n"
-        L"<hash>" + kInfName + L"ATTR1=0x10010001:OSAttr:2:10.0\r\n"
-        L"<hash>" + kInfName + L"ATTR2=0x10010001:File:" + kInfName + L"\r\n";
+        L"<hash>" +
+        kInfName + L"=" + folder + L"\\" + kInfName +
+        L"\r\n"
+        L"<hash>" +
+        kInfName +
+        L"ATTR1=0x10010001:OSAttr:2:10.0\r\n"
+        L"<hash>" +
+        kInfName + L"ATTR2=0x10010001:File:" + kInfName + L"\r\n";
     // In the ANSI code page: the writer doesn't read UTF-16 definitions.
-    int size = WideCharToMultiByte(CP_ACP, 0, text.c_str(), int(text.size()), nullptr, 0,
-                                   nullptr, nullptr);
+    int size = WideCharToMultiByte(CP_ACP, 0, text.c_str(), int(text.size()), nullptr, 0, nullptr,
+                                   nullptr);
     std::string ansi(size_t(size), '\0');
     WideCharToMultiByte(CP_ACP, 0, text.c_str(), int(text.size()), ansi.data(), size, nullptr,
                         nullptr);
@@ -321,11 +333,11 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
         error = ErrorText(L"Couldn't write the driver catalog's definition");
         return false;
     }
-    using EnumAttributes = CRYPTCATATTRIBUTE*(WINAPI*)(CRYPTCATCDF*, LPWSTR, CRYPTCATMEMBER*,
-                                                       CRYPTCATATTRIBUTE*,
-                                                       PFN_CDF_PARSE_ERROR_CALLBACK);
-    auto enumAttributes = SystemFunction<EnumAttributes>(L"wintrust.dll",
-                                                         "CryptCATCDFEnumAttributesWithCDFTag");
+    using EnumAttributes =
+        CRYPTCATATTRIBUTE*(WINAPI*)(CRYPTCATCDF*, LPWSTR, CRYPTCATMEMBER*, CRYPTCATATTRIBUTE*,
+                                    PFN_CDF_PARSE_ERROR_CALLBACK);
+    auto enumAttributes =
+        SystemFunction<EnumAttributes>(L"wintrust.dll", "CryptCATCDFEnumAttributesWithCDFTag");
     // Not in the Windows SDK's mscat.h either, so looked up the same way.
     using EnumMembers = LPWSTR(WINAPI*)(CRYPTCATCDF*, LPWSTR, PFN_CDF_PARSE_ERROR_CALLBACK,
                                         CRYPTCATMEMBER**, BOOL, LPVOID);
@@ -369,13 +381,13 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
 
 bool SignCatalog(const std::wstring& cat, PCCERT_CONTEXT certificate, std::wstring& error) {
     HMODULE mssign = LoadLibraryExW(L"mssign32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-    auto signerSignEx = mssign ? reinterpret_cast<SignerSignExFunction>(
-                                     reinterpret_cast<void*>(GetProcAddress(mssign, "SignerSignEx")))
+    auto signerSignEx = mssign ? reinterpret_cast<SignerSignExFunction>(reinterpret_cast<void*>(
+                                     GetProcAddress(mssign, "SignerSignEx")))
                                : nullptr;
-    auto freeContext = mssign ? reinterpret_cast<SignerFreeSignerContextFunction>(
-                                    reinterpret_cast<void*>(
-                                        GetProcAddress(mssign, "SignerFreeSignerContext")))
-                              : nullptr;
+    auto freeContext =
+        mssign ? reinterpret_cast<SignerFreeSignerContextFunction>(
+                     reinterpret_cast<void*>(GetProcAddress(mssign, "SignerFreeSignerContext")))
+               : nullptr;
     if (!signerSignEx || !freeContext) {
         error = L"Windows' code signing (mssign32.dll) isn't available";
         if (mssign) {
@@ -406,14 +418,14 @@ bool SignCatalog(const std::wstring& cat, PCCERT_CONTEXT certificate, std::wstri
 // Every certificate this has made, out of the machine's root and trusted publisher stores.
 void ForgetCertificates() {
     for (const wchar_t* name : {L"Root", L"TrustedPublisher"}) {
-        HCERTSTORE store = CertOpenStore(CERT_STORE_PROV_SYSTEM_W, 0, 0,
-                                         CERT_SYSTEM_STORE_LOCAL_MACHINE, name);
+        HCERTSTORE store =
+            CertOpenStore(CERT_STORE_PROV_SYSTEM_W, 0, 0, CERT_SYSTEM_STORE_LOCAL_MACHINE, name);
         if (!store) {
             continue;
         }
-        while (PCCERT_CONTEXT found = CertFindCertificateInStore(
-                   store, X509_ASN_ENCODING, 0, CERT_FIND_SUBJECT_STR_W, kCertificateName,
-                   nullptr)) {
+        while (PCCERT_CONTEXT found =
+                   CertFindCertificateInStore(store, X509_ASN_ENCODING, 0, CERT_FIND_SUBJECT_STR_W,
+                                              kCertificateName, nullptr)) {
             CertDeleteCertificateFromStore(found);  // frees it
         }
         CertCloseStore(store, 0);
@@ -431,8 +443,8 @@ bool TrustCertificate(PCCERT_CONTEXT certificate, std::wstring& error) {
         HCERTSTORE store = ok ? CertOpenStore(CERT_STORE_PROV_SYSTEM_W, 0, 0,
                                               CERT_SYSTEM_STORE_LOCAL_MACHINE, name)
                               : nullptr;
-        ok = store && CertAddCertificateContextToStore(store, copy,
-                                                       CERT_STORE_ADD_REPLACE_EXISTING, nullptr);
+        ok = store && CertAddCertificateContextToStore(store, copy, CERT_STORE_ADD_REPLACE_EXISTING,
+                                                       nullptr);
         if (!ok) {
             error = ErrorText(L"Couldn't trust the driver's certificate");
         }
@@ -464,8 +476,8 @@ std::vector<std::pair<std::wstring, std::string>> InstalledPackages() {
         return packages;
     }
     do {
-        HANDLE file = CreateFileW((folder + found.cFileName).c_str(), GENERIC_READ,
-                                  FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+        HANDLE file = CreateFileW((folder + found.cFileName).c_str(), GENERIC_READ, FILE_SHARE_READ,
+                                  nullptr, OPEN_EXISTING, 0, nullptr);
         if (file == INVALID_HANDLE_VALUE) {
             continue;
         }
@@ -511,8 +523,8 @@ bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& err
     SYSTEMTIME now;
     GetSystemTime(&now);
     char stamp[32];
-    snprintf(stamp, sizeof(stamp), "%04u%02u%02u%02u%02u%02u%03u", now.wYear, now.wMonth,
-             now.wDay, now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
+    snprintf(stamp, sizeof(stamp), "%04u%02u%02u%02u%02u%02u%03u", now.wYear, now.wMonth, now.wDay,
+             now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
     std::string text = BuildInf(phoneIds, stamp, now);
     if (!WriteBytes(inf, text.data(), text.size())) {
         error = ErrorText((L"Couldn't write the driver to " + folder).c_str());
@@ -524,8 +536,8 @@ bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& err
     std::wstring container = L"Gazeora USB driver " + std::to_wstring(GetCurrentProcessId()) +
                              L"-" + std::to_wstring(GetTickCount64());
     PCCERT_CONTEXT certificate = CreateSigningCertificate(container, error);
-    bool ok = certificate && CreateCatalog(folder, error) &&
-              SignCatalog(cat, certificate, error) && TrustCertificate(certificate, error);
+    bool ok = certificate && CreateCatalog(folder, error) && SignCatalog(cat, certificate, error) &&
+              TrustCertificate(certificate, error);
     if (certificate) {
         CertFreeCertificateContext(certificate);
     }
@@ -534,8 +546,8 @@ bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& err
     if (ok) {
         // Into the driver store, and onto the devices plugged in now, even those whose own
         // driver Windows ranks higher (a phone's file transfer driver).
-        auto installDriver = SystemFunction<DiInstallDriverFunction>(L"newdev.dll",
-                                                                    "DiInstallDriverW");
+        auto installDriver =
+            SystemFunction<DiInstallDriverFunction>(L"newdev.dll", "DiInstallDriverW");
         BOOL reboot = FALSE;
         if (!installDriver) {
             error = L"Windows' driver install (newdev.dll) isn't available";
@@ -637,14 +649,15 @@ bool ReconnectAccessories(const std::vector<std::wstring>& serials) {
     using GetListFunction = CONFIGRET(WINAPI*)(LPGUID, DEVINSTID_W, PZZWSTR, ULONG, ULONG);
     auto getParent = SystemFunction<GetParentFunction>(L"cfgmgr32.dll", "CM_Get_Parent");
     auto getId = SystemFunction<GetDeviceIdFunction>(L"cfgmgr32.dll", "CM_Get_Device_IDW");
-    auto getListSize = SystemFunction<GetListSizeFunction>(
-        L"cfgmgr32.dll", "CM_Get_Device_Interface_List_SizeW");
-    auto getList = SystemFunction<GetListFunction>(L"cfgmgr32.dll", "CM_Get_Device_Interface_ListW");
+    auto getListSize =
+        SystemFunction<GetListSizeFunction>(L"cfgmgr32.dll", "CM_Get_Device_Interface_List_SizeW");
+    auto getList =
+        SystemFunction<GetListFunction>(L"cfgmgr32.dll", "CM_Get_Device_Interface_ListW");
     if (!getParent || !getId || !getListSize || !getList) {
         return serials.empty();
     }
-    GUID hubInterface = {0xF18A0E88, 0xC30C, 0x11D0,
-                         {0x88, 0x15, 0x00, 0xA0, 0xC9, 0x06, 0xBE, 0xD8}};
+    GUID hubInterface = {
+        0xF18A0E88, 0xC30C, 0x11D0, {0x88, 0x15, 0x00, 0xA0, 0xC9, 0x06, 0xBE, 0xD8}};
     bool ok = true;
     ForEachUsbDevice(true, [&](HDEVINFO set, SP_DEVINFO_DATA& device, const wchar_t* ids) {
         // The accessory as a whole (18D1:2D00 to 2D05), not one of its interfaces.
@@ -679,9 +692,9 @@ bool ReconnectAccessories(const std::vector<std::wstring>& serials) {
                 if (file != INVALID_HANDLE_VALUE) {
                     USB_CYCLE_PORT_PARAMS params = {port, 0};
                     DWORD returned = 0;
-                    cycled = DeviceIoControl(file, IOCTL_USB_HUB_CYCLE_PORT, &params,
-                                             sizeof(params), &params, sizeof(params), &returned,
-                                             nullptr);
+                    cycled =
+                        DeviceIoControl(file, IOCTL_USB_HUB_CYCLE_PORT, &params, sizeof(params),
+                                        &params, sizeof(params), &returned, nullptr);
                     CloseHandle(file);
                 }
             }
@@ -694,10 +707,9 @@ bool ReconnectAccessories(const std::vector<std::wstring>& serials) {
 // Uninstalls the devices with any of `hardwareIds` (plugged in or remembered), and has Windows
 // look at what's plugged in again: they get the driver it picks itself (file transfer).
 void ReinstallDevices(const std::vector<std::wstring>& hardwareIds) {
-    using DiUninstallDeviceFunction = BOOL(WINAPI*)(HWND, HDEVINFO, PSP_DEVINFO_DATA, DWORD,
-                                                    PBOOL);
-    auto uninstallDevice = SystemFunction<DiUninstallDeviceFunction>(L"newdev.dll",
-                                                                    "DiUninstallDevice");
+    using DiUninstallDeviceFunction = BOOL(WINAPI*)(HWND, HDEVINFO, PSP_DEVINFO_DATA, DWORD, PBOOL);
+    auto uninstallDevice =
+        SystemFunction<DiUninstallDeviceFunction>(L"newdev.dll", "DiUninstallDevice");
     HDEVINFO set = SetupDiGetClassDevsW(nullptr, L"USB", nullptr, DIGCF_ALLCLASSES);
     if (set != INVALID_HANDLE_VALUE && uninstallDevice) {
         SP_DEVINFO_DATA device = {sizeof(device)};
@@ -726,8 +738,8 @@ void ReinstallDevices(const std::vector<std::wstring>& hardwareIds) {
     using LocateFunction = CONFIGRET(WINAPI*)(PDEVINST, DEVINSTID_W, ULONG);
     using ReenumerateFunction = CONFIGRET(WINAPI*)(DEVINST, ULONG);
     auto locate = SystemFunction<LocateFunction>(L"cfgmgr32.dll", "CM_Locate_DevNodeW");
-    auto reenumerate = SystemFunction<ReenumerateFunction>(L"cfgmgr32.dll",
-                                                          "CM_Reenumerate_DevNode");
+    auto reenumerate =
+        SystemFunction<ReenumerateFunction>(L"cfgmgr32.dll", "CM_Reenumerate_DevNode");
     DEVINST root = 0;
     if (locate && reenumerate && locate(&root, nullptr, CM_LOCATE_DEVNODE_NORMAL) == CR_SUCCESS) {
         reenumerate(root, CM_REENUMERATE_SYNCHRONOUS);
@@ -807,8 +819,9 @@ bool RestoreFileTransfer(std::wstring& error) {
     ReinstallDevices(phones);
     // A phone streaming now stays in accessory mode until it's disconnected: reconnect it.
     if (!ReconnectAccessories(serials)) {
-        error = L"File transfer is restored, but Gazeora couldn't reconnect the phone that's "
-                L"streaming: unplug it and plug it in again to use file transfer.";
+        error =
+            L"File transfer is restored, but Gazeora couldn't reconnect the phone that's "
+            L"streaming: unplug it and plug it in again to use file transfer.";
         return false;
     }
     return true;
@@ -845,8 +858,7 @@ bool InstallUsbDriverElevated(HWND owner, const std::vector<std::wstring>& phone
 }
 
 bool RestoreFileTransferElevated(HWND owner, std::wstring& error) {
-    return RunElevated(owner, kRestoreFileTransferArgument, L"", L"Restoring file transfer",
-                       error);
+    return RunElevated(owner, kRestoreFileTransferArgument, L"", L"Restoring file transfer", error);
 }
 
 int RunUsbDriverCommand() {

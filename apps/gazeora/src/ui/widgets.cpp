@@ -48,8 +48,8 @@ void TextEllipsis(ImDrawList* draw, ImFont* font, ImVec2 pos, ImU32 color, const
     draw->AddText(font, size, pos, color, clipped.c_str());
 }
 
-bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg,
-                  ImFont* font, float rounding, bool enabled) {
+bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg, ImFont* font,
+                  float rounding, bool enabled) {
     ImVec2 pos = ImGui::GetCursorScreenPos();
     bool pressed = ImGui::InvisibleButton(label, size) && enabled;
     bool hovered = enabled && ImGui::IsItemHovered();
@@ -57,12 +57,11 @@ bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
     }
     ImDrawList* draw = ImGui::GetWindowDrawList();
-    draw->AddRectFilled(pos, pos + size,
-                        enabled ? (hovered ? bgHover : bg) : kDisabled, rounding);
+    draw->AddRectFilled(pos, pos + size, enabled ? (hovered ? bgHover : bg) : kDisabled, rounding);
     const char* end = LabelEnd(label);
     ImVec2 textSize = font->CalcTextSizeA(font->FontSize, FLT_MAX, 0.0f, label, end);
-    draw->AddText(font, font->FontSize, pos + (size - textSize) * 0.5f,
-                  enabled ? fg : kTextFaint, label, end);
+    draw->AddText(font, font->FontSize, pos + (size - textSize) * 0.5f, enabled ? fg : kTextFaint,
+                  label, end);
     return pressed;
 }
 

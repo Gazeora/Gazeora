@@ -15,8 +15,7 @@ namespace gazeora {
 // GazeoraCLI.exe.
 class GameLibrary final {
 public:
-    GameLibrary(IGameRepository& repository, const IClock& clock,
-                const IGameNameResolver& names);
+    GameLibrary(IGameRepository& repository, const IClock& clock, const IGameNameResolver& names);
 
     // On failure, error says why and the library is empty.
     bool Load(std::wstring& error);

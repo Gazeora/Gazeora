@@ -9,7 +9,7 @@
 namespace gazeora::hook::d3d8 {
 
 constexpr UINT kSdkVersion = 220;
-constexpr UINT kAdapterDefault = 0;                       // D3DADAPTER_DEFAULT
+constexpr UINT kAdapterDefault = 0;                      // D3DADAPTER_DEFAULT
 constexpr DWORD kCreateSoftwareVertexProcessing = 0x20;  // D3DCREATE_SOFTWARE_VERTEXPROCESSING
 
 // Only IUnknown (vtable slots 0-2) is declared, so these work with ComPtr.

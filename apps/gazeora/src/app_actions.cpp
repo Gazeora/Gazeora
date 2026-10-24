@@ -48,11 +48,13 @@ void App::AddGamePaths(const std::vector<std::wstring>& paths) {
         }
         bool duplicate = false;
         for (const Game& existing : m_library.Games()) {
-            duplicate = duplicate || (_wcsicmp(existing.exePath.c_str(), game.exePath.c_str()) == 0 &&
-                                      existing.arguments == game.arguments);
+            duplicate =
+                duplicate || (_wcsicmp(existing.exePath.c_str(), game.exePath.c_str()) == 0 &&
+                              existing.arguments == game.arguments);
         }
         if (duplicate) {
-            ShowToast(U8(m_libraryServices.Names().NameFor(game.exePath)) + " is already in your library");
+            ShowToast(U8(m_libraryServices.Names().NameFor(game.exePath)) +
+                      " is already in your library");
             continue;
         }
         lastAdded = m_library.Add(game);
@@ -71,7 +73,6 @@ void App::AddGamePaths(const std::vector<std::wstring>& paths) {
     }
 }
 
-
 void App::Launch(uint32_t gameId, bool capture) {
     Game* game = m_library.Find(gameId);
     if (!game) {
@@ -81,8 +82,8 @@ void App::Launch(uint32_t gameId, bool capture) {
         ShowToast(U8(game->name) + " is already running");
         return;
     }
-    m_sessions.push_back(std::make_unique<GameSession>(gameId, m_libraryServices.LaunchSpecs().Create(*game), capture,
-                                                       &m_stream));
+    m_sessions.push_back(std::make_unique<GameSession>(
+        gameId, m_libraryServices.LaunchSpecs().Create(*game), capture, &m_stream));
     game->lastPlayed = m_libraryServices.Clock().NowUnixSeconds();
     SaveLibrary();
     ShowToast("Launching " + U8(game->name) + (capture ? " with capture" : ""));
@@ -167,6 +168,5 @@ std::vector<const Game*> App::SortedGames(Sort sort, const std::string& filter) 
     });
     return games;
 }
-
 
 }  // namespace gazeora::app

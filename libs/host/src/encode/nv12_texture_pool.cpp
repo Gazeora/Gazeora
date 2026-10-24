@@ -8,8 +8,7 @@ bool Nv12TexturePool::Supported(ID3D11Device* device) {
            (support & D3D11_FORMAT_SUPPORT_RENDER_TARGET);
 }
 
-const Nv12TexturePool::Slot* Nv12TexturePool::Next(ID3D11Device* device, UINT width,
-                                                   UINT height) {
+const Nv12TexturePool::Slot* Nv12TexturePool::Next(ID3D11Device* device, UINT width, UINT height) {
     if (m_device.Get() != device || m_width != width || m_height != height) {
         // Textures still out with the encoder live on through its references.
         m_slots = {};

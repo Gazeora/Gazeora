@@ -37,9 +37,7 @@ public:
     int Step() const { return m_step; }  // 0 is the top
     float WorstLoss() const { return m_worstLoss; }
     // Bits/s at `step` of a ladder topping out at `top` bits/s.
-    static uint32_t BitrateAt(int step, uint32_t top) {
-        return top / 100 * kLadderPercent[step];
-    }
+    static uint32_t BitrateAt(int step, uint32_t top) { return top / 100 * kLadderPercent[step]; }
 
 private:
     struct LossReport {

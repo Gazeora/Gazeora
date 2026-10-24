@@ -13,8 +13,8 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-#include "gazeora/common/text/utf8.h"
 #include "gazeora/common/shared.h"
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
 #include "platform/shell.h"
@@ -243,8 +243,7 @@ bool App::GameRunning() const {
 }
 
 bool App::WantsContinuousFrames() const {
-    if (!m_toasts.empty() || ImGui::GetIO().WantTextInput ||
-        ImGuiPointerInput::HasQueuedInput()) {
+    if (!m_toasts.empty() || ImGui::GetIO().WantTextInput || ImGuiPointerInput::HasQueuedInput()) {
         return true;
     }
     if (m_page == Page::Controls && m_controls.Animating()) {
@@ -333,7 +332,6 @@ void App::Draw() {
     }
 }
 
-
 void App::ApplyVrLayout() {
     m_stream.SetVrLayout(m_vr);
     m_settings.SaveVrLayout(m_vr);
@@ -366,8 +364,7 @@ void App::UpdateLogoFrame() {
         std::vector<uint8_t> warped;
         UINT warpedWidth, warpedHeight;
         std::wstring error;
-        if (reader.Read(m_device.Get(), texture.Get(), warpedWidth, warpedHeight, warped,
-                        error)) {
+        if (reader.Read(m_device.Get(), texture.Get(), warpedWidth, warpedHeight, warped, error)) {
             logo.swap(warped);
             width = warpedWidth;
             height = warpedHeight;
@@ -449,6 +446,5 @@ void App::StreamWindow(IDXGISwapChain* swapChain) {
         m_windowStreamedAtMs = now;
     }
 }
-
 
 }  // namespace gazeora::app

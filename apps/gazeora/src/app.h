@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "game_session.h"
-#include "gazeora/input/hand_gesture_services.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
+#include "gazeora/input/hand_gesture_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
 #include "pages/controls_page.h"
@@ -100,11 +100,11 @@ private:
     void DrawGameInfoCard(Game& game);
     void DrawGameCard(const Game& game, float width);
     void DrawGameContextMenu(const Game& game);
-    void DrawProtocolChoice();  // the protocol setting, in the frame stream card
-    void DrawCodecChoice();     // the video codec setting, in the frame stream card
-    void DrawQualityChoice();   // the stream quality (bitrate) setting, beside it
-    void DrawFrameRateChoice(); // the frame rate setting, beside those
-    void DrawUsbDriverButton();  // the USB driver install, in the frame stream card
+    void DrawProtocolChoice();          // the protocol setting, in the frame stream card
+    void DrawCodecChoice();             // the video codec setting, in the frame stream card
+    void DrawQualityChoice();           // the stream quality (bitrate) setting, beside it
+    void DrawFrameRateChoice();         // the frame rate setting, beside those
+    void DrawUsbDriverButton();         // the USB driver install, in the frame stream card
     void DrawOverlayCard(float width);  // the streaming details drawn into the frames
     void DrawVrCard(float width);
 

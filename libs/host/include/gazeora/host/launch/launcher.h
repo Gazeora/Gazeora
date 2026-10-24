@@ -94,15 +94,14 @@ bool WaitForGameProcess(const std::wstring& exeName, DWORD ignorePid, DWORD time
                         LaunchedGame& game, std::wstring& error);
 
 // Injects the hook into an already running game, creating the shared state on `client`.
-bool AttachHook(DWORD pid, const std::wstring& dllPath, CaptureClient& client,
-                std::wstring& error);
+bool AttachHook(DWORD pid, const std::wstring& dllPath, CaptureClient& client, std::wstring& error);
 
 // Starts the game without injecting anything.
 bool LaunchGame(const LaunchSpec& spec, LaunchedGame& game, std::wstring& error);
 
 // Starts the game suspended, creates the shared state on `client`, injects the hook
 // before any game code runs and resumes the game once the hook has set itself up.
-bool LaunchGameWithHook(const LaunchSpec& spec, const std::wstring& dllPath,
-                        CaptureClient& client, LaunchedGame& game, std::wstring& error);
+bool LaunchGameWithHook(const LaunchSpec& spec, const std::wstring& dllPath, CaptureClient& client,
+                        LaunchedGame& game, std::wstring& error);
 
 }  // namespace gazeora

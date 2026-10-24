@@ -185,8 +185,8 @@ int RunD3D12Scene(HWND hwnd, bool depthBarriers) {
         allocators[i]->Reset();
         list->Reset(allocators[i].Get(), nullptr);
 
-        D3D12_RESOURCE_BARRIER barrier = Transition(
-            buffers[i].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        D3D12_RESOURCE_BARRIER barrier = Transition(buffers[i].Get(), D3D12_RESOURCE_STATE_PRESENT,
+                                                    D3D12_RESOURCE_STATE_RENDER_TARGET);
         list->ResourceBarrier(1, &barrier);
         if (depthBarriers) {
             D3D12_RESOURCE_BARRIER write =

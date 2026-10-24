@@ -7,8 +7,8 @@
 #include <cwchar>
 
 #include "gazeora/common/shared.h"
-#include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/common/text/utf8.h"
+#include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/library/platform/system_clock.h"
 
 namespace gazeora::app {

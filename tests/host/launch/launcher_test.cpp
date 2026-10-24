@@ -44,8 +44,8 @@ TEST(HandOffDetector, EarlyExitWithoutAWindowIsAHandOff) {
     STARTUPINFOW startup = {sizeof(startup)};
     PROCESS_INFORMATION info = {};
     // No console window: Windows reports a console as owned by its client process.
-    ASSERT_TRUE(CreateProcessW(nullptr, command.data(), nullptr, nullptr, FALSE,
-                               CREATE_NO_WINDOW, nullptr, nullptr, &startup, &info));
+    ASSERT_TRUE(CreateProcessW(nullptr, command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
+                               nullptr, nullptr, &startup, &info));
     CloseHandle(info.hThread);
     HandOffDetector detector(info.dwProcessId, info.hProcess);
     ASSERT_EQ(WaitForSingleObject(info.hProcess, 10000), WAIT_OBJECT_0);
@@ -110,8 +110,7 @@ protected:
     void SetUp() override {
         wchar_t temp[MAX_PATH];
         GetTempPathW(MAX_PATH, temp);
-        root = std::wstring(temp) + L"gazeora_steam_test_" +
-               std::to_wstring(GetCurrentProcessId());
+        root = std::wstring(temp) + L"gazeora_steam_test_" + std::to_wstring(GetCurrentProcessId());
         steamapps = root + L"\\SteamApps";  // Steam libraries don't agree on the case
         CreateDirectoryW(root.c_str(), nullptr);
         CreateDirectoryW(steamapps.c_str(), nullptr);
@@ -124,12 +123,14 @@ protected:
     }
 
     void WriteManifest(const char* appId, const char* installDir) {
-        std::wstring path = steamapps + L"\\appmanifest_" +
-                            std::wstring(appId, appId + strlen(appId)) + L".acf";
+        std::wstring path =
+            steamapps + L"\\appmanifest_" + std::wstring(appId, appId + strlen(appId)) + L".acf";
         FILE* f = _wfopen(path.c_str(), L"wb");
         ASSERT_NE(f, nullptr);
-        fprintf(f, "\"AppState\"\n{\n\t\"appid\"\t\t\"%s\"\n\t\"name\"\t\t\"Some Game\"\n"
-                   "\t\"installdir\"\t\t\"%s\"\n}\n", appId, installDir);
+        fprintf(f,
+                "\"AppState\"\n{\n\t\"appid\"\t\t\"%s\"\n\t\"name\"\t\t\"Some Game\"\n"
+                "\t\"installdir\"\t\t\"%s\"\n}\n",
+                appId, installDir);
         fclose(f);
         files.push_back(path);
     }
@@ -200,8 +201,8 @@ TEST(Launcher, WaitForGameProcessIgnoresGivenPid) {
 TEST(Launcher, WaitForGameProcessCanBeCancelled) {
     LaunchedGame found;
     std::wstring error;
-    EXPECT_FALSE(WaitForGameProcess(L"gazeora_no_such_game_7a2e.exe", 0, 60000, 300,
-                                    [] { return true; }, found, error));
+    EXPECT_FALSE(WaitForGameProcess(
+        L"gazeora_no_such_game_7a2e.exe", 0, 60000, 300, [] { return true; }, found, error));
     EXPECT_EQ(error, L"cancelled");
 }
 

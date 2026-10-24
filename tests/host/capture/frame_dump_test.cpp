@@ -114,7 +114,8 @@ TEST_F(FrameDumpTest, WideRowsConvertEveryPixel) {
          }},
         {DXGI_FORMAT_R10G10B10A2_UNORM,
          [](uint32_t v) {
-             uint32_t r = (v & 0x3FF) >> 2, g = ((v >> 10) & 0x3FF) >> 2, b = ((v >> 20) & 0x3FF) >> 2;
+             uint32_t r = (v & 0x3FF) >> 2, g = ((v >> 10) & 0x3FF) >> 2,
+                      b = ((v >> 20) & 0x3FF) >> 2;
              return 0xFF000000 | r << 16 | g << 8 | b;
          }},
     };
@@ -336,8 +337,8 @@ protected:
         FrameDumpTest::SetUp();
         std::vector<uint32_t> columns(kWidth * kHeight);
         for (UINT i = 0; i < kWidth * kHeight; ++i) columns[i] = 0xFF00FF00 | (i % kWidth);
-        color = test::CreateTexture(warp.device.Get(), kWidth, kHeight,
-                                    DXGI_FORMAT_B8G8R8A8_UNORM, columns);
+        color = test::CreateTexture(warp.device.Get(), kWidth, kHeight, DXGI_FORMAT_B8G8R8A8_UNORM,
+                                    columns);
         vr.enabled = true;
         vr.stereo = true;
         vr.stereoDepth = 0.1f;  // 10 source columns each way far away
@@ -377,8 +378,7 @@ protected:
         reader.SetVrLayout(vr);
         std::vector<uint8_t> bgra;
         std::wstring error;
-        EXPECT_TRUE(reader.Read(warp.device.Get(), color.Get(), width, height, bgra, error,
-                                depth))
+        EXPECT_TRUE(reader.Read(warp.device.Get(), color.Get(), width, height, bgra, error, depth))
             << error;
         stereo = reader.Stereo();
         std::vector<uint32_t> pixels(bgra.size() / 4);

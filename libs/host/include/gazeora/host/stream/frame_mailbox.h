@@ -17,7 +17,7 @@ struct Picture {
     Microsoft::WRL::ComPtr<ID3D11Texture2D> nv12;  // even size, from GpuNv12Converter
     uint32_t width = 0;
     uint32_t height = 0;
-    uint64_t clock = 0;  // 90 kHz capture time (live frames only)
+    uint64_t clock = 0;   // 90 kHz capture time (live frames only)
     bool stereo = false;  // two views side by side (TextureReader::Stereo)
 
     bool Complete() const {

@@ -34,8 +34,7 @@ public:
 
     // `depth`, the game's depth buffer for `texture`, is for 3D; without it frames are 2D.
     bool Read(ID3D11Device* device, ID3D11Texture2D* texture, UINT& width, UINT& height,
-              std::vector<uint8_t>& bgra, std::wstring& error,
-              const DepthFrame* depth = nullptr);
+              std::vector<uint8_t>& bgra, std::wstring& error, const DepthFrame* depth = nullptr);
     // Read's GPU half: draws the frame as it'll be streamed (scaled, warped, in 3D) and
     // returns the texture holding it, the reader's own or `texture` itself when nothing had to
     // be drawn. It stays valid until the next call. Null with `error` set if it can't be.
@@ -62,15 +61,15 @@ private:
     // the GPU path is unavailable.
     bool Render(ID3D11DeviceContext* context, ID3D11ShaderResourceView* view,
                 const D3D11_TEXTURE2D_DESC& source, UINT width, UINT height, Pass pass);
-    // Draws the two views of `color`'s texture side by side, at eyeWidth x height each: into m_pair to
-    // be warped, or straight into m_scaled. False if the depth can't be used.
+    // Draws the two views of `color`'s texture side by side, at eyeWidth x height each: into m_pair
+    // to be warped, or straight into m_scaled. False if the depth can't be used.
     bool RenderStereo(ID3D11DeviceContext* context, ID3D11ShaderResourceView* color,
                       const D3D11_TEXTURE2D_DESC& source, const DepthFrame& depth, UINT eyeWidth,
                       UINT height, bool forWarp);
     // The game's depth as floats with their average (m_depth, m_mean[m_meanIndex]).
     bool PrepareDepth(ID3D11DeviceContext* context, const DepthFrame& depth);
-    void SetConstants(ID3D11DeviceContext* context, float mode, float sourceAspect,
-                      float eyeAspect, const DepthFrame* depth);
+    void SetConstants(ID3D11DeviceContext* context, float mode, float sourceAspect, float eyeAspect,
+                      const DepthFrame* depth);
 
     UINT m_maxWidth = 0;
     UINT m_maxHeight = 0;
@@ -110,7 +109,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_mean[2];
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_meanTarget[2];
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_meanView[2];
-    int m_meanIndex = 0;     // the one holding the latest average
+    int m_meanIndex = 0;       // the one holding the latest average
     bool m_meanValid = false;  // whether it holds one yet
 };
 

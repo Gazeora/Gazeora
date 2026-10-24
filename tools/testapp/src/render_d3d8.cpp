@@ -12,9 +12,7 @@ namespace testapp {
 
 namespace {
 
-D3DCOLOR ToD3DColor(const float c[4]) {
-    return D3DCOLOR_COLORVALUE(c[0], c[1], c[2], c[3]);
-}
+D3DCOLOR ToD3DColor(const float c[4]) { return D3DCOLOR_COLORVALUE(c[0], c[1], c[2], c[3]); }
 
 }  // namespace
 

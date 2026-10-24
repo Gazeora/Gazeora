@@ -73,8 +73,7 @@ TEST(DepthPickerTest, KeepsItsPickUnlessAnotherHasClearlyMoreDraws) {
         picker.See(kOther, Buffer(1920, 1080));
         picker.Count(kScene, 100);
         picker.Count(kOther, 200);
-        EXPECT_EQ(picker.Pick(1920, 1080),
-                  frame < DepthPicker::kFramesToSwitch ? kScene : kOther)
+        EXPECT_EQ(picker.Pick(1920, 1080), frame < DepthPicker::kFramesToSwitch ? kScene : kOther)
             << frame;
     }
 }

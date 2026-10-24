@@ -109,8 +109,7 @@ Direct3D8* WINAPI HookDirect3DCreate8(UINT sdkVersion) {
 bool Install() {
     HMODULE module = GetModuleHandleW(L"d3d8.dll");
     if (module) {
-        auto create =
-            reinterpret_cast<Direct3DCreate8Fn>(ModuleExport(module, "Direct3DCreate8"));
+        auto create = reinterpret_cast<Direct3DCreate8Fn>(ModuleExport(module, "Direct3DCreate8"));
         return create &&
                HookVTable(create, [](const char* name, void* target, auto detour, auto* original) {
                    return CreateHook(name, target, detour, original);

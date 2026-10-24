@@ -34,8 +34,8 @@ bool Functions::Load(HMODULE opengl32) {
     LoadExport(opengl32, "glDeleteTextures", DeleteTextures);
     LoadExport(opengl32, "glFlush", Flush);
     if (!wglGetProcAddress || !GetString || !GetIntegerv || !IsEnabled || !Enable || !Disable ||
-        !ReadBuffer || !ReadPixels || !PixelStorei || !GenTextures || !BindTexture || !DeleteTextures ||
-        !Flush) {
+        !ReadBuffer || !ReadPixels || !PixelStorei || !GenTextures || !BindTexture ||
+        !DeleteTextures || !Flush) {
         return false;
     }
 

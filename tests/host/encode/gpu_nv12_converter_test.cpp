@@ -75,8 +75,8 @@ protected:
 
 TEST_F(GpuNv12ConverterTest, GivesTheCpuPathsBytesForEachFormat) {
     GpuNv12Converter converter;
-    for (DXGI_FORMAT format : {DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM,
-                               DXGI_FORMAT_R10G10B10A2_UNORM}) {
+    for (DXGI_FORMAT format :
+         {DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R10G10B10A2_UNORM}) {
         ComPtr<ID3D11Texture2D> texture = Noise(66, 34, format);
         EXPECT_EQ(MaxDifference(GpuNv12(converter, texture.Get()), CpuNv12(texture.Get())), 0)
             << "DXGI format " << format;
@@ -109,7 +109,8 @@ TEST_F(GpuNv12ConverterTest, TakesTexturesFromThePoolInTurn) {
     for (size_t i = 0; i < Nv12TexturePool::kSize * 2; ++i) {
         UINT width = 0, height = 0;
         std::wstring error;
-        used.push_back(converter.Convert(warp.device.Get(), texture.Get(), width, height, error).Get());
+        used.push_back(
+            converter.Convert(warp.device.Get(), texture.Get(), width, height, error).Get());
     }
     // A texture comes round again only after the whole pool.
     std::set<ID3D11Texture2D*> distinct(used.begin(), used.begin() + Nv12TexturePool::kSize);

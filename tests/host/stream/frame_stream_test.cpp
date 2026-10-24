@@ -1,9 +1,9 @@
 #include "gazeora/host/stream/frame_stream.h"
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/rtp_video.h"
 #include "gazeora/host/stream/ts_muxer.h"
 #include "host/stream/software_only_encoder.h"
-#include "gazeora/common/text/utf8.h"
 
 #include <gtest/gtest.h>
 #include <ws2tcpip.h>
@@ -203,7 +203,8 @@ protected:
             std::vector<std::string> nals;
             SplitAnnexB(annexB, nals);
             nalTypes->clear();
-            for (const std::string& nal : nals) nalTypes->push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
+            for (const std::string& nal : nals)
+                nalTypes->push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
         }
         return packets;
     }
@@ -314,10 +315,13 @@ TEST_F(FrameStreamTest, TcpPlayerThatFallsBehindResumesOnAKeyFrame) {
             sawSkip = true;
             std::vector<std::string> nals;
             SplitAnnexB(annexB, nals);
-            for (const std::string& nal : nals) resumedOnKey |= RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice;
+            for (const std::string& nal : nals)
+                resumedOnKey |=
+                    RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice;
             seen = "after " + std::to_string(frames) + " frames, " +
                    std::to_string((frameTimestamp - lastTimestamp) / 90) + " ms skipped; NAL types";
-            for (const std::string& nal : nals) seen += " " + std::to_string(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
+            for (const std::string& nal : nals)
+                seen += " " + std::to_string(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
         }
         ++frames;
         haveLast = true;
@@ -347,8 +351,8 @@ TEST_F(FrameStreamTest, RtspOverUdpRefusesInterleavedPlayers) {
 TEST_F(FrameStreamTest, RtspOverTcpRefusesUdpPlayers) {
     StartServer(StreamProtocol::RtspTcp);
     Connect();
-    std::string response = Request("SETUP", base + "track1",
-                                    "Transport: RTP/AVP;unicast;client_port=5000-5001\r\n");
+    std::string response =
+        Request("SETUP", base + "track1", "Transport: RTP/AVP;unicast;client_port=5000-5001\r\n");
     EXPECT_EQ(response.rfind("RTSP/1.0 461 Unsupported Transport\r\n", 0), 0u) << response;
 }
 
@@ -381,7 +385,8 @@ TEST_F(FrameStreamTest, StreamsInterleavedOverTcp) {
     std::vector<std::string> nals;
     SplitAnnexB(annexB, nals);
     std::vector<uint8_t> types;
-    for (const std::string& nal : nals) types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
+    for (const std::string& nal : nals)
+        types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
     EXPECT_TRUE(Has(types, kNalSps) && Has(types, kNalPps) && Has(types, kNalIdrSlice));
 
     // Requests still work on the connection the stream is flowing on.
@@ -440,7 +445,7 @@ TEST_F(FrameStreamTest, StreamsIdleFrameWithoutLiveFrames) {
 
 TEST_F(FrameStreamTest, KeepsTheIdleFrameWhenTheProtocolChanges) {
     server.SetIdleFrame(64, 48, Solid(64, 48, 0x40));
-    Sleep(100);  // the encode thread takes it
+    Sleep(100);                            // the encode thread takes it
     StartServer(StreamProtocol::RtspUdp);  // a restart, as a change in Settings does
     Play();
     EXPECT_GT(ReceiveFrame(), 0);
@@ -453,8 +458,7 @@ TEST_F(FrameStreamTest, StreamsLiveFramesOverUdp) {
     std::vector<uint8_t> types;
     EXPECT_GT(ReceiveFrame(&types), 0);
     EXPECT_TRUE(Has(types, kNalIdrSlice));
-    EXPECT_TRUE(server.LastError().empty())
-        << Utf8::FromWide(server.LastError());
+    EXPECT_TRUE(server.LastError().empty()) << Utf8::FromWide(server.LastError());
     EXPECT_FALSE(server.EncoderName().empty());
 }
 
@@ -681,7 +685,8 @@ TEST_F(FrameStreamTest, StreamsFramesOverUdpToPlayersThatSayHello) {
     std::vector<std::string> nals;
     SplitAnnexB(annexB, nals);
     std::vector<uint8_t> types;
-    for (const std::string& nal : nals) types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
+    for (const std::string& nal : nals)
+        types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
     EXPECT_TRUE(Has(types, kNalSps) && Has(types, kNalPps) && Has(types, kNalIdrSlice));
 
     say(FrameMessage::Bye);

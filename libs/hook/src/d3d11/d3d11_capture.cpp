@@ -67,8 +67,8 @@ void D3D11Capture::Capture(IDXGISwapChain* swap, ID3D11Device* device, LONGLONG 
         m_context->CopyResource(slot, backBuffer.Get());
     }
     UINT depthWidth, depthHeight;
-    if (depth && m_depth.Capture(m_device.Get(), m_context.Get(), m_ring.DepthSlot(frame),
-                                 bb.Width, bb.Height, depthWidth, depthHeight)) {
+    if (depth && m_depth.Capture(m_device.Get(), m_context.Get(), m_ring.DepthSlot(frame), bb.Width,
+                                 bb.Height, depthWidth, depthHeight)) {
         PublishDepth(frame, depthWidth, depthHeight, kDepthFloat);
     }
     // Flushed to the GPU by the game's Present right after this.
