@@ -19,6 +19,7 @@ block:
 | `gazeora_host_tests` | Capture client, injector (refusing a game of the other bitness), launcher, the test app captured end to end with the real hook (D3D9, and D3D8 in MinGW x86 builds), frame read-back, GPU scaling and the VR pass, NV12 conversion on the GPU, H.264 and H.265 encoding (software and hardware, from memory and from GPU textures), repeated frames, slicing, and RTP round trips through the system decoders, the RTSP server |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
+| `gazeora_installer_tests` | The MSI's custom action that deletes the user's data on uninstall, against a fake installer session |
 | `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`) |
 
 ## Benchmarks
@@ -64,11 +65,13 @@ libs/                 Libraries, in dependency order
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/ (one file per page), ui/ (theme, widgets),
-                          platform/ (shell dialogs) and settings/ (stream.ini)
+                          platform/ (shell dialogs, the USB driver, games opened from
+                          Explorer) and settings/ (stream.ini)
     resources/            Icon and resource script
   cli/                  GazeoraCLI.exe
 tools/                The test app and the stream probe
 tests/                GoogleTest suites, in the same folders as the code they test
+installer/            The MSI: WiX sources and the custom-action DLL (see installer.md)
 bench/                gazeora_bench, the benchmarks
 cmake/                Compiler settings, dependency fetching, formatting targets and the install
                       rules (InstallPrefix.cmake, Install.cmake)

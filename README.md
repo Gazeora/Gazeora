@@ -158,11 +158,19 @@ cmake --install build --prefix D:\Apps\Gazeora    # or anywhere else
 cmake --install build --component Tools           # then, if wanted, the test apps and the probe
 ```
 
+To build the MSI installer instead (`build\Gazeora-<version>-<arch>.msi`), with shortcuts, PATH,
+Explorer's **Open with Gazeora** and a firewall rule, see [Installer](docs/installer.md):
+
+```powershell
+cmake --build build --target gazeora_msi
+```
+
 ## Getting started
 
-Start `Gazeora.exe`, add games with **Add game** or by dragging exes or shortcuts onto the
-window, and launch them with **Play with capture**. The game's session card shows the capture
-status, frame rate, resolution, graphics API and the stream address.
+Start `Gazeora.exe`, add games with **Add game**, by dragging exes or shortcuts onto the
+window or, once installed with the MSI, with **Open with Gazeora** on their right-click menu,
+and launch them with **Play with capture**. The game's session card shows the capture status,
+frame rate, resolution, graphics API and the stream address.
 
 Then open the stream address from **Settings → Frame stream** on a phone or another PC;
 see [Streaming](docs/streaming.md).
@@ -176,6 +184,7 @@ see [Streaming](docs/streaming.md).
 | [Hand gestures](docs/hand-gestures.md) | Controlling the pointer with a webcam |
 | [Command line](docs/command-line.md) | `GazeoraCLI` commands |
 | [Tools](docs/tools.md) | The stream probe and the test app |
+| [Installer](docs/installer.md) | Building the MSI, its features, uninstalling, silent installs |
 | [Configuration files](docs/configuration.md) | What Gazeora stores and where |
 | [Stream format](docs/stream-format.md) | The wire formats of every protocol |
 | [Development](docs/development.md) | Testing, benchmarks, project layout, contributing |
