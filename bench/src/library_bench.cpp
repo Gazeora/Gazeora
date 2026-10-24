@@ -35,12 +35,11 @@ TEST(Library, LoadSaveAndLookups) {
     Print("Load", Measure(20, [&] { EXPECT_TRUE(loaded.Load(error)) << Narrow(error); }));
     EXPECT_EQ(loaded.Games().size(), size_t(kGames));
     Print("ChangedOnDisk", Measure(200, [&] { EXPECT_FALSE(loaded.ChangedOnDisk()); }, 3, 10));
-    Print("FindByIdOrName, by id", Measure(200, [&] {
-              EXPECT_NE(loaded.FindByIdOrName(L"250"), nullptr);
-          }, 3, 10));
-    Print("FindByIdOrName, by name (last)", Measure(200, [&] {
-              EXPECT_NE(loaded.FindByIdOrName(L"GAME NUMBER 499"), nullptr);
-          }, 3, 10));
+    Print("FindByIdOrName, by id",
+          Measure(200, [&] { EXPECT_NE(loaded.FindByIdOrName(L"250"), nullptr); }, 3, 10));
+    Print("FindByIdOrName, by name (last)",
+          Measure(
+              200, [&] { EXPECT_NE(loaded.FindByIdOrName(L"GAME NUMBER 499"), nullptr); }, 3, 10));
     // Auto launch looks for a Steam library around the exe, on disk.
     const Game& game = loaded.Games().back();
     Print("ToLaunchSpec (Auto: Steam lookup)", Measure(50, [&] {

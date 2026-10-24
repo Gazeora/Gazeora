@@ -51,12 +51,14 @@ inline __m128i Chroma2(__m128i top, __m128i bottom) {
     // Add up each pair, interleaved U, V as NV12 stores them.
     __m128i block0 = _mm_unpacklo_epi32(u, v);  // u0a, v0a, u0b, v0b
     __m128i block1 = _mm_unpackhi_epi32(u, v);
-    __m128i uv = _mm_add_epi32(_mm_unpacklo_epi64(block0, block1),
-                               _mm_unpackhi_epi64(block0, block1));
+    __m128i uv =
+        _mm_add_epi32(_mm_unpacklo_epi64(block0, block1), _mm_unpackhi_epi64(block0, block1));
     return _mm_add_epi32(_mm_srai_epi32(uv, 10), _mm_set1_epi32(128));
 }
 
-inline __m128i Load(const uint8_t* p) { return _mm_loadu_si128(reinterpret_cast<const __m128i*>(p)); }
+inline __m128i Load(const uint8_t* p) {
+    return _mm_loadu_si128(reinterpret_cast<const __m128i*>(p));
+}
 
 inline void Store(uint8_t* p, __m128i v) { _mm_storeu_si128(reinterpret_cast<__m128i*>(p), v); }
 

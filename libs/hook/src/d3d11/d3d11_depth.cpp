@@ -19,16 +19,18 @@ namespace {
 
 using DrawIndexedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, INT);
 using DrawFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT);
-using DrawIndexedInstancedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT,
-                                                        INT, UINT);
+using DrawIndexedInstancedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT, INT,
+                                                        UINT);
 using DrawInstancedFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT, UINT, UINT, UINT);
 using DrawIndirectFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, ID3D11Buffer*, UINT);
 using OMSetRenderTargetsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT,
                                                       ID3D11RenderTargetView* const*,
                                                       ID3D11DepthStencilView*);
-using OMSetRenderTargetsAndUavsFn = void(STDMETHODCALLTYPE*)(
-    ID3D11DeviceContext*, UINT, ID3D11RenderTargetView* const*, ID3D11DepthStencilView*, UINT,
-    UINT, ID3D11UnorderedAccessView* const*, const UINT*);
+using OMSetRenderTargetsAndUavsFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*, UINT,
+                                                             ID3D11RenderTargetView* const*,
+                                                             ID3D11DepthStencilView*, UINT, UINT,
+                                                             ID3D11UnorderedAccessView* const*,
+                                                             const UINT*);
 using ClearDepthStencilViewFn = void(STDMETHODCALLTYPE*)(ID3D11DeviceContext*,
                                                          ID3D11DepthStencilView*, UINT, FLOAT,
                                                          UINT8);
@@ -425,9 +427,9 @@ bool D3D11DepthCapture::Capture(ID3D11Device* device, ID3D11DeviceContext* conte
 
     // This frame's depth: the copy a clear made, or the buffer as it stands now.
     CopyIfFuller(context);
-    bool have = t.copiedDraws > 0 && Convert(device, context, slot, t.copyView.Get(),
-                                             std::min(t.copyWidth, width),
-                                             std::min(t.copyHeight, height));
+    bool have =
+        t.copiedDraws > 0 && Convert(device, context, slot, t.copyView.Get(),
+                                     std::min(t.copyWidth, width), std::min(t.copyHeight, height));
     depthWidth = t.copyWidth;
     depthHeight = t.copyHeight;
     t.copiedDraws = t.drawsSinceClear = 0;
@@ -459,8 +461,7 @@ bool D3D11DepthCapture::Capture(ID3D11Device* device, ID3D11DeviceContext* conte
             viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
             viewDesc.Texture2D.MipLevels = 1;
             if (SUCCEEDED(device->CreateTexture2D(&desc, nullptr, &t.copy)) &&
-                SUCCEEDED(device->CreateShaderResourceView(t.copy.Get(), &viewDesc,
-                                                           &t.copyView))) {
+                SUCCEEDED(device->CreateShaderResourceView(t.copy.Get(), &viewDesc, &t.copyView))) {
                 t.selected = it->second;
                 t.copyWidth = desc.Width;
                 t.copyHeight = desc.Height;
@@ -484,10 +485,10 @@ bool D3D11DepthCapture::CreateShaders(ID3D11Device* device) {
     auto compile = reinterpret_cast<D3DCompileFn>(ModuleExport(compiler, "D3DCompile"));
     ComPtr<ID3DBlob> vs, ps;
     if (!compile ||
-        FAILED(compile(kConvertShader, sizeof(kConvertShader) - 1, nullptr, nullptr, nullptr,
-                       "vs", "vs_4_0", 0, 0, &vs, nullptr)) ||
-        FAILED(compile(kConvertShader, sizeof(kConvertShader) - 1, nullptr, nullptr, nullptr,
-                       "ps", "ps_4_0", 0, 0, &ps, nullptr)) ||
+        FAILED(compile(kConvertShader, sizeof(kConvertShader) - 1, nullptr, nullptr, nullptr, "vs",
+                       "vs_4_0", 0, 0, &vs, nullptr)) ||
+        FAILED(compile(kConvertShader, sizeof(kConvertShader) - 1, nullptr, nullptr, nullptr, "ps",
+                       "ps_4_0", 0, 0, &ps, nullptr)) ||
         FAILED(device->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr,
                                           &m_vertexShader)) ||
         FAILED(device->CreatePixelShader(ps->GetBufferPointer(), ps->GetBufferSize(), nullptr,

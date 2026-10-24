@@ -29,8 +29,8 @@ struct OverlaySettings {
     bool bitrate = true;
     bool loss = true;
     bool encoder = false;
-    bool clock = false;     // this PC's time, to the second
-    std::wstring text;      // a line of the user's own; none if empty
+    bool clock = false;  // this PC's time, to the second
+    std::wstring text;   // a line of the user's own; none if empty
 
     bool operator==(const OverlaySettings& other) const;
     bool operator!=(const OverlaySettings& other) const { return !(*this == other); }
@@ -40,7 +40,7 @@ struct OverlaySettings {
 struct OverlayStats {
     std::string protocol;  // e.g. "RTSP over TCP"
     int viewers = 0;
-    std::string codec;     // e.g. "H.265"
+    std::string codec;  // e.g. "H.265"
     uint32_t width = 0;
     uint32_t height = 0;
     float frameRate = 0;

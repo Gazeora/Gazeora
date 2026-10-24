@@ -21,9 +21,9 @@ std::string BuildSenderReport(uint32_t ssrc, uint32_t packetsSent, uint32_t octe
 // One report block of a receiver report (6.4.2): how a player is receiving one source.
 struct ReceptionReport {
     uint32_t source = 0;
-    float fractionLost = 0;    // since the player's previous report, 0..1
+    float fractionLost = 0;      // since the player's previous report, 0..1
     int32_t cumulativeLost = 0;  // signed: duplicates can make it negative
-    uint32_t jitter = 0;       // in RTP timestamp units
+    uint32_t jitter = 0;         // in RTP timestamp units
 };
 
 // The report blocks of every receiver report in a compound RTCP packet.

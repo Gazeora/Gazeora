@@ -24,9 +24,8 @@ bool UserDataRemoval::Wanted() const {
     if (choice == kRemove || choice == kKeep) {
         return choice == kRemove;
     }
-    return m_session.AskYesNo(
-        L"Also delete your Gazeora game library and settings?\n\n" + m_folder.Path() +
-        L"\n\nChoose No to keep them for a later install.");
+    return m_session.AskYesNo(L"Also delete your Gazeora game library and settings?\n\n" +
+                              m_folder.Path() + L"\n\nChoose No to keep them for a later install.");
 }
 
 }  // namespace gazeora::setup

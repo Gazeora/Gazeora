@@ -51,8 +51,8 @@ protected:
     void SetUp() override {
         wchar_t dir[MAX_PATH];
         GetTempPathW(MAX_PATH, dir);
-        folder = std::wstring(dir) + L"gazeora_library_test_" +
-                 std::to_wstring(GetCurrentProcessId());
+        folder =
+            std::wstring(dir) + L"gazeora_library_test_" + std::to_wstring(GetCurrentProcessId());
         path = folder + L"\\library.json";
     }
 

@@ -43,8 +43,8 @@ Device CreateDevice(bool& onWarp) {
 }
 
 // A width x height texture filled with `pixels` (4 bytes each, tightly packed).
-Microsoft::WRL::ComPtr<ID3D11Texture2D> CreateTexture(ID3D11Device* device, UINT width,
-                                                      UINT height, DXGI_FORMAT format,
+Microsoft::WRL::ComPtr<ID3D11Texture2D> CreateTexture(ID3D11Device* device, UINT width, UINT height,
+                                                      DXGI_FORMAT format,
                                                       const std::vector<uint32_t>& pixels) {
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = width;
@@ -85,8 +85,9 @@ TEST(Capture, TransportInProcess) {
     ASSERT_TRUE(ring.Create(game.device.Get(), size.width, size.height, DXGI_FORMAT_B8G8R8A8_UNORM,
                             kApiD3D11));
     client.SetCaptureEnabled(true);
-    auto backBuffer = CreateTexture(game.device.Get(), size.width, size.height,
-                                          DXGI_FORMAT_B8G8R8A8_UNORM, NoisePixels(size.width, size.height));
+    auto backBuffer =
+        CreateTexture(game.device.Get(), size.width, size.height, DXGI_FORMAT_B8G8R8A8_UNORM,
+                      NoisePixels(size.width, size.height));
     ASSERT_TRUE(backBuffer);
 
     TextureReader reader;
@@ -144,13 +145,16 @@ TEST(Capture, TextureReader) {
         {"1080p RGB10A2, full size", k1080p, DXGI_FORMAT_R10G10B10A2_UNORM, false, false},
         {"720p BGRA8, full size", k720p, DXGI_FORMAT_B8G8R8A8_UNORM, false, false},
         {"1440p BGRA8, scaled to 1080p", k1440p, DXGI_FORMAT_B8G8R8A8_UNORM, true, false},
-        {"2160p BGRA8, scaled to 1080p", {3840, 2160, "2160p"}, DXGI_FORMAT_B8G8R8A8_UNORM, true,
+        {"2160p BGRA8, scaled to 1080p",
+         {3840, 2160, "2160p"},
+         DXGI_FORMAT_B8G8R8A8_UNORM,
+         true,
          false},
         {"1080p BGRA8, VR side by side", k1080p, DXGI_FORMAT_B8G8R8A8_UNORM, true, true},
     };
     for (const Case& c : cases) {
-        auto texture = CreateTexture(gpu.device.Get(), c.source.width, c.source.height,
-                                           c.format, NoisePixels(c.source.width, c.source.height));
+        auto texture = CreateTexture(gpu.device.Get(), c.source.width, c.source.height, c.format,
+                                     NoisePixels(c.source.width, c.source.height));
         ASSERT_TRUE(texture) << c.name;
         TextureReader reader;
         if (c.limitTo1080p) reader.SetMaxSize(1920, 1080);
@@ -176,15 +180,19 @@ TEST(Capture, ScreenshotAsBmp) {
     PrintHeader("SaveTextureAsBmp (F12 screenshot)");
     const Size size = k1080p;
     auto texture = CreateTexture(gpu.device.Get(), size.width, size.height,
-                                       DXGI_FORMAT_B8G8R8A8_UNORM, NoisePixels(size.width, size.height));
+                                 DXGI_FORMAT_B8G8R8A8_UNORM, NoisePixels(size.width, size.height));
     wchar_t dir[MAX_PATH];
     GetTempPathW(MAX_PATH, dir);
-    std::wstring path = std::wstring(dir) + L"gazeora_bench_" +
-                        std::to_wstring(GetCurrentProcessId()) + L".bmp";
+    std::wstring path =
+        std::wstring(dir) + L"gazeora_bench_" + std::to_wstring(GetCurrentProcessId()) + L".bmp";
     std::wstring error;
-    Stats s = Measure(20, [&] {
-        EXPECT_TRUE(SaveTextureAsBmp(gpu.device.Get(), texture.Get(), path, error)) << Narrow(error);
-    }, 2);
+    Stats s = Measure(
+        20,
+        [&] {
+            EXPECT_TRUE(SaveTextureAsBmp(gpu.device.Get(), texture.Get(), path, error))
+                << Narrow(error);
+        },
+        2);
     DeleteFileW(path.c_str());
     Print(std::string(size.name) + " to the temp folder", s);
 }
@@ -202,14 +210,15 @@ TEST(Capture, RealHookPerGraphicsApi) {
     std::wstring dll = HookDllPathNextToExe();
     if (GetFileAttributesW(testApp.c_str()) == INVALID_FILE_ATTRIBUTES ||
         GetFileAttributesW(dll.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        GTEST_SKIP() << "gazeora_testapp.exe and gazeora_hook.dll must be next to gazeora_bench.exe";
+        GTEST_SKIP()
+            << "gazeora_testapp.exe and gazeora_hook.dll must be next to gazeora_bench.exe";
     }
     PrintHeader("Hook in gazeora_testapp.exe (1280x720, vsync)");
     struct Api {
         const wchar_t* flag;
         const char* name;
     };
-    const Api apis[] = {{L"", "D3D11"},      {L"--d3d8", "D3D8"},   {L"--d3d9", "D3D9"},
+    const Api apis[] = {{L"", "D3D11"},        {L"--d3d8", "D3D8"},   {L"--d3d9", "D3D9"},
                         {L"--d3d10", "D3D10"}, {L"--d3d12", "D3D12"}, {L"--opengl", "OpenGL"}};
     constexpr int kFrames = 120;
     for (const Api& api : apis) {
@@ -236,8 +245,9 @@ TEST(Capture, RealHookPerGraphicsApi) {
         }
         double firstFrame = QpcSeconds();
         if (!gotFirst) {
-            PrintNote(api.name, std::string(game.Running() ? "no frame in 15 s" : "the app exited") +
-                                    " (hook: " + client.Shared().status + ")");
+            PrintNote(api.name,
+                      std::string(game.Running() ? "no frame in 15 s" : "the app exited") +
+                          " (hook: " + client.Shared().status + ")");
             if (game.Running()) TerminateProcess(game.process, 0);
             continue;
         }

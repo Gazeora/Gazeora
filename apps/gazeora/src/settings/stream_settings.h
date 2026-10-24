@@ -69,7 +69,7 @@ struct ScreenPreset {
     float aspect;
 };
 inline const ScreenPreset kScreenPresets[] = {
-    {"16:9", 16.0f / 9}, {"18:9", 18.0f / 9},   {"19.5:9", 19.5f / 9},
+    {"16:9", 16.0f / 9}, {"18:9", 18.0f / 9}, {"19.5:9", 19.5f / 9},
     {"20:9", 20.0f / 9}, {"21:9", 21.0f / 9},
 };
 

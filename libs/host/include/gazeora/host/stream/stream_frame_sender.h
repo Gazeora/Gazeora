@@ -45,9 +45,9 @@ private:
     TextureReader m_reader;
     GpuNv12Converter m_converter;
     Microsoft::WRL::ComPtr<ID3D11Device> m_noTextures;  // the device the converter failed on
-    std::vector<uint8_t> m_pixels;  // swapped with the sink's older buffers
+    std::vector<uint8_t> m_pixels;                      // swapped with the sink's older buffers
     VrLayout m_vr;
-    VrLayout m_sentLayout;     // what the latest frame went out with
+    VrLayout m_sentLayout;      // what the latest frame went out with
     bool m_latestSent = false;  // the capture's latest frame went out
     bool m_stereo = false;
 };

@@ -60,7 +60,8 @@ void ControlsPage::Draw(const Fonts& fonts) {
     ImGui::TextUnformatted("Your mouse and keyboard always work. Add other ways to play here.");
     ImGui::PopStyleColor();
     ImGui::Dummy(ImVec2(0, S(kTitleGap)));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(S(kCardItemSpacing.x), S(kCardItemSpacing.y)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+                        ImVec2(S(kCardItemSpacing.x), S(kCardItemSpacing.y)));
     DrawHandGestures(fonts, std::min(ImGui::GetContentRegionAvail().x, S(kMaxCardWidth)));
     ImGui::PopStyleVar();
 }

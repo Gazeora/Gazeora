@@ -14,8 +14,8 @@ bool DiscoveryResponder::Start(in_addr address, uint16_t port, Describe describe
     }
     // Another program on this port would get the requests instead.
     BOOL exclusive = TRUE;
-    setsockopt(m_socket.Get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-               reinterpret_cast<char*>(&exclusive), sizeof(exclusive));
+    setsockopt(m_socket.Get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<char*>(&exclusive),
+               sizeof(exclusive));
     sockaddr_in bound = {};
     bound.sin_family = AF_INET;
     bound.sin_addr = address;

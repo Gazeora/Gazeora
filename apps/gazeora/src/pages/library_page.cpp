@@ -66,9 +66,8 @@ void App::DrawLibrary() {
     ImGui::PopStyleVar();
 
     ImGui::SetCursorPos(ImVec2(right - addWidth, controlsY));
-    if (AccentButton(ICON_ADD "   Add game##library",
-                     ImVec2(addWidth, controlsHeight), m_fonts.bold, S(6),
-                     AccentGradient())) {
+    if (AccentButton(ICON_ADD "   Add game##library", ImVec2(addWidth, controlsHeight),
+                     m_fonts.bold, S(6), AccentGradient())) {
         m_deferred.push_back([this] { AddGamesFromDialog(); });
     }
     ImGui::SetCursorPosY(headerY + controlsHeight + S(20));
@@ -121,8 +120,8 @@ void App::DrawGameCard(const Game& game, float width) {
     if (isCover) {
         ImVec2 uv0, uv1;
         CoverUv(art.Aspect(), width / coverHeight, uv0, uv1);
-        draw->AddImageRounded(ImTextureID(art.Id()), pos, coverMax, uv0, uv1,
-                              IM_COL32_WHITE, rounding);
+        draw->AddImageRounded(ImTextureID(art.Id()), pos, coverMax, uv0, uv1, IM_COL32_WHITE,
+                              rounding);
     } else {
         // Icon over a gradient in the icon's own color.
         float rgb[3];
@@ -230,6 +229,5 @@ void App::DrawGameContextMenu(const Game& game) {
     ImGui::PopStyleVar();
     ImGui::EndPopup();
 }
-
 
 }  // namespace gazeora::app

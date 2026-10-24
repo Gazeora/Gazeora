@@ -86,8 +86,7 @@ struct Functions {
     void(APIENTRY* DeleteMemoryObjectsEXT)(GLsizei, const GLuint*);
     void(APIENTRY* MemoryObjectParameterivEXT)(GLuint, GLenum, const GLint*);
     void(APIENTRY* ImportMemoryWin32HandleEXT)(GLuint, GLuint64, GLenum, void*);
-    void(APIENTRY* TexStorageMem2DEXT)(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLuint,
-                                       GLuint64);
+    void(APIENTRY* TexStorageMem2DEXT)(GLenum, GLsizei, GLenum, GLsizei, GLsizei, GLuint, GLuint64);
     void(APIENTRY* GenSemaphoresEXT)(GLsizei, GLuint*);
     void(APIENTRY* DeleteSemaphoresEXT)(GLsizei, const GLuint*);
     void(APIENTRY* ImportSemaphoreWin32HandleEXT)(GLuint, GLenum, void*);

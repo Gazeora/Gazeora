@@ -51,8 +51,8 @@ std::vector<std::string> QuotedTokens(const std::string& line) {
 }
 
 bool HasGraphicsRuntime(DWORD pid) {
-    static const wchar_t* const kRuntimes[] = {L"dxgi.dll",     L"d3d9.dll",   L"d3d11.dll",
-                                               L"d3d12.dll",    L"d3d8.dll",   L"opengl32.dll",
+    static const wchar_t* const kRuntimes[] = {L"dxgi.dll",    L"d3d9.dll", L"d3d11.dll",
+                                               L"d3d12.dll",   L"d3d8.dll", L"opengl32.dll",
                                                L"vulkan-1.dll"};
     HANDLE snapshot = INVALID_HANDLE_VALUE;
     // Fails with ERROR_BAD_LENGTH while the target is loading modules; just retry.
@@ -319,8 +319,8 @@ bool LaunchGame(const LaunchSpec& spec, LaunchedGame& game, std::wstring& error)
     return true;
 }
 
-bool LaunchGameWithHook(const LaunchSpec& spec, const std::wstring& dllPath,
-                        CaptureClient& client, LaunchedGame& game, std::wstring& error) {
+bool LaunchGameWithHook(const LaunchSpec& spec, const std::wstring& dllPath, CaptureClient& client,
+                        LaunchedGame& game, std::wstring& error) {
     if (GetFileAttributesW(dllPath.c_str()) == INVALID_FILE_ATTRIBUTES) {
         error = L"hook DLL not found at " + dllPath;
         return false;

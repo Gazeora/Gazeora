@@ -14,8 +14,8 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
-#include "gazeora/common/text/utf8.h"
 #include "gazeora/common/shared.h"
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
 #include "platform/shell.h"
@@ -53,8 +53,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     if (isCover) {
         ImVec2 uv0, uv1;
         CoverUv(art.Aspect(), width / height, uv0, uv1);
-        draw->AddImageRounded(ImTextureID(art.Id()), pos, max, uv0, uv1, IM_COL32_WHITE,
-                              rounding);
+        draw->AddImageRounded(ImTextureID(art.Id()), pos, max, uv0, uv1, IM_COL32_WHITE, rounding);
     } else if (art) {
         float iconSize = std::min(height * 0.72f, std::max(S(128), float(art.width) * 4.0f));
         ImVec2 iconPos(max.x - iconSize - height * 0.16f, pos.y + (height - iconSize) * 0.5f);
@@ -63,8 +62,7 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     }
     draw->AddImageRounded(ImTextureID(m_textures.Gradient(false).Id()), pos,
                           ImVec2(pos.x + width * 0.85f, max.y), ImVec2(0, 0), ImVec2(1, 1),
-                          Shade(rgb, 0.12f, 0.97f), rounding,
-                          ImDrawFlags_RoundCornersLeft);
+                          Shade(rgb, 0.12f, 0.97f), rounding, ImDrawFlags_RoundCornersLeft);
 
     float padding = S(30);
     float textWidth = width * 0.6f;
@@ -82,11 +80,10 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
     TextEllipsis(draw, m_fonts.title, cursor, kText, U8(game.name), textWidth);
     cursor.y += m_fonts.title->FontSize + S(6);
 
-    std::string meta =
-        starting  ? ICON_CLOCK "  Starting..."
-        : session ? ICON_CLOCK "  Playing for " + ClockText(stats.elapsedSeconds)
-                  : ICON_CLOCK "  " + RelativeTime(game.lastPlayed) + "   \xC2\xB7   " +
-                        PlaytimeText(game.playtimeSeconds);
+    std::string meta = starting  ? ICON_CLOCK "  Starting..."
+                       : session ? ICON_CLOCK "  Playing for " + ClockText(stats.elapsedSeconds)
+                                 : ICON_CLOCK "  " + RelativeTime(game.lastPlayed) +
+                                       "   \xC2\xB7   " + PlaytimeText(game.playtimeSeconds);
     draw->AddText(m_fonts.body, m_fonts.body->FontSize, cursor, WithAlpha(kText, 0.85f),
                   meta.c_str());
 
@@ -99,15 +96,14 @@ void App::DrawGameBanner(const Game& game, float height, const char* eyebrow, bo
                             : stats.state == GameSession::State::WaitingForGame
                                 ? "STARTING...##play"
                                 : "RUNNING##play";
-    if (AccentButton(playLabel, ImVec2(S(150), buttonHeight), m_fonts.bold, S(6),
-                     AccentGradient(), !session)) {
+    if (AccentButton(playLabel, ImVec2(S(150), buttonHeight), m_fonts.bold, S(6), AccentGradient(),
+                     !session)) {
         Launch(game.id, game.captureOnLaunch);
     }
     if (showDetails) {
         ImGui::SameLine(0.0f, S(10));
-        if (FilledButton("Details##details", ImVec2(S(110), buttonHeight),
-                         WithAlpha(kText, 0.12f), WithAlpha(kText, 0.2f), kText,
-                         m_fonts.bold, S(6))) {
+        if (FilledButton("Details##details", ImVec2(S(110), buttonHeight), WithAlpha(kText, 0.12f),
+                         WithAlpha(kText, 0.2f), kText, m_fonts.bold, S(6))) {
             OpenDetails(game.id);
         }
     }
@@ -204,8 +200,8 @@ void App::DrawSessionCard(const Game& game) {
                     session->ThroughSteam() ? "Steam" : "its launcher");
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
-        if (FilledButton("Stop waiting##cancel", ImVec2(S(140), S(36)), kSecondary,
-                         kSecondaryHover, kText, m_fonts.bold, S(6))) {
+        if (FilledButton("Stop waiting##cancel", ImVec2(S(140), S(36)), kSecondary, kSecondaryHover,
+                         kText, m_fonts.bold, S(6))) {
             session->Cancel();
         }
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
@@ -263,17 +259,17 @@ void App::DrawSessionCard(const Game& game) {
                                                 : "3D: no depth buffer found, streaming in 2D");
             ImGui::PopStyleColor();
             if (!stats.stereo) {
-                HelpMarker("3D needs the game's depth buffer, which Gazeora finds in D3D11 and "
-                           "D3D12 games once they draw a 3D scene. Menus, videos and other "
-                           "graphics APIs stay 2D.",
-                           S(380));
+                HelpMarker(
+                    "3D needs the game's depth buffer, which Gazeora finds in D3D11 and "
+                    "D3D12 games once they draw a 3D scene. Menus, videos and other "
+                    "graphics APIs stay 2D.",
+                    S(380));
             }
         }
 
         std::vector<std::wstring> urls = m_stream.Urls();
         if (FilledButton(ICON_CAPTURE "   Copy stream URL##stream", ImVec2(S(170), S(34)),
-                         kSecondary, kSecondaryHover, kText, m_fonts.bold, S(6),
-                         !urls.empty())) {
+                         kSecondary, kSecondaryHover, kText, m_fonts.bold, S(6), !urls.empty())) {
             ImGui::SetClipboardText(U8(urls.front()).c_str());
             ShowToast("Copied " + U8(urls.front()));
         }
@@ -432,6 +428,5 @@ void App::DrawGameInfoCard(Game& game) {
     }
     EndCard();
 }
-
 
 }  // namespace gazeora::app

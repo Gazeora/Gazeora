@@ -47,8 +47,7 @@ void CaptureFrame(HDC dc) {
         return;  // minimized
     }
     if (scope.SelectTarget(window)) {
-        g_capture.Capture(dc, context, UINT(client.right), UINT(client.bottom),
-                          scope.PresentQpc());
+        g_capture.Capture(dc, context, UINT(client.right), UINT(client.bottom), scope.PresentQpc());
     }
 }
 

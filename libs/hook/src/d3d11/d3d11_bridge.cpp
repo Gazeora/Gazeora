@@ -52,10 +52,10 @@ bool D3D11Bridge::CreateDevice(const LUID* adapter) {
     }
     ComPtr<ID3D11Device> device;
     ComPtr<ID3D11DeviceContext> context;
-    HRESULT hr = D3D11CreateDevice(
-        dxgiAdapter.Get(), dxgiAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
-        nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, nullptr, 0, D3D11_SDK_VERSION, &device, nullptr,
-        &context);
+    HRESULT hr = D3D11CreateDevice(dxgiAdapter.Get(),
+                                   dxgiAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
+                                   nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, nullptr, 0,
+                                   D3D11_SDK_VERSION, &device, nullptr, &context);
     if (FAILED(hr)) {
         SetStatus("D3D11CreateDevice for the capture bridge failed: 0x%08lX", hr);
         return false;
@@ -72,8 +72,8 @@ bool D3D11Bridge::CreateDevice(const LUID* adapter) {
 
 bool D3D11Bridge::Configure(const LUID* adapter, UINT width, UINT height, DXGI_FORMAT format,
                             GraphicsApi api) {
-    bool sameAdapter = adapter ? !m_defaultAdapter && SameLuid(*adapter, m_adapter)
-                               : m_defaultAdapter;
+    bool sameAdapter =
+        adapter ? !m_defaultAdapter && SameLuid(*adapter, m_adapter) : m_defaultAdapter;
     if ((!m_device || !sameAdapter) && !CreateDevice(adapter)) {
         return false;
     }

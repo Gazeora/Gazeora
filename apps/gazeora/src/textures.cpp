@@ -108,9 +108,8 @@ Texture TextureCache::FromWicSource(IWICBitmapSource* source, bool cropToAlpha) 
     ComPtr<IWICFormatConverter> converter;
     UINT width = 0, height = 0;
     if (FAILED(m_wic->CreateFormatConverter(&converter)) ||
-        FAILED(converter->Initialize(source, GUID_WICPixelFormat32bppRGBA,
-                                     WICBitmapDitherTypeNone, nullptr, 0.0,
-                                     WICBitmapPaletteTypeCustom)) ||
+        FAILED(converter->Initialize(source, GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone,
+                                     nullptr, 0.0, WICBitmapPaletteTypeCustom)) ||
         FAILED(converter->GetSize(&width, &height)) || width == 0 || height == 0) {
         return {};
     }

@@ -43,12 +43,11 @@ bool D3D11FrameRing::Create(ID3D11Device5* device, UINT width, UINT height, DXGI
         if (SUCCEEDED(hr)) hr = slot.As(&resource);
         if (SUCCEEDED(hr)) {
             hr = resource->CreateSharedHandle(
-                nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr,
-                &handle);
+                nullptr, DXGI_SHARED_RESOURCE_READ | DXGI_SHARED_RESOURCE_WRITE, nullptr, &handle);
         }
         if (FAILED(hr)) {
-            SetStatus("D3D11 shared texture %ux%u fmt %d failed: 0x%08lX", desc.Width,
-                      desc.Height, desc.Format, hr);
+            SetStatus("D3D11 shared texture %ux%u fmt %d failed: 0x%08lX", desc.Width, desc.Height,
+                      desc.Format, hr);
         }
         return SUCCEEDED(hr);
     };

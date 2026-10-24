@@ -50,7 +50,8 @@ std::vector<uint8_t> ReferenceNv12(const uint8_t* bgra, uint32_t stride, uint32_
                 }
             }
             int b = sum[0], g = sum[1], r = sum[2];
-            uv[size_t(y / 2) * width + x] = uint8_t(128 + ((-26 * r - 87 * g + 112 * b + 512) >> 10));
+            uv[size_t(y / 2) * width + x] =
+                uint8_t(128 + ((-26 * r - 87 * g + 112 * b + 512) >> 10));
             uv[size_t(y / 2) * width + x + 1] =
                 uint8_t(128 + ((112 * r - 102 * g - 10 * b + 512) >> 10));
         }
@@ -266,7 +267,8 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     SplitAnnexB(frames[0].annexB, nals);
     bool vps = !hevc, sps = false, pps = false, idr = false;
     for (const std::string& nal : nals) {
-        uint8_t type = hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) : RtpPayloadFormat::For(VideoCodec::H264).NalType(nal);
+        uint8_t type = hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal)
+                            : RtpPayloadFormat::For(VideoCodec::H264).NalType(nal);
         vps |= hevc && type == kHevcVps;
         sps |= type == (hevc ? uint8_t(kHevcSps) : uint8_t(kNalSps));
         pps |= type == (hevc ? uint8_t(kHevcPps) : uint8_t(kNalPps));
@@ -278,8 +280,9 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     if (encoder.Name().find(L"NVIDIA") != std::wstring::npos) {
         int slices = 0;
         for (const std::string& nal : nals) {
-            slices += hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) < kHevcVps : (RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalSlice ||
-                                                            RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice);
+            slices += hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) < kHevcVps
+                           : (RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalSlice ||
+                              RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice);
         }
         EXPECT_GE(slices, 8);
     }
@@ -314,14 +317,15 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     EXPECT_NEAR(luma.back(), 188, 4);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    CodecsAndEncoders, VideoEncoderTest,
-    ::testing::Combine(::testing::Values(VideoCodec::H264, VideoCodec::H265),
-                       ::testing::Values(false, true)),
-    [](const auto& info) {
-        return std::string(std::get<0>(info.param) == VideoCodec::H265 ? "H265" : "H264") +
-               (std::get<1>(info.param) ? "Hardware" : "Software");
-    });
+INSTANTIATE_TEST_SUITE_P(CodecsAndEncoders, VideoEncoderTest,
+                         ::testing::Combine(::testing::Values(VideoCodec::H264, VideoCodec::H265),
+                                            ::testing::Values(false, true)),
+                         [](const auto& info) {
+                             return std::string(std::get<0>(info.param) == VideoCodec::H265
+                                                    ? "H265"
+                                                    : "H264") +
+                                    (std::get<1>(info.param) ? "Hardware" : "Software");
+                         });
 
 // The GPU path end to end, on this machine's GPU: frames converted to NV12 there and encoded
 // from the textures decode to the frames' brightness.
@@ -357,8 +361,8 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
     settings.device = device.Get();
     std::wstring error;
     if (!encoder->Open(settings, error)) {
-        GTEST_SKIP() << "no GPU " << CodecName(codec) << " encoder takes textures here: "
-                     << Utf8::FromWide(error);
+        GTEST_SKIP() << "no GPU " << CodecName(codec)
+                     << " encoder takes textures here: " << Utf8::FromWide(error);
     }
     EXPECT_TRUE(encoder->IsHardware());
     EXPECT_TRUE(encoder->Matches(codec, 320, 240, device.Get()));
@@ -379,8 +383,8 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
         ComPtr<ID3D11Texture2D> frame;
         ASSERT_TRUE(SUCCEEDED(device->CreateTexture2D(&desc, &data, &frame)));
         UINT width = 0, height = 0;
-        ComPtr<ID3D11Texture2D> nv12 = converter.Convert(device.Get(), frame.Get(), width, height,
-                                                         error);
+        ComPtr<ID3D11Texture2D> nv12 =
+            converter.Convert(device.Get(), frame.Get(), width, height, error);
         ASSERT_TRUE(nv12) << Utf8::FromWide(error);
         ASSERT_TRUE(encoder->EncodeTexture(nv12.Get(), int64_t(i) * 333333, frames, error))
             << Utf8::FromWide(error);

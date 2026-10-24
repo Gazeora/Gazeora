@@ -49,7 +49,7 @@ std::string BuildSenderReport(uint32_t ssrc, uint32_t packetsSent, uint32_t octe
     put32(ssrc);
     report +=
         "\x01\x07"
-        "Gazeora";           // CNAME
+        "Gazeora";  // CNAME
     // End of items, padding the chunk to a word: 4 + 9 + 3 = 16 bytes (RFC 3550 6.5).
     report.append(3, '\0');
     return report;

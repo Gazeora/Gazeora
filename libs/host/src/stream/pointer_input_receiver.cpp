@@ -21,7 +21,8 @@ bool PointerInputReceiver::Start(in_addr address, uint16_t port, std::wstring& e
     bound.sin_port = htons(port);
     int length = sizeof(bound);
     // The app sends to this exact port: another one would never hear from it.
-    if (!m_socket || bind(m_socket.Get(), reinterpret_cast<sockaddr*>(&bound), sizeof(bound)) != 0 ||
+    if (!m_socket ||
+        bind(m_socket.Get(), reinterpret_cast<sockaddr*>(&bound), sizeof(bound)) != 0 ||
         getsockname(m_socket.Get(), reinterpret_cast<sockaddr*>(&bound), &length) != 0) {
         error = L"UDP port " + std::to_wstring(port) + L" for touch input is taken (error " +
                 std::to_wstring(WSAGetLastError()) + L")";

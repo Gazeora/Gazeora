@@ -147,8 +147,8 @@ TEST_F(FrameTransportTest, HostFollowsRecreatedResources) {
 TEST_F(FrameTransportTest, DepthTravelsWithItsFrame) {
     client.SetCaptureDepth(true);
     EXPECT_TRUE(hook::CaptureDepth());
-    ASSERT_TRUE(
-        ring.Create(game.device.Get(), kWidth, kHeight, DXGI_FORMAT_B8G8R8A8_UNORM, kApiD3D11, true));
+    ASSERT_TRUE(ring.Create(game.device.Get(), kWidth, kHeight, DXGI_FORMAT_B8G8R8A8_UNORM,
+                            kApiD3D11, true));
     ASSERT_NE(ring.DepthSlot(0), nullptr);
 
     // A frame with depth: the words arrive as they were written, with what they are.
@@ -157,8 +157,7 @@ TEST_F(FrameTransportTest, DepthTravelsWithItsFrame) {
     std::vector<uint32_t> pixels(kWidth * kHeight, 0xFF101010);
     std::vector<uint32_t> depth(kWidth * kHeight, 0x3F000000);  // 0.5f
     game.context->UpdateSubresource(ring.Slot(frame), 0, nullptr, pixels.data(), kWidth * 4, 0);
-    game.context->UpdateSubresource(ring.DepthSlot(frame), 0, nullptr, depth.data(), kWidth * 4,
-                                    0);
+    game.context->UpdateSubresource(ring.DepthSlot(frame), 0, nullptr, depth.data(), kWidth * 4, 0);
     hook::PublishDepth(frame, 1920, 1080, kDepthFloat);
     ring.Publish(game.context.Get(), frame, hook::QpcNow(), true);
     ASSERT_EQ(client.WaitForFrame(kTimeoutMs), CaptureClient::WaitResult::Frame);

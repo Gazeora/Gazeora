@@ -1,7 +1,7 @@
 #include "gazeora/host/stream/packet_send_queue.h"
 
-#include <ws2tcpip.h>
 #include <gtest/gtest.h>
+#include <ws2tcpip.h>
 
 #include <string>
 #include <vector>

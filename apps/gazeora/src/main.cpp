@@ -48,9 +48,9 @@ struct Renderer {
         desc.Windowed = TRUE;
         desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         const D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0};
-        HRESULT hr = D3D11CreateDeviceAndSwapChain(
-            nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, ARRAYSIZE(levels),
-            D3D11_SDK_VERSION, &desc, &swapChain, &device, nullptr, &context);
+        HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0,
+                                                   levels, ARRAYSIZE(levels), D3D11_SDK_VERSION,
+                                                   &desc, &swapChain, &device, nullptr, &context);
         if (FAILED(hr)) {
             // No usable GPU (e.g. a remote session): fall back to the software rasterizer.
             hr = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, 0, levels,
@@ -190,8 +190,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     ImGui_ImplWin32_EnableDpiAwareness();
     POINT origin = {0, 0};
-    g_dpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(
-        MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY));
+    g_dpiScale =
+        ImGui_ImplWin32_GetDpiScaleForMonitor(MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY));
 
     WNDCLASSEXW wc = {sizeof(wc)};
     wc.style = CS_CLASSDC;
@@ -211,11 +211,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
     width = std::min(width, int(work.right - work.left));
     height = std::min(height, int(work.bottom - work.top));
-    HWND hwnd = CreateWindowExW(
-        WS_EX_ACCEPTFILES, kWindowClass, L"Gazeora", WS_OVERLAPPEDWINDOW,
-        work.left + (work.right - work.left - width) / 2,
-        work.top + (work.bottom - work.top - height) / 2, width, height, nullptr, nullptr,
-        instance, nullptr);
+    HWND hwnd = CreateWindowExW(WS_EX_ACCEPTFILES, kWindowClass, L"Gazeora", WS_OVERLAPPEDWINDOW,
+                                work.left + (work.right - work.left - width) / 2,
+                                work.top + (work.bottom - work.top - height) / 2, width, height,
+                                nullptr, nullptr, instance, nullptr);
     StyleTitleBar(hwnd);
 
     if (!g_renderer.Create(hwnd)) {

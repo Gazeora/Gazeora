@@ -46,10 +46,9 @@ void SwapRedBlue10Row(const uint8_t* src, uint8_t* dst, uint32_t width) {
     uint32_t x = 0;
     for (; x + 4 <= width; x += 4, src += 16, dst += 16) {
         __m128i v = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src));
-        __m128i out = _mm_or_si128(
-            _mm_and_si128(v, keep),
-            _mm_or_si128(_mm_slli_epi32(_mm_and_si128(v, low10), 20),
-                         _mm_and_si128(_mm_srli_epi32(v, 20), low10)));
+        __m128i out = _mm_or_si128(_mm_and_si128(v, keep),
+                                   _mm_or_si128(_mm_slli_epi32(_mm_and_si128(v, low10), 20),
+                                                _mm_and_si128(_mm_srli_epi32(v, 20), low10)));
         _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), out);
     }
     for (; x < width; ++x, src += 4, dst += 4) {
@@ -61,8 +60,12 @@ void SwapRedBlue10Row(const uint8_t* src, uint8_t* dst, uint32_t width) {
 }
 
 // 5- or 6-bit channels in 16-bit lanes, widened to 8 bits as Expand5 and Expand6 do.
-inline __m128i Expand5x8(__m128i v) { return _mm_or_si128(_mm_slli_epi16(v, 3), _mm_srli_epi16(v, 2)); }
-inline __m128i Expand6x8(__m128i v) { return _mm_or_si128(_mm_slli_epi16(v, 2), _mm_srli_epi16(v, 4)); }
+inline __m128i Expand5x8(__m128i v) {
+    return _mm_or_si128(_mm_slli_epi16(v, 3), _mm_srli_epi16(v, 2));
+}
+inline __m128i Expand6x8(__m128i v) {
+    return _mm_or_si128(_mm_slli_epi16(v, 2), _mm_srli_epi16(v, 4));
+}
 
 // 16-bit pixels to BGRA8: blue in bits 0-4, green from bit 5 (`greenBits` wide), red above.
 // Computing the channels is cheaper than looking each pixel up in a table: 8 pixels take a

@@ -68,7 +68,8 @@ TEST(Rtp, PacketizeAndDepacketize) {
             const char* name;
             const std::vector<std::string>* nals;
         };
-        for (Case c : {Case{"frame 33 KB", &units.frame}, Case{"key frame 150 KB", &units.keyFrame}}) {
+        for (Case c :
+             {Case{"frame 33 KB", &units.frame}, Case{"key frame 150 KB", &units.keyFrame}}) {
             std::string prefix = std::string(CodecName(codec)) + " " + c.name + ": ";
             std::string annexB = ToAnnexB(*c.nals);
             std::vector<std::string> nals, packets;
@@ -107,50 +108,68 @@ TEST(Rtp, ParameterSets) {
         const RtpPayloadFormat& format = RtpPayloadFormat::For(codec);
         AccessUnits units = UnitsFor(codec);
         ParameterSetCache cache(format);
-        Print(std::string(CodecName(codec)) + " Update", Measure(200, [&] {
-                  Consume(&cache);
-                  cache.Update(units.keyFrame);
-              }, 3, 100));
+        Print(std::string(CodecName(codec)) + " Update", Measure(
+                                                             200,
+                                                             [&] {
+                                                                 Consume(&cache);
+                                                                 cache.Update(units.keyFrame);
+                                                             },
+                                                             3, 100));
         // A key frame without its parameter sets, as some encoders send them once only.
         std::vector<std::string> idrOnly = {units.keyFrame.back().substr(0, 64)};
         std::vector<std::string> nals;
-        Print(std::string(CodecName(codec)) + " PrependTo", Measure(200, [&] {
-                  nals = idrOnly;
-                  cache.PrependTo(nals);
-                  Consume(nals.data());
-              }, 3, 100));
+        Print(std::string(CodecName(codec)) + " PrependTo", Measure(
+                                                                200,
+                                                                [&] {
+                                                                    nals = idrOnly;
+                                                                    cache.PrependTo(nals);
+                                                                    Consume(nals.data());
+                                                                },
+                                                                3, 100));
         std::string fmtp;
-        Print(std::string(CodecName(codec)) + " Fmtp (SDP)", Measure(200, [&] {
-                  fmtp = cache.Fmtp();
-                  Consume(fmtp.data());
-              }, 3, 100));
+        Print(std::string(CodecName(codec)) + " Fmtp (SDP)", Measure(
+                                                                 200,
+                                                                 [&] {
+                                                                     fmtp = cache.Fmtp();
+                                                                     Consume(fmtp.data());
+                                                                 },
+                                                                 3, 100));
     }
 }
 
 TEST(Rtcp, ReportsAndClock) {
     PrintHeader("RTCP");
     std::string report;
-    Print("BuildSenderReport", Measure(200, [&] {
-              report = BuildSenderReport(0x1234, 1000, 1400000);
-              Consume(report.data());
-          }, 3, 100));
+    Print("BuildSenderReport", Measure(
+                                   200,
+                                   [&] {
+                                       report = BuildSenderReport(0x1234, 1000, 1400000);
+                                       Consume(report.data());
+                                   },
+                                   3, 100));
     // A receiver report with one block, as VLC sends every few seconds.
-    const uint8_t rr[32] = {0x81, 201, 0, 7,    0xAA, 0xBB, 0xCC, 0xDD,  // header, reporter
-                            0x00, 0x00, 0x12, 0x34,                       // source
-                            8,    0,    0,    42,                         // lost: 3%, 42 total
-                            0,    1,    0,    0,    0, 0, 0, 30,          // highest seq, jitter
-                            0,    0,    0,    0,    0, 0, 0, 0};          // LSR, DLSR
+    const uint8_t rr[32] = {0x81, 201,  0,    7,    0xAA, 0xBB, 0xCC, 0xDD,  // header, reporter
+                            0x00, 0x00, 0x12, 0x34,                          // source
+                            8,    0,    0,    42,                            // lost: 3%, 42 total
+                            0,    1,    0,    0,    0,    0,    0,    30,    // highest seq, jitter
+                            0,    0,    0,    0,    0,    0,    0,    0};    // LSR, DLSR
     std::vector<ReceptionReport> blocks;
-    Print("ParseReceiverReports", Measure(200, [&] {
-              blocks = ParseReceiverReports(rr, sizeof(rr));
-              Consume(blocks.data());
-          }, 3, 100));
+    Print("ParseReceiverReports", Measure(
+                                      200,
+                                      [&] {
+                                          blocks = ParseReceiverReports(rr, sizeof(rr));
+                                          Consume(blocks.data());
+                                      },
+                                      3, 100));
     EXPECT_EQ(blocks.size(), 1u);
     uint64_t clock = 0;
-    Print("RtpClock64", Measure(200, [&] {
-              clock += RtpClock64();
-              Consume(&clock);
-          }, 3, 100));
+    Print("RtpClock64", Measure(
+                            200,
+                            [&] {
+                                clock += RtpClock64();
+                                Consume(&clock);
+                            },
+                            3, 100));
 }
 
 TEST(Rtsp, MessagesFromAPlayer) {
@@ -161,27 +180,36 @@ TEST(Rtsp, MessagesFromAPlayer) {
         "User-Agent: LibVLC/3.0.20 (LIVE555 Streaming Media v2016.11.28)\r\n"
         "Transport: RTP/AVP;unicast;client_port=50000-50001\r\n\r\n";
     RtspRequest request;
-    Print("RtspRequest::Parse (SETUP)", Measure(200, [&] {
-              request = RtspRequest();
-              EXPECT_TRUE(RtspRequest::Parse(setup, request));
-          }, 3, 50));
+    Print("RtspRequest::Parse (SETUP)", Measure(
+                                            200,
+                                            [&] {
+                                                request = RtspRequest();
+                                                EXPECT_TRUE(RtspRequest::Parse(setup, request));
+                                            },
+                                            3, 50));
     TransportSpec transport;
-    Print("Header + TransportSpec::Parse", Measure(200, [&] {
-              EXPECT_TRUE(TransportSpec::Parse(request.Header("transport"), transport));
-          }, 3, 50));
+    Print(
+        "Header + TransportSpec::Parse",
+        Measure(
+            200, [&] { EXPECT_TRUE(TransportSpec::Parse(request.Header("transport"), transport)); },
+            3, 50));
     const std::string sdp =
         "v=0\r\no=- 0 0 IN IP4 192.168.1.20\r\ns=Gazeora\r\nc=IN IP4 0.0.0.0\r\nt=0 0\r\n"
         "m=video 0 RTP/AVP 96\r\na=rtpmap:96 H264/90000\r\n"
         "a=fmtp:96 packetization-mode=1;sprop-parameter-sets=Z0LAKA==,aM48gA==\r\n"
         "a=control:track1\r\n";
     std::string response;
-    Print("RtspResponse (DESCRIBE, with SDP)", Measure(200, [&] {
-              response = RtspResponse("200 OK", request)
-                             .Header("Content-Base", "rtsp://192.168.1.20:8554/")
-                             .Body("application/sdp", sdp)
-                             .Serialize();
-              Consume(response.data());
-          }, 3, 50));
+    Print("RtspResponse (DESCRIBE, with SDP)",
+          Measure(
+              200,
+              [&] {
+                  response = RtspResponse("200 OK", request)
+                                 .Header("Content-Base", "rtsp://192.168.1.20:8554/")
+                                 .Body("application/sdp", sdp)
+                                 .Serialize();
+                  Consume(response.data());
+              },
+              3, 50));
 
     // What arrives on a connection playing over TCP: interleaved RTCP reports and keep-alives.
     std::string interleaved = std::string("$\x01\x00\x20", 4) + std::string(32, '\x81');
@@ -189,26 +217,34 @@ TEST(Rtsp, MessagesFromAPlayer) {
         "GET_PARAMETER rtsp://192.168.1.20:8554/ RTSP/1.0\r\nCSeq: 9\r\nSession: 1A2B3C\r\n\r\n";
     std::string chunk = interleaved + keepalive + interleaved;
     std::string text;
-    Print("RtspReader (2 RTCP frames + 1 request)", Measure(200, [&] {
-              RtspReader reader;
-              reader.Append(chunk.data(), chunk.size());
-              int items = 0;
-              while (reader.Next(text) != RtspReader::Item::None) ++items;
-              EXPECT_EQ(items, 3);
-          }, 3, 50));
+    Print("RtspReader (2 RTCP frames + 1 request)",
+          Measure(
+              200,
+              [&] {
+                  RtspReader reader;
+                  reader.Append(chunk.data(), chunk.size());
+                  int items = 0;
+                  while (reader.Next(text) != RtspReader::Item::None) ++items;
+                  EXPECT_EQ(items, 3);
+              },
+              3, 50));
 }
 
 TEST(Bitrate, ControllerPerFrame) {
     PrintHeader("BitrateController");
     BitrateController controller;
     uint64_t now = 0;
-    Print("Report + Update, 4 players", Measure(200, [&] {
-              now += 33;
-              for (uint64_t player = 0; player < 4; ++player) {
-                  controller.Report(player, player == 3 ? 0.05f : 0.0f, now);
-              }
-              controller.Update(now, 4);
-          }, 3, 100));
+    Print("Report + Update, 4 players", Measure(
+                                            200,
+                                            [&] {
+                                                now += 33;
+                                                for (uint64_t player = 0; player < 4; ++player) {
+                                                    controller.Report(
+                                                        player, player == 3 ? 0.05f : 0.0f, now);
+                                                }
+                                                controller.Update(now, 4);
+                                            },
+                                            3, 100));
 }
 
 }  // namespace

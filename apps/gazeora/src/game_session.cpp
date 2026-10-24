@@ -42,9 +42,8 @@ GameSession::~GameSession() {
 GameSession::Stats GameSession::Snapshot() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     Stats stats = m_stats;
-    stats.elapsedSeconds = stats.state == State::Running || stats.state == State::Exited
-                               ? ElapsedSeconds()
-                               : 0;
+    stats.elapsedSeconds =
+        stats.state == State::Running || stats.state == State::Exited ? ElapsedSeconds() : 0;
     return stats;
 }
 
@@ -95,9 +94,9 @@ void GameSession::Run() {
     for (int handOffs = 0; handOffs <= kMaxHandOffs; ++handOffs) {
         if (waitForGame) {
             SetState(State::WaitingForGame);
-            if (!WaitForGameProcess(m_spec.GameProcessName(), ignorePid, kWaitForGameMs,
-                                    kWaitForReadyMs, [this] { return m_stop.load(); }, game,
-                                    error)) {
+            if (!WaitForGameProcess(
+                    m_spec.GameProcessName(), ignorePid, kWaitForGameMs, kWaitForReadyMs,
+                    [this] { return m_stop.load(); }, game, error)) {
                 SetState(m_stop ? State::Cancelled : State::Failed,
                          L"the game didn't start: " + error);
                 return;

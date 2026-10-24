@@ -27,9 +27,10 @@ TEST(RtspRequestTest, RejectsWhatIsNotRtsp) {
 TEST(RtspResponseTest, EchoesCSeqAndCountsTheBody) {
     RtspRequest request;
     ASSERT_TRUE(RtspRequest::Parse("DESCRIBE / RTSP/1.0\r\nCSeq: 7\r\n\r\n", request));
-    std::string text =
-        RtspResponse("200 OK", request).Header("Content-Base", "/").Body("application/sdp", "v=0")
-            .Serialize();
+    std::string text = RtspResponse("200 OK", request)
+                           .Header("Content-Base", "/")
+                           .Body("application/sdp", "v=0")
+                           .Serialize();
     EXPECT_EQ(text,
               "RTSP/1.0 200 OK\r\nCSeq: 7\r\nServer: Gazeora\r\nContent-Base: /\r\n"
               "Content-Type: application/sdp\r\nContent-Length: 3\r\n\r\nv=0");

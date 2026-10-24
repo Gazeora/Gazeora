@@ -65,7 +65,10 @@ inline std::string FormatSeconds(double seconds) {
         value = seconds * 1e3, unit = "ms";
     }
     char text[32];
-    snprintf(text, sizeof(text), value < 10 ? "%.2f %s" : value < 100 ? "%.1f %s" : "%.0f %s",
+    snprintf(text, sizeof(text),
+             value < 10    ? "%.2f %s"
+             : value < 100 ? "%.1f %s"
+                           : "%.0f %s",
              value, unit);
     return text;
 }

@@ -64,7 +64,8 @@ void App::DrawSidebar() {
     };
     float width = ImGui::GetContentRegionAvail().x;
     for (const NavItem& item : items) {
-        bool selected = m_page == item.page || (item.page == Page::Library && m_page == Page::Details);
+        bool selected =
+            m_page == item.page || (item.page == Page::Library && m_page == Page::Details);
         ImVec2 p = ImGui::GetCursorScreenPos();
         ImVec2 size(width, S(38));
         ImGui::PushID(item.label);
@@ -74,9 +75,8 @@ void App::DrawSidebar() {
         bool hovered = ImGui::IsItemHovered();
         ImGui::PopID();
         if (selected || hovered) {
-            draw->AddRectFilled(p, p + size,
-                                selected ? WithAlpha(kAccent, 0.16f) : WithAlpha(kText, 0.04f),
-                                S(8));
+            draw->AddRectFilled(
+                p, p + size, selected ? WithAlpha(kAccent, 0.16f) : WithAlpha(kText, 0.04f), S(8));
         }
         if (selected) {
             draw->AddRectFilled(p + ImVec2(0, S(10)), p + ImVec2(S(3), size.y - S(10)), kAccent,
@@ -113,8 +113,7 @@ void App::DrawSidebar() {
 
         ImVec2 inner = p + ImVec2(S(12), S(10));
         bool launching = stats.state != GameSession::State::Running;
-        draw->AddCircleFilled(inner + ImVec2(S(4), S(7)), S(3.5f),
-                              launching ? kWarning : kAccent);
+        draw->AddCircleFilled(inner + ImVec2(S(4), S(7)), S(3.5f), launching ? kWarning : kAccent);
         draw->AddText(m_fonts.caption, m_fonts.caption->FontSize, inner + ImVec2(S(14), 0),
                       launching ? kWarning : kAccent,
                       launching ? SessionLabel(stats.state) : "NOW PLAYING");
@@ -144,7 +143,6 @@ void App::DrawSidebar() {
     ImGui::PopStyleColor();
 }
 
-
 void App::DrawToasts() {
     // Remove confirmation modal (opened from details or a context menu).
     if (m_pendingRemoveId != 0 && !ImGui::IsPopupOpen("Remove game?")) {
@@ -154,9 +152,9 @@ void App::DrawToasts() {
     ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always,
                             ImVec2(0.5f, 0.5f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(20), S(18)));
-    if (ImGui::BeginPopupModal("Remove game?", nullptr,
-                               ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                                   ImGuiWindowFlags_NoTitleBar)) {
+    if (ImGui::BeginPopupModal(
+            "Remove game?", nullptr,
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar)) {
         const Game* game = m_library.Find(m_pendingRemoveId);
         ImGui::PushFont(m_fonts.heading);
         ImGui::TextUnformatted("Remove from library?");
@@ -170,16 +168,15 @@ void App::DrawToasts() {
         ImGui::Dummy(ImVec2(0, S(6)));
         float buttonWidth = S(100);
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - S(20) - buttonWidth * 2 - S(8));
-        if (FilledButton("Cancel##remove", ImVec2(buttonWidth, S(34)), kSecondary,
-                         kSecondaryHover, kText, m_fonts.bold, S(6)) ||
+        if (FilledButton("Cancel##remove", ImVec2(buttonWidth, S(34)), kSecondary, kSecondaryHover,
+                         kText, m_fonts.bold, S(6)) ||
             ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             m_pendingRemoveId = 0;
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine(0.0f, S(8));
-        if (FilledButton("Remove##remove", ImVec2(buttonWidth, S(34)), kDanger,
-                         kDangerHover, IM_COL32_WHITE, m_fonts.bold,
-                         S(6))) {
+        if (FilledButton("Remove##remove", ImVec2(buttonWidth, S(34)), kDanger, kDangerHover,
+                         IM_COL32_WHITE, m_fonts.bold, S(6))) {
             uint32_t id = m_pendingRemoveId;
             m_deferred.push_back([this, id] { RemoveGame(id); });
             m_pendingRemoveId = 0;
@@ -200,12 +197,11 @@ void App::DrawToasts() {
     float maxTextWidth = S(340);
     for (auto it = m_toasts.rbegin(); it != m_toasts.rend(); ++it) {
         float fade = float(std::min(1.0, (it->expiresAt - now) / 0.4));
-        ImVec2 textSize = m_fonts.body->CalcTextSizeA(m_fonts.body->FontSize, FLT_MAX,
-                                                      maxTextWidth, it->text.c_str());
+        ImVec2 textSize = m_fonts.body->CalcTextSizeA(m_fonts.body->FontSize, FLT_MAX, maxTextWidth,
+                                                      it->text.c_str());
         ImVec2 size = textSize + ImVec2(S(50), S(22));
         ImVec2 pos = corner - size;
-        draw->AddRectFilled(pos, pos + size, WithAlpha(kCardHover, 0.97f * fade),
-                            S(8));
+        draw->AddRectFilled(pos, pos + size, WithAlpha(kCardHover, 0.97f * fade), S(8));
         draw->AddRectFilled(pos, pos + ImVec2(S(4), size.y),
                             WithAlpha(it->error ? kDanger : kAccent, fade), S(8),
                             ImDrawFlags_RoundCornersLeft);
@@ -217,6 +213,5 @@ void App::DrawToasts() {
         corner.y -= size.y + S(8);
     }
 }
-
 
 }  // namespace gazeora::app

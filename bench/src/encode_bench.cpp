@@ -45,8 +45,8 @@ std::string Kilobytes(double bytes) {
 // a frame in to getting it back (hardware encoders may return a frame a call or two later).
 void BenchEncoder(VideoCodec codec, bool preferHardware, Size size,
                   const std::vector<std::vector<uint8_t>>& frames) {
-    std::string label = std::string(CodecName(codec)) + (preferHardware ? " hw " : " sw ") +
-                        size.name;
+    std::string label =
+        std::string(CodecName(codec)) + (preferHardware ? " hw " : " sw ") + size.name;
     auto encoder = CreateVideoEncoder();
     VideoEncoder::Settings settings;
     settings.codec = codec;
@@ -57,8 +57,8 @@ void BenchEncoder(VideoCodec codec, bool preferHardware, Size size,
     std::wstring error;
     double openStart = QpcSeconds();
     bool opened = encoder->Open(settings, error);
-    std::string opening = Narrow(encoder->Name()) + ", opened in " +
-                          FormatSeconds(QpcSeconds() - openStart);
+    std::string opening =
+        Narrow(encoder->Name()) + ", opened in " + FormatSeconds(QpcSeconds() - openStart);
     if (!opened) {
         PrintNote(label, "could not open: " + Narrow(error));
         return;
@@ -150,15 +150,18 @@ TEST(Encode, VideoPipelinePerFrame) {
             ++frames;
         };
         int i = 0;
-        Stats s = Measure(kFrames, [&] {
-            Picture& picture = pictures[size_t(i) % pictures.size()];
-            picture.clock = uint64_t(i++) * 3000;  // 30 fps on the 90 kHz clock
-            bool fmtpChanged = false;
-            EXPECT_TRUE(pipeline.Encode(picture, sink, fmtpChanged, error)) << Narrow(error);
-        }, kWarmupFrames);
+        Stats s = Measure(
+            kFrames,
+            [&] {
+                Picture& picture = pictures[size_t(i) % pictures.size()];
+                picture.clock = uint64_t(i++) * 3000;  // 30 fps on the 90 kHz clock
+                bool fmtpChanged = false;
+                EXPECT_TRUE(pipeline.Encode(picture, sink, fmtpChanged, error)) << Narrow(error);
+            },
+            kWarmupFrames);
         char note[96];
-        snprintf(note, sizeof(note), "%.1f packets/frame, %s", frames ? double(packets) / frames : 0.0,
-                 Narrow(pipeline.EncoderName()).c_str());
+        snprintf(note, sizeof(note), "%.1f packets/frame, %s",
+                 frames ? double(packets) / frames : 0.0, Narrow(pipeline.EncoderName()).c_str());
         Print(std::string(CodecName(codec)) + " " + size.name, s, note);
     }
 }
@@ -200,8 +203,8 @@ TEST(Encode, GameFrameReadBackOrOnTheGpu) {
     PrintHeader("1080p game frame on the GPU to RTP packets");
     Microsoft::WRL::ComPtr<ID3D11Device> device;
     D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
-                      D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
-                      nullptr, 0, D3D11_SDK_VERSION, &device, nullptr, nullptr);
+                      D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_VIDEO_SUPPORT, nullptr,
+                      0, D3D11_SDK_VERSION, &device, nullptr, nullptr);
     if (!device) {
         PrintNote("GPU", "no hardware D3D11 device");
         return;
@@ -234,15 +237,18 @@ TEST(Encode, GameFrameReadBackOrOnTheGpu) {
             int i = 0;
             std::wstring error;
             double cpuStart = CpuSeconds();
-            Stats s = Measure(kFrames, [&] {
-                uint64_t clock = uint64_t(i) * 3000;  // 30 fps on the 90 kHz clock
-                ID3D11Texture2D* frame = frames[size_t(i++) % frames.size()].Get();
-                EXPECT_TRUE(path.Encode(frame, pipeline, config, clock, sink, error))
-                    << Narrow(error);
-            }, kWarmupFrames);
+            Stats s = Measure(
+                kFrames,
+                [&] {
+                    uint64_t clock = uint64_t(i) * 3000;  // 30 fps on the 90 kHz clock
+                    ID3D11Texture2D* frame = frames[size_t(i++) % frames.size()].Get();
+                    EXPECT_TRUE(path.Encode(frame, pipeline, config, clock, sink, error))
+                        << Narrow(error);
+                },
+                kWarmupFrames);
             double cpuPerFrame = (CpuSeconds() - cpuStart) / (kFrames + kWarmupFrames);
-            std::string note = FormatSeconds(cpuPerFrame) + " CPU/frame, " +
-                               Narrow(pipeline.EncoderName());
+            std::string note =
+                FormatSeconds(cpuPerFrame) + " CPU/frame, " + Narrow(pipeline.EncoderName());
             Print(std::string(CodecName(codec)) + (gpu ? " kept on the GPU" : " read back"), s,
                   note);
         }

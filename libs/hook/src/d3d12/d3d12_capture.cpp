@@ -152,8 +152,8 @@ void D3D12Capture::Capture(IDXGISwapChain* swap, ID3D12Device* device, LONGLONG 
     // The game's depth, from the buffer its command lists copied it into, as 32-bit words
     // whatever the depth format: the slot's RGBA8 takes them as they are.
     d3d12::DepthCopy depthCopy;
-    bool withDepth = depth && d3d12::TakeDepthCopy(m_device.Get(), UINT(bb.Width), bb.Height,
-                                                   depthCopy);
+    bool withDepth =
+        depth && d3d12::TakeDepthCopy(m_device.Get(), UINT(bb.Width), bb.Height, depthCopy);
     m_depthSources[index] = depthCopy.buffer;
     if (withDepth) {
         ID3D12Resource* depthSlot = m_depthSlots[index].Get();
@@ -168,8 +168,12 @@ void D3D12Capture::Capture(IDXGISwapChain* swap, ID3D12Device* device, LONGLONG 
         source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
         source.PlacedFootprint = depthCopy.footprint;
         source.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        D3D12_BOX box = {0, 0, 0, std::min(depthCopy.footprint.Footprint.Width, UINT(bb.Width)),
-                         std::min(depthCopy.footprint.Footprint.Height, bb.Height), 1};
+        D3D12_BOX box = {0,
+                         0,
+                         0,
+                         std::min(depthCopy.footprint.Footprint.Width, UINT(bb.Width)),
+                         std::min(depthCopy.footprint.Footprint.Height, bb.Height),
+                         1};
         m_list->CopyTextureRegion(&destination, 0, 0, 0, &source, &box);
         D3D12_RESOURCE_BARRIER back =
             Transition(depthSlot, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);

@@ -1,7 +1,7 @@
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/pointer_gate.h"
 #include "gazeora/host/stream/pointer_input_receiver.h"
 #include "gazeora/host/stream/pointer_message.h"
-#include "gazeora/common/text/utf8.h"
 
 #include <gtest/gtest.h>
 
@@ -61,8 +61,7 @@ TEST(PointerMessageTest, RoundTripsThroughTheWire) {
     EXPECT_EQ(header.type, FrameMessage::Pointer);
     EXPECT_EQ(header.tail, kPointerPayloadSize);
     PointerEvent read;
-    ASSERT_TRUE(
-        PointerMessage::Read(Bytes(message) + kFrameHeaderSize, kPointerPayloadSize, read));
+    ASSERT_TRUE(PointerMessage::Read(Bytes(message) + kFrameHeaderSize, kPointerPayloadSize, read));
     EXPECT_EQ(read.action, PointerAction::Press);
     EXPECT_EQ(read.button, PointerButton::Right);
     EXPECT_NEAR(read.x, 0.25f, 1e-4f);
@@ -72,8 +71,7 @@ TEST(PointerMessageTest, RoundTripsThroughTheWire) {
 TEST(PointerMessageTest, KeepsTheWheelsSign) {
     std::string message = PointerMessage::Write(Scroll(-240, 120));
     PointerEvent read;
-    ASSERT_TRUE(
-        PointerMessage::Read(Bytes(message) + kFrameHeaderSize, kPointerPayloadSize, read));
+    ASSERT_TRUE(PointerMessage::Read(Bytes(message) + kFrameHeaderSize, kPointerPayloadSize, read));
     EXPECT_EQ(read.wheelVertical, -240);
     EXPECT_EQ(read.wheelHorizontal, 120);
 }
@@ -84,8 +82,7 @@ TEST(PointerMessageTest, CarriesAClickWhole) {
     click.x = 0.5f;
     std::string message = PointerMessage::Write(click);
     PointerEvent read;
-    ASSERT_TRUE(
-        PointerMessage::Read(Bytes(message) + kFrameHeaderSize, kPointerPayloadSize, read));
+    ASSERT_TRUE(PointerMessage::Read(Bytes(message) + kFrameHeaderSize, kPointerPayloadSize, read));
     EXPECT_EQ(read.action, PointerAction::Click);
     EXPECT_NEAR(read.x, 0.5f, 1e-4f);
 }

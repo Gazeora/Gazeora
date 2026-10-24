@@ -93,8 +93,8 @@ void App::DrawEmptyLibrary() {
 
     float circle = S(44);
     draw->AddCircleFilled(ImVec2(centerX, y + circle), circle, kCardBg);
-    ImVec2 iconSize = m_fonts.hugeIcon->CalcTextSizeA(m_fonts.hugeIcon->FontSize, FLT_MAX, 0.0f,
-                                                      ICON_GAME);
+    ImVec2 iconSize =
+        m_fonts.hugeIcon->CalcTextSizeA(m_fonts.hugeIcon->FontSize, FLT_MAX, 0.0f, ICON_GAME);
     draw->AddText(m_fonts.hugeIcon, m_fonts.hugeIcon->FontSize,
                   ImVec2(centerX - iconSize.x * 0.5f, y + circle - iconSize.y * 0.5f - S(4)),
                   kAccent, ICON_GAME);
@@ -116,6 +116,5 @@ void App::DrawEmptyLibrary() {
         m_deferred.push_back([this] { AddGamesFromDialog(); });
     }
 }
-
 
 }  // namespace gazeora::app

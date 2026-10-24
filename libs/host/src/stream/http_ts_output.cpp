@@ -19,10 +19,9 @@ constexpr size_t kMaxRequestBytes = 8192;
 constexpr uint64_t kRequestTimeoutMs = 10000;
 
 std::string Response(const char* status, const char* type, const std::string& body) {
-    return std::string("HTTP/1.1 ") + status +
-           "\r\nServer: Gazeora\r\nContent-Type: " + type +
-           "\r\nContent-Length: " + std::to_string(body.size()) +
-           "\r\nConnection: close\r\n\r\n" + body;
+    return std::string("HTTP/1.1 ") + status + "\r\nServer: Gazeora\r\nContent-Type: " + type +
+           "\r\nContent-Length: " + std::to_string(body.size()) + "\r\nConnection: close\r\n\r\n" +
+           body;
 }
 
 // The request's User-Agent header, trimmed; empty if it has none.
@@ -49,8 +48,8 @@ bool HttpTsOutput::Start(in_addr address, uint16_t port, std::wstring& error) {
         return false;
     }
     BOOL exclusive = TRUE;
-    setsockopt(m_listen.Get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
-               reinterpret_cast<char*>(&exclusive), sizeof(exclusive));
+    setsockopt(m_listen.Get(), SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<char*>(&exclusive),
+               sizeof(exclusive));
     sockaddr_in bound = {};
     bound.sin_family = AF_INET;
     bound.sin_addr = address;
@@ -58,8 +57,7 @@ bool HttpTsOutput::Start(in_addr address, uint16_t port, std::wstring& error) {
     int length = sizeof(bound);
     if (bind(m_listen.Get(), reinterpret_cast<sockaddr*>(&bound), sizeof(bound)) == SOCKET_ERROR ||
         listen(m_listen.Get(), SOMAXCONN) == SOCKET_ERROR ||
-        getsockname(m_listen.Get(), reinterpret_cast<sockaddr*>(&bound), &length) ==
-            SOCKET_ERROR) {
+        getsockname(m_listen.Get(), reinterpret_cast<sockaddr*>(&bound), &length) == SOCKET_ERROR) {
         int code = WSAGetLastError();
         error = code == WSAEADDRINUSE ? L"port " + std::to_wstring(port) + L" is already in use"
                                       : L"cannot listen on port " + std::to_wstring(port) +
@@ -112,7 +110,8 @@ void HttpTsOutput::AcceptLoop() {
         client.SetSendBuffer(kSocketSendBufferBytes);
         client.SetNonBlocking();
 
-        auto connection = std::make_unique<RtspConnection>(std::move(client), net::AddressText(peer));
+        auto connection =
+            std::make_unique<RtspConnection>(std::move(client), net::AddressText(peer));
         m_log.Write("%s connected over HTTP", connection->Peer().c_str());
         RtspConnection* raw = connection.get();
         std::lock_guard<std::mutex> lock(m_playersMutex);

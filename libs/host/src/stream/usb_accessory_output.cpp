@@ -144,8 +144,8 @@ std::wstring WindowsDeviceName(const libusb_device_descriptor& descriptor) {
         if (!SetupDiGetDeviceRegistryPropertyW(set, &device, SPDRP_HARDWAREID, nullptr,
                                                reinterpret_cast<BYTE*>(ids), sizeof(ids) - 4,
                                                nullptr) ||
-            _wcsicmp(ids, prefix) != 0 && _wcsnicmp(ids, (std::wstring(prefix) + L"&REV").c_str(),
-                                                    wcslen(prefix) + 4) != 0) {
+            _wcsicmp(ids, prefix) != 0 &&
+                _wcsnicmp(ids, (std::wstring(prefix) + L"&REV").c_str(), wcslen(prefix) + 4) != 0) {
             continue;
         }
         wchar_t text[256] = {};
@@ -195,8 +195,8 @@ private:
 // Straight through WinUSB, on the interface the driver Gazeora installs registers
 // (apps/gazeora: platform/usb_driver.cpp, whose INF names this GUID): the accessory interface
 // alone, so adb keeps the phone's other one.
-const GUID kAccessoryInterface = {0x6A8E2B7C, 0x3F41, 0x4C9B,
-                                  {0x9D, 0x0E, 0x7B, 0x2F, 0x5A, 0x1C, 0x8E, 0x43}};
+const GUID kAccessoryInterface = {
+    0x6A8E2B7C, 0x3F41, 0x4C9B, {0x9D, 0x0E, 0x7B, 0x2F, 0x5A, 0x1C, 0x8E, 0x43}};
 
 class WinUsbPipe : public UsbAccessoryPipe {
 public:
@@ -210,8 +210,8 @@ public:
         }
         int result = LIBUSB_ERROR_NOT_FOUND;
         SP_DEVICE_INTERFACE_DATA data = {sizeof(data)};
-        for (DWORD i = 0; result != 0 && SetupDiEnumDeviceInterfaces(set, nullptr,
-                                                                     &kAccessoryInterface, i, &data);
+        for (DWORD i = 0; result != 0 &&
+                          SetupDiEnumDeviceInterfaces(set, nullptr, &kAccessoryInterface, i, &data);
              ++i) {
             DWORD size = 0;
             SetupDiGetDeviceInterfaceDetailW(set, &data, nullptr, 0, &size, nullptr);
@@ -242,8 +242,8 @@ public:
 
     int Write(const uint8_t* data, int size, int& sent) override {
         ULONG done = 0;
-        bool ok = WinUsb_WritePipe(m_usb, m_out, const_cast<PUCHAR>(data), ULONG(size), &done,
-                                   nullptr);
+        bool ok =
+            WinUsb_WritePipe(m_usb, m_out, const_cast<PUCHAR>(data), ULONG(size), &done, nullptr);
         sent = int(done);
         return ok ? 0 : Error(GetLastError());
     }
@@ -304,8 +304,9 @@ private:
         auto text = [&](UCHAR index) {
             UCHAR buffer[256] = {};
             ULONG length = 0;
-            if (index == 0 || !WinUsb_GetDescriptor(usb, USB_STRING_DESCRIPTOR_TYPE, index, 0x0409,
-                                                    buffer, sizeof(buffer), &length) ||
+            if (index == 0 ||
+                !WinUsb_GetDescriptor(usb, USB_STRING_DESCRIPTOR_TYPE, index, 0x0409, buffer,
+                                      sizeof(buffer), &length) ||
                 length < 2) {
                 return std::string();
             }
@@ -325,12 +326,15 @@ private:
 
     static int Error(DWORD code) {
         switch (code) {
-            case ERROR_SEM_TIMEOUT: return LIBUSB_ERROR_TIMEOUT;
+            case ERROR_SEM_TIMEOUT:
+                return LIBUSB_ERROR_TIMEOUT;
             case ERROR_DEVICE_NOT_CONNECTED:
             case ERROR_BAD_COMMAND:
             case ERROR_GEN_FAILURE:
-            case ERROR_FILE_NOT_FOUND: return LIBUSB_ERROR_NO_DEVICE;
-            default: return LIBUSB_ERROR_IO;
+            case ERROR_FILE_NOT_FOUND:
+                return LIBUSB_ERROR_NO_DEVICE;
+            default:
+                return LIBUSB_ERROR_IO;
         }
     }
 
@@ -431,9 +435,9 @@ void UsbAccessoryOutput::Scan() {
         return;
     }
     std::set<std::string> present;
-    bool needsDriver = false;  // a phone in accessory mode, its interface without WinUSB
-    bool inUse = false;        // an Android device another program has open: adb, usually
-    bool unreachable = false;  // a likely phone libusb can't open in its normal mode
+    bool needsDriver = false;      // a phone in accessory mode, its interface without WinUSB
+    bool inUse = false;            // an Android device another program has open: adb, usually
+    bool unreachable = false;      // a likely phone libusb can't open in its normal mode
     std::vector<UsbPhone> phones;  // phones whose driver can't send the switch request
     std::vector<libusb_device*> accessories;
     for (ssize_t i = 0; i < count && !m_connected; ++i) {
@@ -464,8 +468,8 @@ void UsbAccessoryOutput::Scan() {
                     // offered for Apple devices, or anything but a phone (a file transfer
                     // interface), as WinUSB on them would only cost them their own driver.
                     if (looks == Looks::LikeAPhone && descriptor.idVendor != kAppleVendor) {
-                        phones.push_back({PhoneHardwareId(device, descriptor),
-                                          WindowsDeviceName(descriptor)});
+                        phones.push_back(
+                            {PhoneHardwareId(device, descriptor), WindowsDeviceName(descriptor)});
                         if (phones.back().name.empty()) {
                             phones.back().name = L"the phone";
                         }
@@ -512,21 +516,24 @@ void UsbAccessoryOutput::Scan() {
     }
     if (!m_connected) {
         if (needsDriver) {
-            SetStatus(L"The phone is in accessory mode, but Windows has no driver for its "
-                      L"accessory interface yet. Install the USB driver below, once.");
+            SetStatus(
+                L"The phone is in accessory mode, but Windows has no driver for its "
+                L"accessory interface yet. Install the USB driver below, once.");
         } else if (!phones.empty()) {
             SetStatus(L"Gazeora can't switch " + phones.front().name +
                       L" to accessory mode with the driver Windows gave it. Install the USB "
                       L"driver below for it, or turn on USB debugging on the phone.");
         } else if (inUse) {
-            SetStatus(L"Another program has the phone open, adb (Android Studio) most likely. "
-                      L"Gazeora needs it for a moment to switch the phone to accessory mode: "
-                      L"run \"adb kill-server\", or unplug the phone and plug it in again with "
-                      L"adb closed. Once switched, adb works alongside.");
+            SetStatus(
+                L"Another program has the phone open, adb (Android Studio) most likely. "
+                L"Gazeora needs it for a moment to switch the phone to accessory mode: "
+                L"run \"adb kill-server\", or unplug the phone and plug it in again with "
+                L"adb closed. Once switched, adb works alongside.");
         } else if (unreachable) {
-            SetStatus(L"A phone is connected, but Gazeora can't reach it in its normal USB "
-                      L"mode. Unplug it and plug it in again; if that doesn't help, turn on USB "
-                      L"debugging on the phone.");
+            SetStatus(
+                L"A phone is connected, but Gazeora can't reach it in its normal USB "
+                L"mode. Unplug it and plug it in again; if that doesn't help, turn on USB "
+                L"debugging on the phone.");
         } else {
             SetStatus(L"Looking for a phone on USB");
         }
@@ -563,14 +570,13 @@ UsbAccessoryOutput::Switch UsbAccessoryOutput::SwitchToAccessory(libusb_device* 
         bool sent = true;
         for (uint16_t index = 0; index < 6 && sent; ++index) {
             sent = libusb_control_transfer(
-                       handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR,
-                       kAoaSendString, 0, index,
-                       reinterpret_cast<unsigned char*>(const_cast<char*>(strings[index])),
+                       handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR, kAoaSendString, 0,
+                       index, reinterpret_cast<unsigned char*>(const_cast<char*>(strings[index])),
                        uint16_t(strlen(strings[index]) + 1), kControlTimeoutMs) >= 0;
         }
-        sent = sent && libusb_control_transfer(handle,
-                                               LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR,
-                                               kAoaStart, 0, 0, nullptr, 0, kControlTimeoutMs) >= 0;
+        sent = sent &&
+               libusb_control_transfer(handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR,
+                                       kAoaStart, 0, 0, nullptr, 0, kControlTimeoutMs) >= 0;
         m_log.Write(sent ? "asked %s to switch to USB accessory mode"
                          : "%s didn't take the switch to USB accessory mode",
                     name.c_str());
@@ -677,8 +683,8 @@ void UsbAccessoryOutput::ReadFromPhone(uint64_t now) {
         Hear(header, reinterpret_cast<const uint8_t*>(m_inbox.data()) + kFrameHeaderSize, now);
         m_inbox.erase(0, kFrameHeaderSize + header.tail);
     }
-    if (m_inbox.size() >= kFrameHeaderSize && !header.Read(
-            reinterpret_cast<const uint8_t*>(m_inbox.data()), m_inbox.size())) {
+    if (m_inbox.size() >= kFrameHeaderSize &&
+        !header.Read(reinterpret_cast<const uint8_t*>(m_inbox.data()), m_inbox.size())) {
         m_inbox.clear();  // lost track of where messages start
     }
     if (m_watching && now - m_lastHelloMs > kPlayerTimeoutMs) {

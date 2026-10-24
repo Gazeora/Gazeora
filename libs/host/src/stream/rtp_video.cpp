@@ -79,12 +79,10 @@ public:
     uint8_t NalType(const std::string& nal) const override {
         return nal.empty() ? 0 : nal[0] & 0x1F;
     }
-    bool IsKeyFrame(const std::string& nal) const override {
-        return NalType(nal) == kNalIdrSlice;
-    }
+    bool IsKeyFrame(const std::string& nal) const override { return NalType(nal) == kNalIdrSlice; }
     ParameterSet ParameterSetOf(const std::string& nal) const override {
         uint8_t type = NalType(nal);
-        return type == kNalSps ? ParameterSet::Sps
+        return type == kNalSps   ? ParameterSet::Sps
                : type == kNalPps ? ParameterSet::Pps
                                  : ParameterSet::None;
     }
@@ -97,8 +95,8 @@ public:
         std::string fmtp = "packetization-mode=1";
         if (sps.size() >= 4) {
             char profile[32];
-            snprintf(profile, sizeof(profile), ";profile-level-id=%02X%02X%02X",
-                     uint8_t(sps[1]), uint8_t(sps[2]), uint8_t(sps[3]));
+            snprintf(profile, sizeof(profile), ";profile-level-id=%02X%02X%02X", uint8_t(sps[1]),
+                     uint8_t(sps[2]), uint8_t(sps[3]));
             fmtp += profile;
             if (!pps.empty()) {
                 fmtp += ";sprop-parameter-sets=" + Base64(sps) + "," + Base64(pps);

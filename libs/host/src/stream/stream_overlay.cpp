@@ -32,9 +32,9 @@ std::wstring Line(std::initializer_list<std::wstring> parts) {
 bool OverlaySettings::operator==(const OverlaySettings& other) const {
     return enabled == other.enabled && corner == other.corner && textSize == other.textSize &&
            opacity == other.opacity && protocol == other.protocol && viewers == other.viewers &&
-           codec == other.codec && resolution == other.resolution &&
-           frameRate == other.frameRate && bitrate == other.bitrate && loss == other.loss &&
-           encoder == other.encoder && clock == other.clock && text == other.text;
+           codec == other.codec && resolution == other.resolution && frameRate == other.frameRate &&
+           bitrate == other.bitrate && loss == other.loss && encoder == other.encoder &&
+           clock == other.clock && text == other.text;
 }
 
 std::vector<std::wstring> OverlayLines(const OverlaySettings& settings, const OverlayStats& stats) {
@@ -121,8 +121,7 @@ void OverlayRenderer::Draw(const std::vector<std::wstring>& lines, const Overlay
     }
 }
 
-void OverlayRenderer::Render(const std::vector<std::wstring>& lines, int fontPixels,
-                             int opacity) {
+void OverlayRenderer::Render(const std::vector<std::wstring>& lines, int fontPixels, int opacity) {
     m_panel.clear();
     m_panelWidth = m_panelHeight = 0;
     HDC dc = CreateCompatibleDC(nullptr);
@@ -198,7 +197,8 @@ void OverlayRenderer::Blend(Picture& picture, uint32_t left, uint32_t top, uint3
                             uint32_t step) const {
     const uint32_t shownWidth = m_panelWidth / step;
     int marginX = margin / int(step);
-    if (width < shownWidth + 2 * uint32_t(marginX) || height < m_panelHeight + 2 * uint32_t(margin)) {
+    if (width < shownWidth + 2 * uint32_t(marginX) ||
+        height < m_panelHeight + 2 * uint32_t(margin)) {
         margin = marginX = 0;  // too small for the margin: as much of the panel as fits
     }
     const bool right = corner == OverlaySettings::Corner::TopRight ||
