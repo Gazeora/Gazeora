@@ -57,10 +57,11 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   and opening it again clicks; with the left hand pinching, the right index scrolls. Runs
   MediaPipe's hand models on the CPU.
 - **Game controllers.** Any controller (Xbox, PlayStation, Nintendo Switch Pro and most
-  others, wired or Bluetooth) moves around the launcher: the d-pad or left stick between
-  controls, the bottom button to press, the shoulder buttons between pages. It works with the
-  window in front or on the stream, as in the headset, and lets go of the controller while a
-  game runs, so the game has it to itself.
+  others, wired or Bluetooth) runs the whole launcher, as in Steam's Big Picture: the d-pad or
+  left stick between controls, the bottom button to press, the right one to go back, the
+  shoulder buttons between pages, the menu button for a game's options, and a keyboard on
+  screen for typing. It works with the window in front or on the stream, as in the headset,
+  and lets go of the controller while a game runs, so the game has it to itself.
 - **Touch from the phone.** While VR viewer mode is off, touches on the picture in the Android
   app control the Gazeora window, and only it: the PC's own mouse and other programs are left
   alone. A tap clicks and a finger moving scrolls. It works with Gazeora minimized too, as
