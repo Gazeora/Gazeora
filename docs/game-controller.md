@@ -11,18 +11,41 @@ controller the same standard layout. So a button does the same thing wherever it
 controller, not by what it's called. Several controllers can be connected at once; any of
 them drives.
 
+It works the way Steam's Big Picture does: a bright outline shows which control has the
+focus, and the sidebar and the page are two regions side by side.
+
 | Button | Does |
 |---|---|
-| D-pad or left stick | Moves between controls: the sidebar, buttons, switches, game cards |
-| Bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo) | Presses the focused control |
-| Right face button (B, Circle, A) | Backs out: closes a list or popup, or leaves a field |
-| Left and right shoulder buttons (LB / RB, L1 / R1, L / R) | The previous and next page in the sidebar |
+| D-pad or left stick | Moves the focus. Right from the sidebar goes into the page, left from the page's edge back to the sidebar, each time to where you were |
+| Bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo) | Presses the focused control. On a game, opens its page; on a text box, starts typing |
+| Right face button (B, Circle, A) | Backs out: closes a list or menu, finishes typing, or goes from a game's page back to the library, onto that game |
+| Menu / Options / + button | On a game: its menu (Play, Details, Open file location, Remove), as a right-click gives |
+| Left and right shoulder buttons (LB / RB, L1 / R1, L / R) | The previous and next page in the sidebar, starting at the page's first control |
 | Right stick | Scrolls the page, faster the further it's pushed |
 
 Held, the d-pad and the left stick repeat. To change a slider, press the bottom button on it,
-move it with left and right, and press the bottom button again.
-Sticks have a dead zone, so one that rests slightly off center (most do) doesn't move anything.
-Typing still needs the keyboard.
+move it with left and right, and press the bottom button again. Focusing an ⓘ shows its
+explanation. Sticks have a dead zone, so one that rests slightly off center (most do) doesn't
+move anything.
+
+## Typing
+
+Selecting a text box with the controller (the library's search, a game's name, launch
+arguments, folders, the stream overlay's text) brings up a keyboard on screen, in the window
+itself, so it's in the stream and the headset too. It types into the box as a keyboard would,
+and the box saves as it always does.
+
+| Button | Does |
+|---|---|
+| D-pad or left stick | Picks a key (held, it keeps going) |
+| Bottom face button | Types the key |
+| Left face button (X, Square, Y) | Deletes the character before the caret (held, it keeps deleting) |
+| Top face button (Y, Triangle, X) | Types a space |
+| Left shoulder | Shift: the next letter in capitals, or the digits' symbols |
+| Right shoulder | Switches between letters and symbols (`\ / : . _ -` and the rest for paths and arguments) |
+| Right face button, or Menu / Options | Done: keeps the text and puts the keyboard away |
+
+The keys **Shift**, **&123** / **ABC**, **Space**, **Delete** and **Done** do the same.
 
 The card lists the controllers it sees, by name.
 
@@ -46,6 +69,8 @@ The card lists the controllers it sees, by name.
 - **"No controller connected".** Plug the controller in, or pair it in Windows' Bluetooth
   settings first. It shows up within a moment, with no need to restart Gazeora.
 - **A button does nothing.** The guide button (Xbox, PS) is left to Windows and Steam. The
-  left and top face buttons aren't used.
+  left and top face buttons are used only by the on-screen keyboard.
+- **Adding games and choosing pictures.** **Add game**, **Browse** and **Choose image...**
+  open Windows' own file dialogs, which need the mouse and keyboard.
 - **Steam Input.** Steam can stand in for a controller while Steam is open, and it may then
   show up as an Xbox controller. Either way, it works.
