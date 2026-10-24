@@ -1,0 +1,22 @@
+<!-- Shortcuts. Their key paths are under HKCU, as Windows Installer wants for anything in a
+     profile folder, though a per-machine install puts them in the all-users folders. -->
+<?include Release.wxi ?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder">
+      <Shortcut Name="$(var.ProductName)" Target="[BinFolder]Gazeora.exe"
+                WorkingDirectory="BinFolder"
+                Description="VR game launcher: play PC games on your phone in a VR viewer" />
+      <RegistryValue Root="HKCU" Key="$(var.StateKey)" Name="StartMenuShortcut" Value="1"
+                     Type="integer" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder">
+      <Shortcut Name="$(var.ProductName)" Target="[BinFolder]Gazeora.exe"
+                WorkingDirectory="BinFolder"
+                Description="VR game launcher: play PC games on your phone in a VR viewer" />
+      <RegistryValue Root="HKCU" Key="$(var.StateKey)" Name="DesktopShortcut" Value="1"
+                     Type="integer" KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>

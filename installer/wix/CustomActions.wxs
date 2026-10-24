@@ -1,0 +1,41 @@
+<!-- Uninstall clean-up, and starting Gazeora from the last page. The clean-up skips upgrades,
+     which uninstall the earlier version on the way. -->
+<?include Release.wxi ?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <?define FullUninstall = REMOVE~="ALL" AND NOT UPGRADINGPRODUCTCODE ?>
+
+    <!-- The USB driver and the certificate Gazeora trusted for it (usb_driver.h). An x86
+         Gazeora on 64-bit Windows leaves the driver to the x64 one. -->
+    <?if $(sys.BUILDARCH) = x64 ?>
+      <?define DriverUninstall = "$(var.FullUninstall)" ?>
+    <?else?>
+      <?define DriverUninstall = "$(var.FullUninstall) AND NOT VersionNT64" ?>
+    <?endif?>
+    <CustomAction Id="UninstallUsbDriver" FileRef="GazeoraExe"
+                  ExeCommand="--uninstall-usb-driver" Execute="deferred" Impersonate="no"
+                  Return="ignore" />
+
+    <!-- %APPDATA%\Gazeora, if the user says so (installer/custom_actions). -->
+    <Binary Id="SetupActions" SourceFile="!(bindpath.Actions)\gazeora_setup_actions.dll" />
+    <CustomAction Id="RemoveUserData" BinaryRef="SetupActions" DllEntry="RemoveUserData"
+                  Execute="immediate" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="UninstallUsbDriver" Before="RemoveFiles"
+              Condition="$(var.DriverUninstall)" />
+      <Custom Action="RemoveUserData" After="InstallFinalize"
+              Condition="$(var.FullUninstall)" />
+    </InstallExecuteSequence>
+
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start $(var.ProductName)" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#GazeoraExe]" />
+    <CustomAction Id="StartGazeora" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  DllEntry="WixShellExec" Impersonate="yes" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="StartGazeora"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+  </Fragment>
+</Wix>

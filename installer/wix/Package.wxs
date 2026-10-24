@@ -1,0 +1,60 @@
+<!-- Gazeora's MSI: built by the gazeora_msi target (installer/CMakeLists.txt), which passes
+     ProductName, ProductVersion, UpgradeCode and Publisher, and bind paths to the staged files
+     (Runtime, Tools), the custom actions and Uninstall.exe (Actions), the icon (Resources), the
+     wizard's pictures (Branding) and the license (Generated). -->
+<?include Release.wxi ?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="$(var.ProductName)"
+           Manufacturer="$(var.Publisher)"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="$(var.UpgradeCode)"
+           Scope="perMachine"
+           Compressed="yes">
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="GazeoraIcon" SourceFile="!(bindpath.Resources)\gazeora.ico" />
+    <Property Id="ARPPRODUCTICON" Value="GazeoraIcon" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <Feature Id="Main" Title="Gazeora" AllowAbsent="no" Display="expand"
+             ConfigurableDirectory="INSTALLFOLDER"
+             Description="The launcher, GazeoraCLI, the capture hook and the hand gesture models.">
+      <ComponentGroupRef Id="RuntimeFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+
+      <Feature Id="DesktopShortcut" Title="Desktop shortcut"
+               Description="A shortcut to Gazeora on the desktop.">
+        <ComponentRef Id="DesktopShortcut" />
+      </Feature>
+      <Feature Id="CommandLinePath" Title="Add GazeoraCLI to PATH"
+               Description="Run GazeoraCLI from any command prompt.">
+        <ComponentRef Id="BinOnPath" />
+      </Feature>
+      <Feature Id="OpenWith" Title="Open with Gazeora in Explorer"
+               Description="Right-click a game's .exe or shortcut to add it to the library.">
+        <ComponentGroupRef Id="OpenWithVerbs" />
+      </Feature>
+      <Feature Id="Firewall" Title="Allow the stream through the firewall"
+               Description="Lets devices on your private network watch the stream and find this PC.">
+        <ComponentRef Id="FirewallRule" />
+      </Feature>
+      <!-- Off unless picked: INSTALLLEVEL is 1. -->
+      <Feature Id="Tools" Title="Developer tools" Level="1000"
+               Description="The test game and the stream probe.">
+        <ComponentGroupRef Id="ToolFiles" />
+      </Feature>
+    </Feature>
+
+    <!-- Links CustomActions.wxs, whose fragment nothing else refers to. -->
+    <CustomActionRef Id="UninstallUsbDriver" />
+
+    <WixVariable Id="WixUILicenseRtf" Value="!(bindpath.Generated)\License.rtf" />
+    <!-- In Gazeora's colors (installer/branding/make_branding.py). -->
+    <WixVariable Id="WixUIBannerBmp" Value="!(bindpath.Branding)\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="!(bindpath.Branding)\dialog.bmp" />
+    <ui:WixUI Id="WixUI_FeatureTree" />
+  </Package>
+</Wix>

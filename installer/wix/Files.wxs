@@ -1,0 +1,30 @@
+<!-- Everything the install rules staged, so the MSI ships exactly what they list. Gazeora.exe
+     gets an ID of its own for the shortcuts, verbs and custom actions. -->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Gazeora">
+        <Directory Id="BinFolder" Name="bin" />
+        <Directory Id="ShareFolder" Name="share" />
+      </Directory>
+    </StandardDirectory>
+
+    <ComponentGroup Id="RuntimeFiles">
+      <Component Directory="BinFolder">
+        <File Id="GazeoraExe" Source="!(bindpath.Runtime)\bin\Gazeora.exe" KeyPath="yes" />
+      </Component>
+      <Files Directory="BinFolder" Include="!(bindpath.Runtime)\bin\**">
+        <Exclude Files="!(bindpath.Runtime)\bin\Gazeora.exe" />
+      </Files>
+      <Files Directory="ShareFolder" Include="!(bindpath.Runtime)\share\**" />
+      <!-- Starts the MSI's uninstall (installer/uninstaller). -->
+      <Component Directory="INSTALLFOLDER">
+        <File Id="UninstallExe" Source="!(bindpath.Actions)\Uninstall.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="ToolFiles">
+      <Files Directory="BinFolder" Include="!(bindpath.Tools)\bin\**" />
+    </ComponentGroup>
+  </Fragment>
+</Wix>

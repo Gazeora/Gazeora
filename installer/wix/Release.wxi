@@ -1,0 +1,13 @@
+<!-- What differs between the x64 and x86 packages besides ProductName and UpgradeCode, which
+     installer/CMakeLists.txt passes in. Each has its own Explorer verb, so both can be there. -->
+<Include>
+  <?if $(sys.BUILDARCH) = x64 ?>
+    <?define VerbKey = "Gazeora" ?>
+    <?define VerbText = "Open with Gazeora" ?>
+  <?else?>
+    <?define VerbKey = "Gazeora32" ?>
+    <?define VerbText = "Open with Gazeora (32-bit)" ?>
+  <?endif?>
+  <!-- Key paths for the components that only write registry values or shortcuts. -->
+  <?define StateKey = "Software\Gazeora\Installer" ?>
+</Include>

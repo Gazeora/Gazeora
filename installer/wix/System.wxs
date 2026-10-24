@@ -1,0 +1,46 @@
+<!-- What the optional features change outside the install folder: PATH, Explorer's
+     right-click menu and the firewall. Uninstalling removes each again. -->
+<?include Release.wxi ?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall">
+  <Fragment>
+    <Component Id="BinOnPath" Directory="BinFolder">
+      <Environment Id="PathEntry" Name="PATH" Value="[BinFolder]" Part="last" Action="set"
+                   System="yes" />
+      <RegistryValue Root="HKLM" Key="$(var.StateKey)" Name="BinOnPath" Value="1"
+                     Type="integer" KeyPath="yes" />
+    </Component>
+
+    <!-- A verb on every .exe and shortcut. Windows 11 lists it under "Show more options". -->
+    <ComponentGroup Id="OpenWithVerbs" Directory="BinFolder">
+      <Component Id="OpenWithExe">
+        <RegistryKey Root="HKLM"
+                     Key="Software\Classes\SystemFileAssociations\.exe\shell\$(var.VerbKey)">
+          <RegistryValue Name="MUIVerb" Value="$(var.VerbText)" Type="string" KeyPath="yes" />
+          <RegistryValue Name="Icon" Value="[BinFolder]Gazeora.exe,0" Type="string" />
+          <RegistryValue Key="command" Value="&quot;[BinFolder]Gazeora.exe&quot; &quot;%1&quot;"
+                         Type="string" />
+        </RegistryKey>
+      </Component>
+      <Component Id="OpenWithShortcut">
+        <RegistryKey Root="HKLM"
+                     Key="Software\Classes\SystemFileAssociations\.lnk\shell\$(var.VerbKey)">
+          <RegistryValue Name="MUIVerb" Value="$(var.VerbText)" Type="string" KeyPath="yes" />
+          <RegistryValue Name="Icon" Value="[BinFolder]Gazeora.exe,0" Type="string" />
+          <RegistryValue Key="command" Value="&quot;[BinFolder]Gazeora.exe&quot; &quot;%1&quot;"
+                         Type="string" />
+        </RegistryKey>
+      </Component>
+    </ComponentGroup>
+
+    <!-- Private networks and the local subnet only: the stream has no password. -->
+    <Component Id="FirewallRule" Directory="BinFolder">
+      <fw:FirewallException Id="GazeoraStream" Name="$(var.ProductName) stream"
+                            Program="[BinFolder]Gazeora.exe" Profile="private"
+                            Scope="localSubnet"
+                            Description="Streams games to devices on the local network." />
+      <RegistryValue Root="HKLM" Key="$(var.StateKey)" Name="FirewallRule" Value="1"
+                     Type="integer" KeyPath="yes" />
+    </Component>
+  </Fragment>
+</Wix>

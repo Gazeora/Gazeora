@@ -47,3 +47,4 @@ if(GAZEORA_BUILD_BENCH)
 endif()
 
 include(Install)  # cmake --install: the programs and what they load, in one folder
+add_subdirectory(installer)  # gazeora_msi: the MSI, from what cmake --install stages
