@@ -18,7 +18,8 @@ namespace gazeora {
 //    8  u16  height
 //   10  u16  in a hello: the share of frames the player lost lately, per mille; else 0
 //   12  u32  frame number, counting up from the first frame sent
-//   16  u32  timestamp, 90 kHz
+//   16  u32  in a frame: timestamp, 90 kHz. In a challenge, and the player's messages over
+//            UDP: the cookie
 //   20  u32  UDP: chunk index (high 16 bits) and chunk count (low 16 bits)
 //            USB: payload length
 // A frame's payload is its access unit in Annex B, the parameter sets in front of a key
@@ -29,6 +30,11 @@ namespace gazeora {
 // player silent for kPlayerTimeoutMs is dropped), asks for a key frame when it starts or
 // lost a frame, and says bye when it stops.
 //
+// Over UDP the PC first answers a hello with a challenge: a header the hello's size, with a
+// random cookie for that address. Only messages carrying it count. A hello's source address
+// can be forged, and without this one forged hello would have the PC stream video at
+// whatever address it named; the cookie only reaches the real one.
+//
 // While the picture is shown flat (not VR), the app sends its touches as Pointer messages
 // (pointer_message.h): over USB on the same cable, over the network to kPointerPort.
 enum class FrameMessage : uint8_t {
@@ -37,6 +43,7 @@ enum class FrameMessage : uint8_t {
     KeyFrameRequest = 3,  // player to PC
     Bye = 4,              // player to PC
     Pointer = 5,          // player to PC
+    Challenge = 6,        // PC to player, over UDP
 };
 
 constexpr size_t kFrameHeaderSize = 24;

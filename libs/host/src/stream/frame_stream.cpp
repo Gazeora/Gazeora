@@ -42,6 +42,8 @@ constexpr uint32_t kKeyFramesPerSecond = 1;
 // too, so what's queued stays where it can be counted.
 constexpr size_t kTcpBacklogBytes = 512 * 1024;
 constexpr int kTcpSendBufferBytes = 128 * 1024;
+// RTSP connections open at once, each with its thread; more are closed as they come.
+constexpr size_t kMaxConnections = 16;
 // A UDP player without a receiver report for this long is noted in the log. VLC sends one
 // every few seconds, so a player that stops has most likely stopped receiving.
 constexpr uint64_t kQuietPlayerMs = 12000;
@@ -392,6 +394,15 @@ void FrameStreamServer::AcceptLoop() {
         if (!client) {
             continue;
         }
+        ReapConnections(false);
+        {
+            std::lock_guard<std::mutex> lock(m_connectionsMutex);
+            if (m_connections.size() >= kMaxConnections) {
+                m_log.Write("%s turned away: %u connections are open already",
+                            net::AddressText(peer).c_str(), unsigned(m_connections.size()));
+                continue;  // closes it
+            }
+        }
         BOOL noDelay = TRUE;
         setsockopt(client.Get(), IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&noDelay),
                    sizeof(noDelay));
@@ -422,6 +433,16 @@ void FrameStreamServer::ReapConnections(bool all) {
             ++it;
         }
     }
+}
+
+bool FrameStreamServer::Watching(const in_addr& address) {
+    if (m_output) {
+        return m_output->Watching(address);
+    }
+    std::lock_guard<std::mutex> lock(m_sessionsMutex);
+    return std::any_of(m_sessions.begin(), m_sessions.end(), [&](const auto& entry) {
+        return entry.second.playing && entry.second.peer.s_addr == address.s_addr;
+    });
 }
 
 void FrameStreamServer::UpdateViewers() {
@@ -628,6 +649,7 @@ bool FrameStreamServer::OnSetup(RequestContext& context) {
         it = m_sessions.emplace(id, Session{&connection}).first;
     }
     Session& session = it->second;
+    session.peer = context.peer.sin_addr;
     session.tcp = transport.interleaved;
     session.app = PlayerIdentity::IsGazeoraApp(context.request.Header("User-Agent"));
     std::string replyTransport;

@@ -56,6 +56,12 @@ public:
     // Where touches the players send on the output's own link go (USB only: the network's go
     // to PointerInputReceiver). Set before Start.
     virtual void SetPointerSink(PointerEventSink* sink) { (void)sink; }
+    // Whether a player at `address` is watching: the touches that come over the network
+    // (PointerInputReceiver) count only from one.
+    virtual bool Watching(const in_addr& address) {
+        (void)address;
+        return false;
+    }
 };
 
 // The output for `protocol`; null for the RTSP ones, which the server handles itself.

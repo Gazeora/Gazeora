@@ -650,15 +650,28 @@ TEST_F(FrameStreamTest, StreamsFramesOverUdpToPlayersThatSayHello) {
     SOCKET player = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     SetTimeout(player, 3000);
     sockaddr_in to = Loopback(server.Port());
-    auto say = [&](FrameMessage type) {
+    auto say = [&](FrameMessage type, uint32_t cookie) {
         FrameHeader header;
         header.type = type;
+        header.timestamp = cookie;
         uint8_t raw[kFrameHeaderSize];
         header.Write(raw);
         sendto(player, reinterpret_cast<char*>(raw), sizeof(raw), 0,
                reinterpret_cast<sockaddr*>(&to), sizeof(to));
     };
-    say(FrameMessage::Hello);
+    // A first hello only gets a challenge, no bigger than it: a forged one gains nothing.
+    say(FrameMessage::Hello, 0);
+    char reply[2048];
+    int replied = recv(player, reply, sizeof(reply), 0);
+    ASSERT_EQ(replied, int(kFrameHeaderSize));
+    FrameHeader challenge;
+    ASSERT_TRUE(challenge.Read(reinterpret_cast<uint8_t*>(reply), size_t(replied)));
+    EXPECT_EQ(challenge.type, FrameMessage::Challenge);
+    const uint32_t cookie = challenge.timestamp;
+    EXPECT_NE(cookie, 0u);
+    EXPECT_EQ(server.Viewers(), 0);
+    // The cookie back, and it's a player.
+    say(FrameMessage::Hello, cookie);
     WaitForViewers(1);
     ASSERT_EQ(server.Viewers(), 1);
     EXPECT_EQ(server.AppViewers(), 1);  // only the app speaks GZF1
@@ -689,7 +702,10 @@ TEST_F(FrameStreamTest, StreamsFramesOverUdpToPlayersThatSayHello) {
         types.push_back(RtpPayloadFormat::For(VideoCodec::H264).NalType(nal));
     EXPECT_TRUE(Has(types, kNalSps) && Has(types, kNalPps) && Has(types, kNalIdrSlice));
 
-    say(FrameMessage::Bye);
+    say(FrameMessage::Bye, cookie + 1);  // not with the wrong cookie
+    Sleep(100);
+    EXPECT_EQ(server.Viewers(), 1);
+    say(FrameMessage::Bye, cookie);
     WaitForViewers(0);
     EXPECT_EQ(server.Viewers(), 0);
     closesocket(player);
@@ -706,6 +722,8 @@ TEST_F(FrameStreamTest, StreamsMpegTsOverHttp) {
     ASSERT_NE(headEnd, std::string::npos) << received;
     EXPECT_EQ(received.rfind("HTTP/1.1 200 OK\r\n", 0), 0u) << received;
     EXPECT_NE(received.find("Content-Type: video/mp2t\r\n"), std::string::npos) << received;
+    // Web pages elsewhere can't read the stream.
+    EXPECT_EQ(received.find("Access-Control-Allow-Origin"), std::string::npos) << received;
     received.erase(0, headEnd + 4);
     WaitForViewers(1);
     ASSERT_EQ(server.Viewers(), 1);

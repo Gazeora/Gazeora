@@ -170,6 +170,7 @@ private:
     // A player that has set up the stream, by RTSP session id.
     struct Session {
         RtspConnection* owner;
+        in_addr peer = {};    // the player's address
         sockaddr_in rtp;      // where the player wants the RTP packets (UDP)
         sockaddr_in rtcp;     // and the RTCP sender reports
         bool tcp = false;     // interleaved in the RTSP connection instead
@@ -229,6 +230,8 @@ private:
                                float frameRate);
     void SetLastError(const std::wstring& error);
     bool StartRtsp(in_addr address, uint16_t port, std::wstring& error);
+    // Whether a player at `address` is watching, on whichever protocol (FrameOutput::Watching).
+    bool Watching(const in_addr& address);
     // The discovery reply (discovery.h).
     std::string Describe();
 
@@ -295,7 +298,8 @@ private:
     VrLayout m_vr;
 
     PointerGate m_pointerGate;
-    PointerInputReceiver m_pointerReceiver{m_pointerGate, m_log};
+    PointerInputReceiver m_pointerReceiver{
+        m_pointerGate, m_log, [this](const in_addr& address) { return Watching(address); }};
 
     std::mutex m_overlayMutex;
     OverlaySettings m_overlay;

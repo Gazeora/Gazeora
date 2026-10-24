@@ -1,6 +1,8 @@
 #include "gazeora/host/stream/udp_frame_output.h"
 
 #include <ws2tcpip.h>
+// After winsock2.h (by way of the header), which brings in windows.h.
+#include <bcrypt.h>
 
 #include <algorithm>
 
@@ -52,6 +54,8 @@ void UdpFrameOutput::Stop() {
     m_port = 0;
     std::lock_guard<std::mutex> lock(m_playersMutex);
     m_players.clear();
+    m_challenges.clear();
+    m_fullLogged = false;
     m_viewers = 0;
 }
 
@@ -86,6 +90,7 @@ void UdpFrameOutput::ReceiveLoop() {
                 m_log.Write("%s stopped saying hello: dropped",
                             net::AddressText(it->second.address).c_str());
                 it = m_players.erase(it);
+                m_fullLogged = false;
             } else {
                 ++it;
             }
@@ -94,14 +99,75 @@ void UdpFrameOutput::ReceiveLoop() {
     }
 }
 
+bool UdpFrameOutput::Watching(const in_addr& address) {
+    std::lock_guard<std::mutex> lock(m_playersMutex);
+    return std::any_of(m_players.begin(), m_players.end(), [&](const auto& entry) {
+        return entry.second.address.sin_addr.s_addr == address.s_addr;
+    });
+}
+
+uint32_t UdpFrameOutput::CookieFor(uint64_t key) {
+    for (const auto& challenge : m_challenges) {
+        if (challenge.first == key) {
+            return challenge.second;
+        }
+    }
+    // From the system's cryptographic generator: one a player could predict from the cookies
+    // it was given could be forged for any address.
+    uint32_t cookie = 0;
+    while (cookie == 0) {  // 0 is what a player that hasn't been challenged sends
+        BCryptGenRandom(nullptr, reinterpret_cast<PUCHAR>(&cookie), sizeof(cookie),
+                        BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+    }
+    if (m_challenges.size() >= kMaxChallenges) {
+        m_challenges.pop_front();
+    }
+    m_challenges.emplace_back(key, cookie);
+    return cookie;
+}
+
+void UdpFrameOutput::SendChallenge(const sockaddr_in& to, uint32_t cookie) {
+    FrameHeader header;
+    header.type = FrameMessage::Challenge;
+    header.timestamp = cookie;
+    uint8_t raw[kFrameHeaderSize];
+    header.Write(raw);
+    sendto(m_socket.Get(), reinterpret_cast<const char*>(raw), sizeof(raw), 0,
+           reinterpret_cast<const sockaddr*>(&to), sizeof(to));
+}
+
 void UdpFrameOutput::Hear(const sockaddr_in& from, const FrameHeader& header, uint64_t now) {
     std::lock_guard<std::mutex> lock(m_playersMutex);
-    auto it = m_players.find(Key(from));
+    const uint64_t key = Key(from);
+    auto it = m_players.find(key);
+    if (it == m_players.end() && header.type != FrameMessage::Hello) {
+        return;  // only a player's count
+    }
+    // Only with the cookie this address was sent: then it comes from where it says.
+    const uint32_t cookie = it != m_players.end() ? it->second.cookie : CookieFor(key);
+    if (header.timestamp != cookie) {
+        if (header.type == FrameMessage::Hello) {
+            SendChallenge(from, cookie);  // the size of the hello: nothing gained by forging it
+        }
+        return;
+    }
     switch (header.type) {
         case FrameMessage::Hello:
             if (it == m_players.end()) {
+                if (m_players.size() >= kMaxPlayers) {
+                    if (!m_fullLogged) {
+                        m_log.Write("%s said hello, but %u players are watching already",
+                                    net::AddressText(from).c_str(), unsigned(m_players.size()));
+                        m_fullLogged = true;
+                    }
+                    break;
+                }
                 m_log.Write("%s said hello: streaming to it", net::AddressText(from).c_str());
-                it = m_players.emplace(Key(from), Player{from}).first;
+                it = m_players.emplace(key, Player{from, cookie}).first;
+                m_challenges.erase(
+                    std::remove_if(m_challenges.begin(), m_challenges.end(),
+                                   [&](const auto& challenge) { return challenge.first == key; }),
+                    m_challenges.end());
                 m_keyFrameWanted = true;  // so it doesn't wait for one
             }
             it->second.lastHeardMs = now;
@@ -112,10 +178,9 @@ void UdpFrameOutput::Hear(const sockaddr_in& from, const FrameHeader& header, ui
             m_keyFrameWanted = true;
             break;
         case FrameMessage::Bye:
-            if (it != m_players.end()) {
-                m_log.Write("%s said bye", net::AddressText(from).c_str());
-                m_players.erase(it);
-            }
+            m_log.Write("%s said bye", net::AddressText(from).c_str());
+            m_players.erase(it);
+            m_fullLogged = false;
             break;
         default:
             break;

@@ -17,6 +17,8 @@ constexpr size_t kBacklogBytes = 512 * 1024;
 constexpr int kSocketSendBufferBytes = 128 * 1024;
 constexpr size_t kMaxRequestBytes = 8192;
 constexpr uint64_t kRequestTimeoutMs = 10000;
+// Connections open at once, each with its thread; more are closed as they come.
+constexpr size_t kMaxConnections = 16;
 
 std::string Response(const char* status, const char* type, const std::string& body) {
     return std::string("HTTP/1.1 ") + status + "\r\nServer: Gazeora\r\nContent-Type: " + type +
@@ -104,6 +106,15 @@ void HttpTsOutput::AcceptLoop() {
         if (!client) {
             continue;
         }
+        Reap(false);
+        {
+            std::lock_guard<std::mutex> lock(m_playersMutex);
+            if (m_players.size() >= kMaxConnections) {
+                m_log.Write("%s turned away: %u connections are open already",
+                            net::AddressText(peer).c_str(), unsigned(m_players.size()));
+                continue;  // closes it
+            }
+        }
         BOOL noDelay = TRUE;
         setsockopt(client.Get(), IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&noDelay),
                    sizeof(noDelay));
@@ -115,7 +126,7 @@ void HttpTsOutput::AcceptLoop() {
         m_log.Write("%s connected over HTTP", connection->Peer().c_str());
         RtspConnection* raw = connection.get();
         std::lock_guard<std::mutex> lock(m_playersMutex);
-        m_players.push_back(Player{std::move(connection)});
+        m_players.push_back(Player{std::move(connection), peer.sin_addr});
         raw->thread = std::thread([this, raw] { Serve(*raw); });
     }
 }
@@ -134,6 +145,13 @@ void HttpTsOutput::Reap(bool all) {
             ++it;
         }
     }
+}
+
+bool HttpTsOutput::Watching(const in_addr& address) {
+    std::lock_guard<std::mutex> lock(m_playersMutex);
+    return std::any_of(m_players.begin(), m_players.end(), [&](const Player& player) {
+        return player.streaming && player.address.s_addr == address.s_addr;
+    });
 }
 
 void HttpTsOutput::SetStreaming(RtspConnection& connection, bool streaming, bool app) {
@@ -173,11 +191,12 @@ bool HttpTsOutput::Answer(RtspConnection& connection, const std::string& request
         connection.Send(Response("404 Not Found", "text/plain", "The stream is at /stream.ts\n"));
         return false;
     }
-    // No length: the stream lasts until the connection closes.
+    // No length: the stream lasts until the connection closes. No Access-Control-Allow-Origin:
+    // players don't need it, and with it any web page open on this PC or the network could read
+    // the stream.
     connection.Send(
         "HTTP/1.1 200 OK\r\nServer: Gazeora\r\nContent-Type: video/mp2t\r\n"
-        "Cache-Control: no-cache, no-store\r\nAccess-Control-Allow-Origin: *\r\n"
-        "Connection: close\r\n\r\n");
+        "Cache-Control: no-cache, no-store\r\nConnection: close\r\n\r\n");
     return method == "GET";
 }
 
