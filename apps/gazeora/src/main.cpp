@@ -18,6 +18,7 @@
 #include <imgui_impl_win32.h>
 
 #include "app.h"
+#include "platform/game_open_request.h"
 #include "platform/usb_driver.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam,
@@ -132,6 +133,16 @@ LRESULT WINAPI WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             return 0;
         }
+        case WM_COPYDATA: {
+            // Games from Explorer, passed on by a second Gazeora.
+            auto request = gazeora::app::GameOpenRequest::FromCopyData(
+                *reinterpret_cast<const COPYDATASTRUCT*>(lParam));
+            if (!request || !g_app) {
+                break;
+            }
+            g_app->OnFilesDropped(request->Paths());
+            return TRUE;
+        }
         case WM_SYSCOMMAND:
             if ((wParam & 0xFFF0) == SC_KEYMENU) {
                 return 0;  // no ALT application menu
@@ -161,10 +172,15 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
         return driverExit;
     }
 
-    // One launcher at a time: a second start just brings the first one forward.
+    // One launcher at a time: a second start brings the first one forward, with any games
+    // Explorer opened it with.
+    const auto openRequest = gazeora::app::GameOpenRequest::FromCommandLine();
     HANDLE singleInstance = CreateMutexW(nullptr, TRUE, L"Local\\Gazeora_launcher");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         if (HWND existing = FindWindowW(kWindowClass, nullptr)) {
+            if (!openRequest.Empty()) {
+                openRequest.SendTo(existing);
+            }
             ShowWindow(existing, IsIconic(existing) ? SW_RESTORE : SW_SHOW);
             SetForegroundWindow(existing);
         }
@@ -214,6 +230,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_renderer.device.Get(), g_renderer.context.Get());
     g_app = app.get();
+    if (!openRequest.Empty()) {
+        app->OnFilesDropped(openRequest.Paths());
+    }
 
     ShowWindow(hwnd, showCommand);
     UpdateWindow(hwnd);

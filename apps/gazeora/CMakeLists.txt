@@ -14,6 +14,7 @@ add_executable(Gazeora WIN32
     src/pages/home_page.cpp
     src/pages/library_page.cpp
     src/pages/settings_page.cpp
+    src/platform/game_open_request.cpp
     src/platform/shell.cpp
     src/platform/usb_driver.cpp
     src/remote/imgui_pointer_input.cpp
