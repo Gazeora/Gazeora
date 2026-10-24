@@ -14,6 +14,10 @@ add_executable(Gazeora WIN32
     src/gamepad/gamepad_presses.cpp
     src/gamepad/imgui_gamepad_input.cpp
     src/gamepad/pane_navigation.cpp
+    src/keyboard/imgui_text_sink.cpp
+    src/keyboard/keyboard_layout.cpp
+    src/keyboard/keyboard_view.cpp
+    src/keyboard/on_screen_keyboard.cpp
     src/pages/chrome.cpp
     src/pages/controls_page.cpp
     src/pages/details_page.cpp

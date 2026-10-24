@@ -3,6 +3,8 @@
 #include <cfloat>
 #include <cstring>
 
+#include <imgui_internal.h>
+
 #include "ui/theme.h"
 
 namespace gazeora::app {
@@ -63,6 +65,16 @@ bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32
     draw->AddText(font, font->FontSize, pos + (size - textSize) * 0.5f, enabled ? fg : kTextFaint,
                   label, end);
     return pressed;
+}
+
+void TypeOnSelect() {
+    if (!ImGui::IsItemFocused() || ImGui::IsItemActive() ||
+        !ImGui::IsKeyPressed(ImGuiKey_GamepadFaceDown, false)) {
+        return;
+    }
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    g.NavNextActivateId = ImGui::GetItemID();
+    g.NavNextActivateFlags = ImGuiActivateFlags_PreferInput;
 }
 
 bool NavButton(const char* id, ImVec2 size) {

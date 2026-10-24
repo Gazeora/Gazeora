@@ -293,6 +293,7 @@ void App::DrawGameSettingsCard(Game& game) {
     FieldLabel(m_fonts.caption, "Name");
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputText("##name", &m_editName);
+    TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit() && !m_editName.empty()) {
         game.name = Utf8::ToWide(m_editName);
         SaveLibrary();
@@ -310,6 +311,7 @@ void App::DrawGameSettingsCard(Game& game) {
     FieldLabel(m_fonts.caption, "Launch arguments");
     ImGui::SetNextItemWidth(-FLT_MIN);
     ImGui::InputTextWithHint("##args", "e.g. -dx12 -windowed", &m_editArgs);
+    TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.arguments = Utf8::ToWide(m_editArgs);
         SaveLibrary();
@@ -318,6 +320,7 @@ void App::DrawGameSettingsCard(Game& game) {
     FieldLabel(m_fonts.caption, "Working directory");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
     ImGui::InputTextWithHint("##workdir", "Defaults to the game's folder", &m_editWorkDir);
+    TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.workingDir = Utf8::ToWide(m_editWorkDir);
         SaveLibrary();
@@ -354,6 +357,7 @@ void App::DrawGameSettingsCard(Game& game) {
     ImGui::SetNextItemWidth(-FLT_MIN);
     std::string processHint = "Defaults to " + U8(LaunchSpec{game.exePath}.GameProcessName());
     ImGui::InputTextWithHint("##process", processHint.c_str(), &m_editProcess);
+    TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.processName = Utf8::ToWide(m_editProcess);
         SaveLibrary();

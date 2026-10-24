@@ -442,8 +442,10 @@ void App::DrawOverlayCard(float width) {
     FieldLabel(m_fonts.caption, "Your own text (a line under the details)");
     std::string text = U8(m_overlay.text);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::InputTextWithHint("##overlaytext", "e.g. a name, or where it's streaming from",
-                                 &text)) {
+    bool edited = ImGui::InputTextWithHint("##overlaytext",
+                                           "e.g. a name, or where it's streaming from", &text);
+    TypeOnSelect();
+    if (edited) {
         int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), int(text.size()), nullptr, 0);
         std::wstring wide(size_t(size), L'\0');
         MultiByteToWideChar(CP_UTF8, 0, text.c_str(), int(text.size()), wide.data(), size);

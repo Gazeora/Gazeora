@@ -18,6 +18,7 @@ constexpr const char* kGuide[] = {
     "Game options: the Menu or Options button on a game: play, details, remove",
     "Pages: the shoulder buttons (LB and RB, L1 and R1, L and R)",
     "Scroll: the right stick",
+    "Type: select a text box, and a keyboard comes up on screen",
 };
 
 }  // namespace

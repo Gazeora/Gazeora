@@ -23,6 +23,9 @@
 #include "gazeora/input/hand_gesture_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "keyboard/imgui_text_sink.h"
+#include "keyboard/keyboard_view.h"
+#include "keyboard/on_screen_keyboard.h"
 #include "pages/controls_page.h"
 #include "pages/gamepad_card.h"
 #include "remote/imgui_pointer_input.h"
@@ -110,6 +113,9 @@ private:
     void FollowGamepadPageKeys();
     // Its right button goes back from a game's page to the library, as in Steam.
     void FollowGamepadBack();
+    // A text field entered with the controller gets the on-screen keyboard, until it's left.
+    void FollowTextInput();
+    void DrawKeyboard();
     void DrawHome();
     void DrawLibrary();
     void DrawDetails();
@@ -222,10 +228,13 @@ private:
     ImGuiGamepadInput m_gamepadInput;
     GamepadPresses m_gamepadPresses;
     PaneNavigation m_panes;
+    ImGuiTextSink m_textSink;
+    OnScreenKeyboard m_keyboard{m_textSink};
+    KeyboardView m_keyboardView{m_scale};
     // The game whose page a controller opened: going back focuses its card again.
     uint32_t m_returnToGame = 0;
-    // Last frame, a popup was open or a control was held: the controller's buttons were
-    // theirs, not the pages'.
+    // Last frame, a popup was open, a control was held or the keyboard was up: the
+    // controller's buttons were theirs, not the pages'.
     bool m_gamepadBusy = false;
     GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
     GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
