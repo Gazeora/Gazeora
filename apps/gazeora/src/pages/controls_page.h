@@ -46,7 +46,7 @@ private:
     int ChosenCamera() const;
     // Saves the settings and starts, restarts or stops tracking to match.
     void Apply();
-    bool Tracking() const { return m_settings.enabled && !m_gameRunning; }
+    bool Tracking() const { return m_phoneInVr && m_settings.enabled && !m_gameRunning; }
     float S(float px) const { return px * m_scale; }
 
     input::HandGestureServices& m_hands;
