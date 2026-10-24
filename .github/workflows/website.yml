@@ -1,0 +1,20 @@
+# Keeps gazeora.github.io in step when a release is edited, unpublished or deleted. A newly
+# published release reaches it from ci.yml, after its MSIs are attached.
+name: Website
+
+on:
+  release:
+    types: [edited, unpublished, deleted]
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Update the website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Gazeora/gazeora.github.io/.github/actions/publish-release@main
+        with:
+          platform: windows
+          site-token: ${{ secrets.GAZEORA_SITE_TOKEN }}
