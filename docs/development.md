@@ -136,7 +136,8 @@ The version lives in one place: the `VERSION` file at the root, as `MAJOR.MINOR.
    an x64 and an x86 build folder.
 
 CI also runs on every pull request, every Monday at 00:00 UTC, and by hand from the Actions tab
-(`workflow_dispatch`); the MSIs of each run are kept as workflow artifacts for 7 days.
+(`workflow_dispatch`); the MSIs of each run are kept as workflow artifacts for 7 days (90 for a
+release run). The MSIs attached to a release never expire.
 
 A newer MSI replaces the installed version, keeping the user's library and settings.
 
