@@ -6,6 +6,7 @@
 #  - gazeora_transport_tests: real hook and host talking to each other in one process
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
 #  - gazeora_input_tests:     hand gesture control, with the real models on photos in input/data
+#  - gazeora_installer_tests: the MSI's custom actions, on a fake installer session
 # D3D11 tests run on WARP, so no GPU is needed.
 
 include(FetchGoogleTest)
@@ -65,6 +66,10 @@ endif()
 gazeora_add_test(gazeora_library_tests
     SOURCES library/game_library_test.cpp
     LIBS gazeora_library)
+
+gazeora_add_test(gazeora_installer_tests
+    SOURCES installer/user_data_removal_test.cpp
+    LIBS gazeora_setup_actions_core)
 
 gazeora_add_test(gazeora_transport_tests
     SOURCES transport/frame_transport_test.cpp
