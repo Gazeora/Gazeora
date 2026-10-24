@@ -13,6 +13,7 @@
 #include <iterator>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <imgui_stdlib.h>
 
 #include "gazeora/common/shared.h"
@@ -171,6 +172,25 @@ void App::FollowGamepadBack() {
         m_page = Page::Library;
         m_panes.EnterPage();
     }
+}
+
+void App::FollowTextInput() {
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    const ImGuiInputTextState* typing = ImGui::GetInputTextState(g.ActiveId);
+    if (!typing || (typing->Flags & ImGuiInputTextFlags_ReadOnly)) {
+        m_keyboard.Close();
+        return;
+    }
+    if (!m_keyboard.IsOpen() && g.ActiveIdSource == ImGuiInputSource_Gamepad) {
+        m_keyboard.Open();
+    }
+}
+
+void App::DrawKeyboard() {
+    ImGuiContext& g = *ImGui::GetCurrentContext();
+    const ImGuiInputTextState* typing = ImGui::GetInputTextState(g.ActiveId);
+    std::string text = typing ? std::string(typing->TextA.Data, size_t(typing->TextLen)) : "";
+    m_keyboardView.Draw(m_keyboard, text, {m_fonts.body, m_fonts.caption});
 }
 
 void App::DrawToasts() {

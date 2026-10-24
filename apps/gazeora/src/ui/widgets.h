@@ -22,6 +22,10 @@ void TextEllipsis(ImDrawList* draw, ImFont* font, ImVec2 pos, ImU32 color, const
 // Its hover visuals then show on the focused one, as IsItemHovered() reports it hovered.
 bool NavButton(const char* id, ImVec2 size);
 
+// Call after a text field: a controller's select button starts typing in it, as Enter does on
+// a keyboard. ImGui's own starts typing only with the top button.
+void TypeOnSelect();
+
 bool FilledButton(const char* label, ImVec2 size, ImU32 bg, ImU32 bgHover, ImU32 fg, ImFont* font,
                   float rounding, bool enabled = true);
 // Text-only button, e.g. "Back" or "View all".

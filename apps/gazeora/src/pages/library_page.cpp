@@ -55,6 +55,7 @@ void App::DrawLibrary() {
     ImGui::SetNextItemWidth(searchWidth);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(S(12), S(9)));
     ImGui::InputTextWithHint("##search", ICON_SEARCH "  Search games", &m_search);
+    TypeOnSelect();
 
     ImGui::SetCursorPos(ImVec2(x + searchWidth + spacing, controlsY));
     ImGui::SetNextItemWidth(sortWidth);

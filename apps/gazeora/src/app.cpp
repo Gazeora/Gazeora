@@ -246,6 +246,12 @@ void App::ApplyGamepadInput() {
         return;
     }
     m_gamepadPresses.Update(states);
+    if (m_keyboard.IsOpen()) {
+        // The keyboard has the controller; ImGui lets go of what it held.
+        m_gamepadInput.Apply({input::GamepadState()}, m_gamepadControl.Connected(), io);
+        m_keyboard.Update(m_gamepadPresses, ImGui::GetTime());
+        return;
+    }
     m_gamepadInput.Apply(states, m_gamepadControl.Connected(), io);
 }
 
@@ -350,9 +356,11 @@ void App::Draw() {
     ImGui::End();
 
     DrawToasts();
+    FollowTextInput();
+    DrawKeyboard();
     m_panes.Follow();
-    m_gamepadBusy =
-        ImGui::IsAnyItemActive() || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId);
+    m_gamepadBusy = ImGui::IsAnyItemActive() ||
+                    ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) || m_keyboard.IsOpen();
 
     std::vector<std::function<void()>> deferred;
     deferred.swap(m_deferred);
