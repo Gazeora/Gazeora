@@ -1,0 +1,97 @@
+# Builds and tests both releases (x64 and x86) and packs their MSIs. A published GitHub
+# release also gets the two MSIs attached.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  format:
+    name: Format and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: pre-commit/action@v3.0.1
+
+  build:
+    name: Build and test (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            vcvars: x64
+          - arch: x86
+            vcvars: amd64_x86
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.vcvars }}
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+
+      - name: Build
+        run: cmake --build build
+
+      # Retried because a stream test can starve for CPU on a busy machine
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --repeat until-pass:3
+
+      - name: Pack the MSI
+        run: cmake --build build --target gazeora_msi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gazeora-msi-${{ matrix.arch }}
+          path: build/Gazeora-*-${{ matrix.arch }}.msi
+          if-no-files-found: error
+
+  publish:
+    name: Attach MSIs to the release
+    if: github.event_name == 'release'
+    needs: [format, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches VERSION
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          expected="v$(tr -d '[:space:]' < VERSION)"
+          if [ "$TAG" != "$expected" ]; then
+            echo "::error::Release tag $TAG does not match VERSION ($expected)"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: gazeora-msi-*
+          path: dist
+          merge-multiple: true
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/*.msi --clobber --repo "$GITHUB_REPOSITORY"
