@@ -25,6 +25,12 @@ else()
 endif()
 
 add_compile_definitions(UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+if(MSVC)
+    # Sources are UTF-8 without a BOM (the UI's icon-font characters are typed into theme.h);
+    # MSVC would otherwise read them in the system code page and garble every non-ASCII
+    # literal. GCC reads and writes UTF-8 already.
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>")
+endif()
 if(NOT MSVC)
     # MinGW's D3D12 headers otherwise use a non-MSVC ABI for COM methods that return
     # structs (e.g. ID3D12Resource::GetDesc), which crashes at runtime.
