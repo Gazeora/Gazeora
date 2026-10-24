@@ -185,12 +185,15 @@ void HelpMarker(const char* text, float wrapWidth) {
     ImGui::PushStyleColor(ImGuiCol_Text, kTextFaint);
     ImGui::TextUnformatted(ICON_INFO);
     ImGui::PopStyleColor();
-    // A button over the icon, so a controller can land on it and show the text.
+    // A button over the icon, so a controller can land on it and show the text. Never where a
+    // page starts, and the text waits a moment, so passing over it doesn't cover the page.
     ImGui::SetCursorScreenPos(ImGui::GetItemRectMin());
     ImGui::PushID(text);
+    ImGui::PushItemFlag(ImGuiItemFlags_NoNavDefaultFocus, true);
     NavButton("##help", ImGui::GetItemRectSize());
+    ImGui::PopItemFlag();
     ImGui::PopID();
-    if (ImGui::IsItemHovered()) {
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(wrapWidth);
         ImGui::TextUnformatted(text);

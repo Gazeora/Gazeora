@@ -272,7 +272,7 @@ bool App::GameRunning() const {
 
 bool App::WantsContinuousFrames() const {
     if (!m_toasts.empty() || ImGui::GetIO().WantTextInput || ImGuiPointerInput::HasQueuedInput() ||
-        m_gamepadInput.Holding() || m_gamepadPresses.Holding()) {
+        m_gamepadInput.Holding() || m_gamepadPresses.Holding() || m_panes.Settling()) {
         return true;
     }
     if (m_page == Page::Controls && m_controls.Animating()) {
@@ -333,6 +333,7 @@ void App::Draw() {
     FollowGamepadBack();
     if (m_page != m_shownPage || m_detailsId != m_shownDetailsId) {
         m_shownPage = m_page;
+        m_panes.PageChanged();
         m_shownDetailsId = m_detailsId;
         ImGui::SetScrollY(0.0f);
     }
