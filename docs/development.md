@@ -129,9 +129,14 @@ The version lives in one place: the `VERSION` file at the root, as `MAJOR.MINOR.
 
 1. Change `VERSION`, for example to `1.1.0`, and commit it (`chore: release 1.1.0`). The next
    build picks it up; there's no need to configure again.
-2. Build both releases and their MSIs (`--target gazeora_msi` in an x64 and an x86 build
-   folder).
-3. Tag the commit `v1.1.0` and push the tag.
+2. Tag the commit `v1.1.0`, push the tag and publish a GitHub release for it.
+3. CI (`.github/workflows/ci.yml`) builds and tests both releases and attaches
+   `Gazeora-1.1.0-x64.msi` and `Gazeora-1.1.0-x86.msi` to the release. It fails if the tag
+   doesn't match `VERSION`. To build the MSIs locally instead, run `--target gazeora_msi` in
+   an x64 and an x86 build folder.
+
+CI also runs on every pull request, and by hand from the Actions tab (`workflow_dispatch`); the
+MSIs of each run are kept as workflow artifacts.
 
 A newer MSI replaces the installed version, keeping the user's library and settings.
 
