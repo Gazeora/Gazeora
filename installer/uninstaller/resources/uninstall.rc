@@ -1,0 +1,3 @@
+#include "release_info.h"  // generated: GAZEORA_ICON, the launcher's own icon
+
+IDI_UNINSTALL ICON GAZEORA_ICON
