@@ -33,6 +33,7 @@ add_executable(Gazeora WIN32
     src/settings/controls_settings.cpp
     src/settings/settings_file.cpp
     src/settings/stream_settings.cpp
+    src/ui/focus_lift.cpp
     src/ui/gamepad_scroll.cpp
     src/ui/gamepad_status_line.cpp
     src/ui/hand_preview.cpp
