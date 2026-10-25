@@ -27,8 +27,8 @@ UiScale UiScale::ForMonitor(HMONITOR monitor) {
     GetMonitorInfoW(monitor, &info);
     float dpi = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
     // Grow only as far as the smallest window still fits the screen.
-    float fit = std::min(Width(info.rcWork) / (kMinWidth * dpi),
-                         Height(info.rcWork) / (kMinHeight * dpi));
+    float fit =
+        std::min(Width(info.rcWork) / (kMinWidth * dpi), Height(info.rcWork) / (kMinHeight * dpi));
     float zoom = std::clamp(fit, kNoZoom, kComfortZoom);
     return UiScale(dpi * zoom, info.rcWork);
 }

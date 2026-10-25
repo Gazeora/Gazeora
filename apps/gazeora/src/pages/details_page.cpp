@@ -353,9 +353,10 @@ void App::DrawGameSettingsCard(Game& game) {
     }
 
     FieldLabel(m_fonts.caption, "Game process");
-    HelpMarker("Set this if the exe is a launcher that starts the real game, so Gazeora "
-               "captures the right program.",
-               S(380));
+    HelpMarker(
+        "Set this if the exe is a launcher that starts the real game, so Gazeora "
+        "captures the right program.",
+        S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
     std::string processHint = "Default: " + U8(LaunchSpec{game.exePath}.GameProcessName());
     ImGui::InputTextWithHint("##process", processHint.c_str(), &m_editProcess);

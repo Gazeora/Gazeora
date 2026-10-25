@@ -17,12 +17,9 @@ struct GuideRow {
 
 // Buttons by where they sit, as every make reads them.
 constexpr GuideRow kGuide[] = {
-    {"Move", "D-pad or left stick"},
-    {"Select", "Bottom button (A, Cross)"},
-    {"Back", "Right button (B, Circle)"},
-    {"Game options", "Menu button on a game"},
-    {"Switch pages", "Shoulder buttons"},
-    {"Scroll", "Right stick"},
+    {"Move", "D-pad or left stick"},      {"Select", "Bottom button (A, Cross)"},
+    {"Back", "Right button (B, Circle)"}, {"Game options", "Menu button on a game"},
+    {"Switch pages", "Shoulder buttons"}, {"Scroll", "Right stick"},
     {"Type", "Select a text box"},
 };
 

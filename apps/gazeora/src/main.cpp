@@ -190,8 +190,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     ImGui_ImplWin32_EnableDpiAwareness();
     POINT origin = {0, 0};
-    const auto uiScale = gazeora::app::UiScale::ForMonitor(
-        MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY));
+    const auto uiScale =
+        gazeora::app::UiScale::ForMonitor(MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY));
     g_minWindowSize = uiScale.MinWindowSize();
 
     WNDCLASSEXW wc = {sizeof(wc)};
@@ -226,8 +226,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    auto app = std::make_unique<gazeora::app::App>(hwnd, g_renderer.device.Get(),
-                                                      uiScale.Factor());
+    auto app = std::make_unique<gazeora::app::App>(hwnd, g_renderer.device.Get(), uiScale.Factor());
     app->SetupImGui();
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_renderer.device.Get(), g_renderer.context.Get());

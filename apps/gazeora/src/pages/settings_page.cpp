@@ -192,8 +192,7 @@ void App::DrawSettings() {
     BeginCard("##about", m_scale, width);
     CardTitle(m_fonts.heading, ICON_INFO "  About");
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-    ImGui::Text("Game launcher with capture and streaming  \xC2\xB7  Dear ImGui %s",
-                IMGUI_VERSION);
+    ImGui::Text("Game launcher with capture and streaming  \xC2\xB7  Dear ImGui %s", IMGUI_VERSION);
     ImGui::TextUnformatted("Command line: GazeoraCLI.exe list | add | remove | launch | attach");
     ImGui::PopStyleColor();
     // Required in every version by NOTICE's additional terms (GPLv3 section 7(b)).
@@ -449,8 +448,8 @@ void App::DrawOverlayCard(float width) {
     FieldLabel(m_fonts.caption, "Custom text (shown under the details)");
     std::string text = U8(m_overlay.text);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    bool edited = ImGui::InputTextWithHint("##overlaytext",
-                                           "For example, a name or a place", &text);
+    bool edited =
+        ImGui::InputTextWithHint("##overlaytext", "For example, a name or a place", &text);
     TypeOnSelect();
     if (edited) {
         int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), int(text.size()), nullptr, 0);
@@ -576,8 +575,8 @@ void App::DrawVrCard(float width) {
         slider("Lens distortion (k1)", "##vrk1", &m_vr.k1, 0.0f, 1.0f, "%.3f");
         slider("Edge distortion (k2)", "##vrk2", &m_vr.k2, 0.0f, 1.0f, "%.3f");
         slider("Picture size", "##vrscale", &m_vr.imageScale, 0.3f, 1.5f, "%.2f");
-        slider("Distance between lenses (share of screen width)", "##vrsep",
-               &m_vr.lensSeparation, 0.3f, 0.7f, "%.3f");
+        slider("Distance between lenses (share of screen width)", "##vrsep", &m_vr.lensSeparation,
+               0.3f, 0.7f, "%.3f");
         slider("Color fringe correction", "##vrchroma", &m_vr.chromaCorrection, 0.0f, 0.05f,
                "%.3f");
 
@@ -593,8 +592,8 @@ void App::DrawVrCard(float width) {
         if (m_vr.stereo) {
             slider("3D depth (how far back distant things go)", "##vrdepth", &m_vr.stereoDepth,
                    0.002f, 0.04f, "%.3f");
-            slider("Pop-out (how far near things come forward)", "##vrpop",
-                   &m_vr.stereoPopOut, 0.0f, 1.0f, "%.2f");
+            slider("Pop-out (how far near things come forward)", "##vrpop", &m_vr.stereoPopOut,
+                   0.0f, 1.0f, "%.2f");
         }
 
         ImGui::Dummy(ImVec2(0, S(kGroupGap)));
