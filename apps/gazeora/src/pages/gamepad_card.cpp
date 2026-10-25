@@ -10,15 +10,20 @@ namespace {
 
 constexpr float kHelpWidth = 380.0f;
 
-// Buttons by where they sit, as every make reads them; each make's own names in brackets.
-constexpr const char* kGuide[] = {
-    "Move: d-pad or left stick. Left and right switch between the menu and the page",
-    "Select: bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo)",
-    "Back: right face button (B, Circle, A). Closes what's open or goes back a step",
-    "Game options: Menu or Options button on a game: play, details, remove",
-    "Switch pages: shoulder buttons (LB and RB, L1 and R1, L and R)",
-    "Scroll: right stick",
-    "Type: select a text box to bring up the on-screen keyboard",
+struct GuideRow {
+    const char* action;
+    const char* buttons;
+};
+
+// Buttons by where they sit, as every make reads them.
+constexpr GuideRow kGuide[] = {
+    {"Move", "D-pad or left stick"},
+    {"Select", "Bottom button (A, Cross)"},
+    {"Back", "Right button (B, Circle)"},
+    {"Game options", "Menu button on a game"},
+    {"Switch pages", "Shoulder buttons"},
+    {"Scroll", "Right stick"},
+    {"Type", "Select a text box"},
 };
 
 }  // namespace
@@ -46,22 +51,24 @@ void GamepadCard::DrawSwitch() {
     ImGui::SameLine();
     ImGui::TextUnformatted("Move around Gazeora with a game controller");
     HelpMarker(
-        "Works with Xbox, PlayStation, Nintendo Switch Pro and most other controllers, "
-        "wired or over Bluetooth. You can use several at once.\n\nThe controller works "
-        "Gazeora while its window is in front or showing on the stream, such as in the "
-        "headset. While a game you launched from here runs, Gazeora leaves the controller "
-        "to the game.",
+        "Works with Xbox, PlayStation, Switch Pro and most other controllers, wired or "
+        "Bluetooth. It works while Gazeora is in front or on the stream, and is left to "
+        "the game while one runs.",
         S(kHelpWidth));
 }
 
 void GamepadCard::DrawGuide() {
-    ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-    ImGui::PushTextWrapPos(0.0f);
-    for (const char* line : kGuide) {
-        ImGui::TextUnformatted(line);
+    if (!ImGui::BeginTable("##guide", 2, ImGuiTableFlags_SizingFixedFit)) {
+        return;
     }
-    ImGui::PopTextWrapPos();
-    ImGui::PopStyleColor();
+    for (const GuideRow& row : kGuide) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kTextDim), "%s", row.action);
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(row.buttons);
+    }
+    ImGui::EndTable();
 }
 
 void GamepadCard::DrawStatus() {
