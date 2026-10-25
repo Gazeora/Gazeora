@@ -47,7 +47,7 @@ namespace gazeora::app {
 // The controls and colors the pages draw with live in ui/.
 class App {
 public:
-    App(HWND hwnd, ID3D11Device* device, float dpiScale);
+    App(HWND hwnd, ID3D11Device* device, float scale);
     ~App();
 
     // Builds the fonts and style; call once before the first frame.

@@ -160,7 +160,7 @@ void App::DrawSessionCard(const Game& game) {
     if (!session) {
         CardTitle(m_fonts.heading, ICON_CAPTURE "  Gazeora capture");
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-        ImGui::TextUnformatted("The capture hook goes in when the game starts.");
+        ImGui::TextUnformatted("Capture starts when you launch the game.");
         ImGui::PopStyleColor();
         EndCard();
         return;
@@ -170,11 +170,11 @@ void App::DrawSessionCard(const Game& game) {
     CardTitle(m_fonts.heading, ICON_PLAY "  Session");
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     if (stats.state == GameSession::State::Launching) {
-        ImGui::TextUnformatted(session->Capture() ? "Launching and injecting the capture hook..."
+        ImGui::TextUnformatted(session->Capture() ? "Launching and setting up capture..."
                                                   : "Launching...");
     } else if (stats.state == GameSession::State::WaitingForGame) {
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::Text("Waiting for %s (started through %s)...",
+        ImGui::Text("Waiting for %s to start (launched through %s)...",
                     U8(session->GameProcessName()).c_str(),
                     session->ThroughSteam() ? "Steam" : "its launcher");
         ImGui::PopTextWrapPos();
@@ -185,7 +185,7 @@ void App::DrawSessionCard(const Game& game) {
         }
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     } else {
-        ImGui::Text("PID %lu   \xC2\xB7   running for %s", stats.pid,
+        ImGui::Text("Process %lu   \xC2\xB7   running for %s", stats.pid,
                     ClockText(stats.elapsedSeconds).c_str());
     }
     ImGui::PopStyleColor();
@@ -203,7 +203,7 @@ void App::DrawSessionCard(const Game& game) {
         Tile tiles[] = {{"FPS", fps},
                         {"RESOLUTION", stats.width ? res : "-"},
                         {"GRAPHICS API", stats.api ? GraphicsApiName(stats.api) : "-"},
-                        {"HANDOFF", stats.fps > 0 ? latency : "-"}};
+                        {"DELAY", stats.fps > 0 ? latency : "-"}};
         float gap = S(10);
         float tileWidth = (ImGui::GetContentRegionAvail().x - gap * 3) / 4;
         ImDrawList* draw = ImGui::GetWindowDrawList();
@@ -235,12 +235,12 @@ void App::DrawSessionCard(const Game& game) {
             ImGui::SameLine(0.0f, S(16));
             ImGui::PushStyleColor(ImGuiCol_Text, stats.stereo ? kAccent : kWarning);
             ImGui::TextUnformatted(stats.stereo ? "3D from the game's depth"
-                                                : "3D: no depth buffer found, streaming in 2D");
+                                                : "3D unavailable: streaming in 2D");
             ImGui::PopStyleColor();
             if (!stats.stereo) {
                 HelpMarker(
-                    "3D needs the game's depth buffer, which Gazeora finds in D3D11 and "
-                    "D3D12 games once they draw a 3D scene. Menus, videos and other "
+                    "3D needs the game's depth information, which Gazeora finds in D3D11 "
+                    "and D3D12 games while they draw a 3D scene. Menus, videos and other "
                     "graphics APIs stay 2D.",
                     S(380));
             }
@@ -258,12 +258,12 @@ void App::DrawSessionCard(const Game& game) {
             !stats.streamError.empty() ? stats.streamError : m_stream.LastError();
         if (!m_stream.Running()) {
             ImGui::PushStyleColor(ImGuiCol_Text, kDanger);
-            ImGui::TextUnformatted("Stream server not running");
+            ImGui::TextUnformatted("Stream not running");
             HelpMarker(U8(m_streamError).c_str(), S(380));
             ImGui::PopStyleColor();
         } else if (!streamError.empty()) {
             ImGui::PushStyleColor(ImGuiCol_Text, kDanger);
-            ImGui::TextUnformatted("Can't stream");
+            ImGui::TextUnformatted("Can't stream this game");
             HelpMarker(U8(streamError).c_str(), S(380));
             ImGui::PopStyleColor();
         } else {
@@ -310,7 +310,7 @@ void App::DrawGameSettingsCard(Game& game) {
 
     FieldLabel(m_fonts.caption, "Launch arguments");
     ImGui::SetNextItemWidth(-FLT_MIN);
-    ImGui::InputTextWithHint("##args", "e.g. -dx12 -windowed", &m_editArgs);
+    ImGui::InputTextWithHint("##args", "For example: -dx12 -windowed", &m_editArgs);
     TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.arguments = Utf8::ToWide(m_editArgs);
@@ -319,7 +319,7 @@ void App::DrawGameSettingsCard(Game& game) {
 
     FieldLabel(m_fonts.caption, "Working directory");
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - S(8));
-    ImGui::InputTextWithHint("##workdir", "Defaults to the game's folder", &m_editWorkDir);
+    ImGui::InputTextWithHint("##workdir", "The game's folder", &m_editWorkDir);
     TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
         game.workingDir = Utf8::ToWide(m_editWorkDir);
@@ -337,8 +337,8 @@ void App::DrawGameSettingsCard(Game& game) {
 
     FieldLabel(m_fonts.caption, "Launch through");
     std::string autoLabel = m_editSteamAppId.empty()
-                                ? std::string("Automatic (run the exe)")
-                                : "Automatic (Steam, app " + U8(m_editSteamAppId) + ")";
+                                ? std::string("Automatic (start the exe)")
+                                : "Automatic (through Steam, app " + U8(m_editSteamAppId) + ")";
     const char* viaNames[] = {autoLabel.c_str(), "The game's exe", "Steam"};
     int via = int(game.launchVia);
     ImGui::SetNextItemWidth(-FLT_MIN);
@@ -348,14 +348,17 @@ void App::DrawGameSettingsCard(Game& game) {
     }
     if (game.launchVia == LaunchVia::Steam && m_editSteamAppId.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, kWarning);
-        ImGui::TextUnformatted(ICON_WARNING "  Not in a Steam library: runs the exe.");
+        ImGui::TextUnformatted(ICON_WARNING "  Not in a Steam library, so the exe starts directly");
         ImGui::PopStyleColor();
     }
 
     FieldLabel(m_fonts.caption, "Game process");
-    HelpMarker("Set it if the exe is a launcher for another exe.", S(380));
+    HelpMarker(
+        "Set this if the exe is a launcher that starts the real game, so Gazeora "
+        "captures the right program.",
+        S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
-    std::string processHint = "Defaults to " + U8(LaunchSpec{game.exePath}.GameProcessName());
+    std::string processHint = "Default: " + U8(LaunchSpec{game.exePath}.GameProcessName());
     ImGui::InputTextWithHint("##process", processHint.c_str(), &m_editProcess);
     TypeOnSelect();
     if (ImGui::IsItemDeactivatedAfterEdit()) {
@@ -372,7 +375,7 @@ void App::DrawGameSettingsCard(Game& game) {
                 game.coverPath = picked[0];
                 SaveLibrary();
             } else {
-                ShowToast("That image couldn't be loaded.", true);
+                ShowToast("Couldn't load that image. Try a PNG or JPG file.", true);
             }
         }
     }

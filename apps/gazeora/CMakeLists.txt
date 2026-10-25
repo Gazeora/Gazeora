@@ -41,6 +41,7 @@ add_executable(Gazeora WIN32
     src/ui/text_format.cpp
     src/ui/theme.cpp
     src/ui/tracking_status_line.cpp
+    src/ui/ui_scale.cpp
     src/ui/widgets.cpp
     resources/gazeora.rc)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

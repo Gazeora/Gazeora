@@ -17,7 +17,7 @@ constexpr char kNameSeparator[] = ", ";
 GamepadStatusLine::GamepadStatusLine(const GamepadSnapshot& snapshot, bool paused)
     : m_color(kTextDim) {
     if (paused) {
-        m_text = "Paused while a game runs: the game has your controller to itself";
+        m_text = "Paused while a game runs, so the game gets your controller";
         return;
     }
     Describe(snapshot);
@@ -41,7 +41,7 @@ void GamepadStatusLine::Describe(const GamepadSnapshot& snapshot) {
 
 void GamepadStatusLine::DescribeConnected(const GamepadSnapshot& snapshot) {
     if (snapshot.connected.empty()) {
-        m_text = "No controller connected: plug one in, or pair it over Bluetooth";
+        m_text = "No controller connected: plug one in or pair it over Bluetooth";
         m_color = kWarning;
         return;
     }

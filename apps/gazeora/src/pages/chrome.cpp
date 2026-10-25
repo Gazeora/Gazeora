@@ -223,7 +223,7 @@ void App::DrawToasts() {
         ImGui::PopFont();
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::Text("%s will be removed from Gazeora. The game stays installed.",
+        ImGui::Text("%s will be removed from your library. The game stays installed.",
                     game ? U8(game->name).c_str() : "This game");
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();

@@ -96,24 +96,24 @@ void ControlsPage::DrawSwitch() {
     ImGui::TextUnformatted(m_gameRunning ? "Use your hand as a mouse (paused while a game runs)"
                                          : "Use your hand as a mouse");
     HelpMarker(
-        "Use your hands like a touch screen you don't touch.\n\nMove: palm toward the screen, "
-        "right index finger up. The pointer goes where your fingertip is in the air in front "
-        "of you; small, slow moves fine-tune it.\n\nClick: raise your left index finger to "
-        "hold the pointer still, then fold your right index finger (halfway is enough) and "
-        "open it again.\n\nScroll: pinch your left thumb and index fingertips together, and "
-        "move your right index finger up, down or sideways: the page follows it, as on a "
-        "touch screen.\n\nLower your left hand, or let go, to move the pointer again. The left "
-        "hand never moves the pointer.\n\nOpen hand: hold all your right fingers open for half "
-        "a second to put the pointer right back under your fingertip. The mouse works "
-        "alongside: the pointer stays where the mouse puts it until your finger moves.\n\n"
-        "Each gesture shows in its own color: "
-        "violet moving, amber holding, red clicking, cyan scrolling, green an open hand.",
+        "Control the pointer with your hands, like a touch screen you don't touch.\n\n"
+        "Move: hold your right index finger up, palm toward the screen. The pointer follows "
+        "your fingertip; small, slow moves fine-tune it.\n\nClick: raise your left index "
+        "finger to hold the pointer still, then fold your right index finger (halfway is "
+        "enough) and open it again.\n\nScroll: pinch your left thumb and index finger "
+        "together, then move your right index finger. The page follows it, as on a touch "
+        "screen.\n\nLower your left hand or release the pinch to move the pointer again. "
+        "Your left hand never moves the pointer.\n\nOpen hand: hold all your right fingers "
+        "open for half a second to bring the pointer back under your fingertip. The mouse "
+        "still works: the pointer stays where the mouse leaves it until your finger moves."
+        "\n\nColors: violet moving, amber holding, red clicking, cyan scrolling, green open "
+        "hand.",
         S(kHelpWidth));
     if (!m_phoneInVr) {
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
         ImGui::PushTextWrapPos(0.0f);
         ImGui::TextUnformatted(
-            "For playing in the headset: connect the Gazeora app on your phone, with VR on in "
+            "Playing in a headset? Connect the Gazeora app on your phone with VR turned on in "
             "Settings, and hand gestures turn on.");
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
@@ -146,8 +146,8 @@ void ControlsPage::DrawCameraChoice(const Fonts& fonts) {
 void ControlsPage::DrawSpeed(const Fonts& fonts) {
     FieldLabel(fonts.caption, "Pointer speed");
     HelpMarker(
-        "How far your fingertip moves to cross the screen: the higher, the shorter. At 5, "
-        "about 20 cm, the length of two and a half palms.",
+        "How far you move your fingertip to cross the screen: higher means a shorter "
+        "move. At 5, it's about 20 cm, roughly two and a half palm widths.",
         S(kHelpWidth));
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::SliderFloat("##speed", &m_settings.speed, input::HandGestureSettings::kMinSpeed,

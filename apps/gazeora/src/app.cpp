@@ -41,8 +41,8 @@ constexpr int kLogoFrameHeight = 720;
 
 }  // namespace
 
-App::App(HWND hwnd, ID3D11Device* device, float dpiScale)
-    : m_hwnd(hwnd), m_scale(dpiScale), m_device(device), m_textures(device) {
+App::App(HWND hwnd, ID3D11Device* device, float scale)
+    : m_hwnd(hwnd), m_scale(scale), m_device(device), m_textures(device) {
     std::wstring error;
     if (!m_library.Load(error)) {
         ShowToast(U8(error), true);
@@ -69,7 +69,7 @@ void App::StartStream() {
     m_streamError.clear();
     if (!m_stream.Start(kStreamPort, true, m_streamError) &&
         !m_stream.Start(0, true, m_streamError)) {
-        ShowToast("Frame streaming unavailable: " + U8(m_streamError), true);
+        ShowToast("Streaming isn't available: " + U8(m_streamError), true);
     }
 }
 

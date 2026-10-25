@@ -8,7 +8,6 @@
 #include <shellapi.h>
 #include <wrl/client.h>
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,6 +19,7 @@
 #include "app.h"
 #include "platform/game_open_request.h"
 #include "platform/usb_driver.h"
+#include "ui/ui_scale.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam,
                                                              LPARAM lParam);
@@ -86,7 +86,7 @@ struct Renderer {
 
 Renderer g_renderer;
 gazeora::app::App* g_app = nullptr;
-float g_dpiScale = 1.0f;
+SIZE g_minWindowSize = {};
 
 LRESULT WINAPI WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam)) {
@@ -100,8 +100,8 @@ LRESULT WINAPI WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         case WM_GETMINMAXINFO: {
             auto* info = reinterpret_cast<MINMAXINFO*>(lParam);
-            info->ptMinTrackSize.x = LONG(980 * g_dpiScale);
-            info->ptMinTrackSize.y = LONG(640 * g_dpiScale);
+            info->ptMinTrackSize.x = g_minWindowSize.cx;
+            info->ptMinTrackSize.y = g_minWindowSize.cy;
             return 0;
         }
         case WM_DPICHANGED: {
@@ -190,8 +190,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     ImGui_ImplWin32_EnableDpiAwareness();
     POINT origin = {0, 0};
-    g_dpiScale =
-        ImGui_ImplWin32_GetDpiScaleForMonitor(MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY));
+    const auto uiScale =
+        gazeora::app::UiScale::ForMonitor(MonitorFromPoint(origin, MONITOR_DEFAULTTOPRIMARY));
+    g_minWindowSize = uiScale.MinWindowSize();
 
     WNDCLASSEXW wc = {sizeof(wc)};
     wc.style = CS_CLASSDC;
@@ -206,11 +207,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     wc.lpszClassName = kWindowClass;
     RegisterClassExW(&wc);
 
-    int width = int(1360 * g_dpiScale), height = int(860 * g_dpiScale);
-    RECT work;
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
-    width = std::min(width, int(work.right - work.left));
-    height = std::min(height, int(work.bottom - work.top));
+    const SIZE size = uiScale.DefaultWindowSize();
+    const int width = size.cx, height = size.cy;
+    const RECT& work = uiScale.WorkArea();
     HWND hwnd = CreateWindowExW(WS_EX_ACCEPTFILES, kWindowClass, L"Gazeora", WS_OVERLAPPEDWINDOW,
                                 work.left + (work.right - work.left - width) / 2,
                                 work.top + (work.bottom - work.top - height) / 2, width, height,
@@ -218,13 +217,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     StyleTitleBar(hwnd);
 
     if (!g_renderer.Create(hwnd)) {
-        MessageBoxW(hwnd, L"Could not create a Direct3D 11 device.", L"Gazeora", MB_ICONERROR);
+        MessageBoxW(hwnd,
+                    L"Gazeora couldn't start because Direct3D 11 isn't available. Update "
+                    L"your graphics driver and try again.",
+                    L"Gazeora", MB_ICONERROR);
         return 1;
     }
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    auto app = std::make_unique<gazeora::app::App>(hwnd, g_renderer.device.Get(), g_dpiScale);
+    auto app = std::make_unique<gazeora::app::App>(hwnd, g_renderer.device.Get(), uiScale.Factor());
     app->SetupImGui();
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_renderer.device.Get(), g_renderer.context.Get());
