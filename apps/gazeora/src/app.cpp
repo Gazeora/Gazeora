@@ -69,7 +69,7 @@ void App::StartStream() {
     m_streamError.clear();
     if (!m_stream.Start(kStreamPort, true, m_streamError) &&
         !m_stream.Start(0, true, m_streamError)) {
-        ShowToast("Frame streaming unavailable: " + U8(m_streamError), true);
+        ShowToast("Streaming isn't available: " + U8(m_streamError), true);
     }
 }
 

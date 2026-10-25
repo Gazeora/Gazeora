@@ -47,7 +47,7 @@ std::vector<std::wstring> PickFiles(HWND owner, PickKind kind) {
         dialog->SetTitle(L"Choose cover art");
     } else {
         options |= FOS_PICKFOLDERS;
-        dialog->SetTitle(L"Choose working directory");
+        dialog->SetTitle(L"Choose the folder to start the game in");
     }
     dialog->SetOptions(options);
     if (FAILED(dialog->Show(owner))) {

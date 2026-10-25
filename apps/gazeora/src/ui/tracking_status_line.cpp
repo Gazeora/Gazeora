@@ -26,11 +26,11 @@ const char* TrackingStatusLine::ModeText(input::GestureMode mode) {
         case input::GestureMode::Steering:
             return "Moving with your right index finger";
         case input::GestureMode::Holding:
-            return "Holding: fold your right index finger and open it to click";
+            return "Holding: fold and open your right index finger to click";
         case input::GestureMode::Folded:
             return "Folded: open your right index finger to click";
         case input::GestureMode::Scrolling:
-            return "Scrolling: move your index finger; open the left pinch to stop";
+            return "Scrolling: move your right index finger, release the left pinch to stop";
         case input::GestureMode::Resting:
             return "Starting";
     }
@@ -39,7 +39,7 @@ const char* TrackingStatusLine::ModeText(input::GestureMode mode) {
 
 // An open hand is held to bring the pointer back under the fingertip.
 const char* TrackingStatusLine::GestureText(const TrackingSnapshot& snapshot) {
-    return snapshot.handOpen ? "Open hand: hold it to bring the pointer under your finger"
+    return snapshot.handOpen ? "Open hand: keep it open to bring the pointer back"
                              : ModeText(snapshot.mode);
 }
 

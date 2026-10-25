@@ -106,7 +106,8 @@ void App::DrawEmptyLibrary() {
         y += size.y + S(6);
     };
     centered(m_fonts.heading, kText, "Your library is empty");
-    centered(m_fonts.body, kTextDim, "Add an .exe or shortcut, or drop one onto this window.");
+    centered(m_fonts.body, kTextDim,
+             "Add a game's .exe or shortcut, or drag one onto this window.");
     y += S(14);
 
     ImVec2 buttonSize(S(150), S(38));

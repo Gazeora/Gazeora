@@ -26,7 +26,8 @@ std::string RelativeTime(int64_t when) {
     } else if (ago < 3600) {
         snprintf(text, sizeof(text), "%lld min ago", ago / 60);
     } else if (ago < 86400) {
-        snprintf(text, sizeof(text), "%lld h ago", ago / 3600);
+        int64_t hours = ago / 3600;
+        snprintf(text, sizeof(text), "%lld hour%s ago", hours, hours == 1 ? "" : "s");
     } else if (ago < 2 * 86400) {
         return "Yesterday";
     } else if (ago < 30 * 86400) {
@@ -57,11 +58,11 @@ std::string PlaytimeText(int64_t seconds) {
     if (seconds <= 0) {
         return "No playtime yet";
     } else if (seconds < 60) {
-        return "< 1 min played";
+        return "Under 1 min played";
     } else if (seconds < 3600) {
         snprintf(text, sizeof(text), "%lld min played", seconds / 60);
     } else {
-        snprintf(text, sizeof(text), "%.1f h played", double(seconds) / 3600.0);
+        snprintf(text, sizeof(text), "%.1f hours played", double(seconds) / 3600.0);
     }
     return text;
 }
@@ -88,22 +89,22 @@ const char* SessionLabel(GameSession::State state) {
 const char* HookStateText(LONG state) {
     switch (state) {
         case kHookNotLoaded:
-            return "Waiting for hook";
+            return "Connecting to the game";
         case kHookInitializing:
-            return "Hook initializing";
+            return "Setting up capture";
         case kHookInstalled:
-            return "Hooked, waiting for the first frame";
+            return "Waiting for the first frame";
         case kHookCapturing:
             return "Capturing";
         case kHookError:
-            return "Hook error";
+            return "Capture failed";
         default:
             return "Unknown";
     }
 }
 
-// "3% lost, 3.0 Mbit/s" while players report loss or the stream has backed off because of
-// it; empty on a clean link.
+// "Weak connection: 3% lost, quality lowered to 3.0 Mbit/s" while players report loss or the
+// stream has backed off because of it; empty on a clean link.
 std::string StreamHealth(const FrameStreamServer& stream) {
     float loss = stream.PacketLoss();
     uint32_t bitrate = stream.Bitrate();
@@ -111,8 +112,8 @@ std::string StreamHealth(const FrameStreamServer& stream) {
         return {};
     }
     char text[96];
-    snprintf(text, sizeof(text), "%.0f%% lost, bitrate lowered to %.1f Mbit/s", loss * 100,
-             bitrate / 1e6);
+    snprintf(text, sizeof(text), "Weak connection: %.0f%% lost, quality lowered to %.1f Mbit/s",
+             loss * 100, bitrate / 1e6);
     return text;
 }
 

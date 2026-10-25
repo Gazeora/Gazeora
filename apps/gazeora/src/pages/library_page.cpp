@@ -80,7 +80,7 @@ void App::DrawLibrary() {
     std::vector<const Game*> games = SortedGames(m_sort, m_search);
     if (games.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-        ImGui::Text("No games match \"%s\".", m_search.c_str());
+        ImGui::Text("No games match \"%s\"", m_search.c_str());
         ImGui::PopStyleColor();
         return;
     }

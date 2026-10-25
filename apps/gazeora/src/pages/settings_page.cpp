@@ -39,20 +39,22 @@ constexpr float kGroupGap = 4.0f;
 const char* ProtocolHelp(StreamProtocol protocol) {
     switch (protocol) {
         case StreamProtocol::RtspTcp:
-            return "RTSP over TCP: for the Gazeora Android app, VLC, ffplay or OBS. Nothing is "
-                   "lost; a slow link skips frames. Players set to UDP are refused.";
+            return "RTSP over TCP: works with the Gazeora app, VLC, ffplay and OBS. Reliable: "
+                   "nothing is lost, and a slow connection skips frames instead. Players set "
+                   "to UDP can't connect.";
         case StreamProtocol::RtspUdp:
-            return "RTSP over UDP: for VLC, ffplay or OBS. Lowest delay on a good network; a "
-                   "lost packet smears the picture briefly. Doesn't reach an Android emulator.";
+            return "RTSP over UDP: works with VLC, ffplay and OBS. The lowest delay on a good "
+                   "network, but a lost packet briefly smears the picture. Doesn't work with "
+                   "Android emulators.";
         case StreamProtocol::Udp:
-            return "UDP: for the Gazeora Android app. Frames go straight to the phone with the "
-                   "least overhead; a lost datagram costs its frame.";
+            return "UDP: for the Gazeora app. Frames go straight to the phone with the least "
+                   "overhead, and a lost packet drops its frame.";
         case StreamProtocol::Http:
-            return "HTTP: a live MPEG-TS stream for the Gazeora Android app, VLC or ffplay. "
-                   "Nothing is lost; a slow link skips frames.";
+            return "HTTP: a live MPEG-TS stream for the Gazeora app, VLC and ffplay. Reliable: "
+                   "nothing is lost, and a slow connection skips frames instead.";
         case StreamProtocol::Usb:
-            return "USB: for the Gazeora Android app on a phone plugged into this PC, no Wi-Fi "
-                   "needed. Turn on USB debugging on the phone, or install the USB driver.";
+            return "USB: for the Gazeora app on a phone plugged into this PC. No Wi-Fi "
+                   "needed. Turn on USB debugging on the phone, or install the USB driver below.";
     }
     return "";
 }
@@ -70,7 +72,7 @@ void App::DrawSettings() {
     BeginCard("##library", m_scale, width);
     CardTitle(m_fonts.heading, ICON_LIBRARY "  Library");
     FieldLabel(m_fonts.caption, "Library file");
-    HelpMarker("Shared with GazeoraCLI.", S(360));
+    HelpMarker("GazeoraCLI uses this file too.", S(360));
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     ImGui::TextWrapped("%s  \xC2\xB7  %zu %s", U8(m_library.Path()).c_str(),
                        m_library.Games().size(), m_library.Games().size() == 1 ? "game" : "games");
@@ -96,10 +98,10 @@ void App::DrawSettings() {
     CardTitle(m_fonts.heading, ICON_CAPTURE "  Capture");
     std::wstring dll = HookDllPathNextToExe();
     bool found = GetFileAttributesW(dll.c_str()) != INVALID_FILE_ATTRIBUTES;
-    FieldLabel(m_fonts.caption, "Capture hook");
+    FieldLabel(m_fonts.caption, "Game capture");
     ImGui::PushStyleColor(ImGuiCol_Text, found ? kAccent : kDanger);
-    ImGui::TextUnformatted(found ? ICON_CHECK "  Found"
-                                 : ICON_WARNING "  Missing - rebuild Gazeora");
+    ImGui::TextUnformatted(found ? ICON_CHECK "  Ready"
+                                 : ICON_WARNING "  Missing: reinstall Gazeora");
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("%s", U8(dll).c_str());
@@ -110,17 +112,18 @@ void App::DrawSettings() {
     CardTitle(m_fonts.heading, ICON_CAMERA "  Frame stream");
     const StreamProtocol protocol = m_stream.Protocol();
     std::string help = std::string(ProtocolHelp(protocol)) +
-                       "\n\nAlways on: shows this window (or the logo) while no game is "
-                       "captured. The Android app finds this PC by itself on the same network.";
+                       "\n\nThe stream is always on: while no game runs, it shows this window "
+                       "or the logo. The Gazeora app finds this PC by itself on the same "
+                       "network.";
     if (protocol != StreamProtocol::Udp && protocol != StreamProtocol::Usb) {
         // VLC buffers a second of any network stream by default; that's most of the delay.
         help +=
-            "\n\nVLC buffers 1 s by default: lower its network caching (0-100 ms wired, "
-            "about 300 ms on Wi-Fi).";
+            "\n\nVLC waits 1 second before playing by default. To cut the delay, lower its "
+            "network caching: 0-100 ms on a wired network, about 300 ms on Wi-Fi.";
     }
     help +=
-        "\n\nOn a weak link the bitrate drops, and recovers once the link is clean. 5 GHz "
-        "Wi-Fi and a wired PC help most.\n\nLog: " +
+        "\n\nOn a weak connection the quality drops, then recovers once the connection is "
+        "clean. 5 GHz Wi-Fi and a wired PC help most.\n\nLog file: " +
         U8(StreamSettings::LogPath());
     FieldLabel(m_fonts.caption, "Protocol");
     HelpMarker(help.c_str(), S(380));
@@ -129,8 +132,8 @@ void App::DrawSettings() {
         DrawCodecChoice();
         DrawQualityChoice();
         DrawFrameRateChoice();
-        FieldLabel(m_fonts.caption, "When no game is running, stream");
-        static const char* kIdlePictures[] = {"Gazeora (this window)", "The Gazeora logo"};
+        FieldLabel(m_fonts.caption, "While no game is running, show");
+        static const char* kIdlePictures[] = {"This window", "The Gazeora logo"};
         int idle = int(m_idlePicture);
         ImGui::SetNextItemWidth(-FLT_MIN);
         if (ImGui::Combo("##idlepicture", &idle, kIdlePictures, IM_ARRAYSIZE(kIdlePictures))) {
@@ -138,7 +141,7 @@ void App::DrawSettings() {
         }
         std::vector<std::wstring> urls = m_stream.Urls();
         if (!urls.empty()) {
-            FieldLabel(m_fonts.caption, "Address");
+            FieldLabel(m_fonts.caption, "Stream URL");
         }
         for (const std::wstring& url : urls) {
             std::string text = U8(url);
@@ -177,7 +180,8 @@ void App::DrawSettings() {
         ImGui::PopTextWrapPos();
     } else {
         ImGui::PushStyleColor(ImGuiCol_Text, kDanger);
-        ImGui::TextWrapped("%s", (ICON_WARNING "  Not running: " + U8(m_streamError)).c_str());
+        std::string stopped = ICON_WARNING "  Stream not running: " + U8(m_streamError);
+        ImGui::TextWrapped("%s", stopped.c_str());
         ImGui::PopStyleColor();
     }
     EndCard();
@@ -188,8 +192,9 @@ void App::DrawSettings() {
     BeginCard("##about", m_scale, width);
     CardTitle(m_fonts.heading, ICON_INFO "  About");
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-    ImGui::Text("Gazeora game launcher and frame capture  \xC2\xB7  Dear ImGui %s", IMGUI_VERSION);
-    ImGui::TextUnformatted("CLI: GazeoraCLI.exe list | add | remove | launch | attach");
+    ImGui::Text("Game launcher with capture and streaming  \xC2\xB7  Dear ImGui %s",
+                IMGUI_VERSION);
+    ImGui::TextUnformatted("Command line: GazeoraCLI.exe list | add | remove | launch | attach");
     ImGui::PopStyleColor();
     // Required in every version by NOTICE's additional terms (GPLv3 section 7(b)).
     ImGui::TextUnformatted(GAZEORA_ATTRIBUTION "  \xC2\xB7  " GAZEORA_VERSION_STRING);
@@ -217,8 +222,8 @@ void App::DrawProtocolChoice() {
                     m_settings.SaveProtocol(protocol);
                     StartStream();
                     if (m_stream.Running()) {
-                        ShowToast(std::string("Streaming over ") + ProtocolName(protocol) +
-                                  (watched ? ". Players were disconnected." : "."));
+                        ShowToast(std::string("Now streaming over ") + ProtocolName(protocol) +
+                                  (watched ? ". Viewers need to reconnect." : ""));
                     }
                 });
             }
@@ -247,12 +252,12 @@ void App::DrawUsbDriverButton() {
     if (needed) {
         ImGui::PushStyleColor(ImGuiCol_Button, kAccent);
     }
-    if (ImGui::Button(working ? ICON_REFRESH "  Working on the USB driver..." : label.c_str())) {
+    if (ImGui::Button(working ? ICON_REFRESH "  Updating the USB driver..." : label.c_str())) {
         HWND owner = m_hwnd;
         m_usbDriverDone = phones.empty()
-                              ? "USB driver installed. The phone connects in a moment."
-                              : "USB driver installed. The phone switches to the stream in a "
-                                "moment, without USB debugging.";
+                              ? "USB driver installed. The phone will connect in a moment."
+                              : "USB driver installed. The phone will start streaming in a "
+                                "moment, no USB debugging needed.";
         m_usbDriverInstall = std::async(std::launch::async, [owner, phoneIds] {
             std::wstring error;
             InstallUsbDriverElevated(owner, phoneIds, error);
@@ -267,12 +272,12 @@ void App::DrawUsbDriverButton() {
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(S(380));
         ImGui::TextUnformatted(
-            "Once per PC: WinUSB for phones in accessory mode. Windows asks "
-            "for an administrator.");
+            "Needed once per PC to stream over USB. Windows will ask for "
+            "administrator permission.");
         if (!phones.empty()) {
             ImGui::TextUnformatted(
-                "Phones without USB debugging lose file transfer on this PC "
-                "until you restore it.");
+                "Phones without USB debugging can't transfer files with this PC "
+                "until you restore file transfer.");
         }
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
@@ -282,8 +287,8 @@ void App::DrawUsbDriverButton() {
         if (ImGui::Button(ICON_REFRESH "  Restore file transfer")) {
             HWND owner = m_hwnd;
             m_usbDriverDone =
-                "File transfer restored. Those phones need USB debugging for the "
-                "USB stream again.";
+                "File transfer restored. These phones need USB debugging again to "
+                "stream over USB.";
             m_usbDriverInstall = std::async(std::launch::async, [owner] {
                 std::wstring error;
                 RestoreFileTransferElevated(owner, error);
@@ -296,8 +301,8 @@ void App::DrawUsbDriverButton() {
 
     if (!m_installedPhones.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
-        ImGui::Text("%zu phone model%s switched without USB debugging.", m_installedPhones.size(),
-                    m_installedPhones.size() == 1 ? "" : "s");
+        ImGui::Text("%zu phone model%s set up to stream without USB debugging",
+                    m_installedPhones.size(), m_installedPhones.size() == 1 ? "" : "s");
         ImGui::PopStyleColor();
     }
 }
@@ -308,7 +313,7 @@ void App::DrawCodecChoice() {
         const char* name;
     };
     static const Choice kChoices[] = {
-        {VideoCodec::H264, "H.264 - plays on every device"},
+        {VideoCodec::H264, "H.264 - works on every device"},
         {VideoCodec::H265, "H.265 - sharper on weak Wi-Fi, newer devices only"},
     };
     VideoCodec current = m_stream.Codec();
@@ -318,15 +323,15 @@ void App::DrawCodecChoice() {
         for (const Choice& choice : kChoices) {
             bool available = m_stream.CodecAvailable(choice.codec);
             std::string label = choice.name;
-            if (!available) label += " (no encoder on this PC)";
+            if (!available) label += " (not supported on this PC)";
             if (ImGui::Selectable(label.c_str(), choice.codec == current,
                                   available ? 0 : ImGuiSelectableFlags_Disabled) &&
                 choice.codec != current) {
                 bool watched = m_stream.Viewers() > 0;
                 m_stream.SetCodec(choice.codec);
                 m_settings.SaveCodec(choice.codec);
-                ShowToast(std::string("Streaming ") + CodecName(choice.codec) +
-                          (watched ? ". Players were disconnected: open the stream again." : "."));
+                ShowToast(std::string("Now streaming ") + CodecName(choice.codec) +
+                          (watched ? ". Viewers need to reconnect." : ""));
             }
         }
         ImGui::EndCombo();
@@ -340,7 +345,7 @@ void App::DrawQualityChoice() {
     };
     static const Choice kChoices[] = {
         {10000000, "Balanced - 10 Mbit/s, for weak or busy Wi-Fi"},
-        {20000000, "High - 20 Mbit/s, sharp on good Wi-Fi"},
+        {20000000, "High - 20 Mbit/s, for good Wi-Fi"},
         {35000000, "Very high - 35 Mbit/s, for 5 GHz Wi-Fi and USB"},
     };
     uint32_t current = m_stream.MaxBitrate();
@@ -352,10 +357,10 @@ void App::DrawQualityChoice() {
     }
     FieldLabel(m_fonts.caption, "Stream quality");
     HelpMarker(
-        "The bitrate at full quality: more bits keep fine detail and motion sharp. H.265 "
-        "uses 70% of it for about the same picture. While the phone reports lost "
-        "packets, the stream steps down to as little as a quarter of it, and back up "
-        "once the link is clean. Applies at once.",
+        "Higher quality keeps detail and motion sharp, but needs a faster connection. "
+        "H.265 looks about the same with 30% less. If the phone starts losing packets, "
+        "Gazeora lowers the quality (down to a quarter) and raises it again once the "
+        "connection recovers. Changes apply right away.",
         S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##quality", shown)) {
@@ -375,8 +380,8 @@ void App::DrawFrameRateChoice() {
         const char* name;
     };
     static const Choice kChoices[] = {
-        {30, "30 fps - the most detail in each frame"},
-        {60, "60 fps - smoother, and less delay"},
+        {30, "30 fps - more detail in each frame"},
+        {60, "60 fps - smoother, with less delay"},
     };
     uint32_t current = m_stream.FrameRate();
     char custom[32];
@@ -387,10 +392,10 @@ void App::DrawFrameRateChoice() {
     }
     FieldLabel(m_fonts.caption, "Frame rate");
     HelpMarker(
-        "Frames streamed a second. 60 halves the wait for the next frame and moves "
-        "smoother; from the same stream quality each frame gets half the bits, so pick "
-        "a higher quality with it if the Wi-Fi allows. Games drawing fewer frames have "
-        "their last one sent again. Applies at once, with a key frame.",
+        "How many frames are sent each second. 60 fps feels smoother and responds "
+        "faster, but each frame gets half the data, so raise the stream quality too if "
+        "your Wi-Fi allows. Games drawing fewer frames repeat their last one. Changes "
+        "apply right away.",
         S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##framerate", shown)) {
@@ -414,15 +419,14 @@ void App::DrawOverlayCard(float width) {
     ImGui::AlignTextToFramePadding();
     changed |= Toggle("##overlayon", &m_overlay.enabled, m_scale);
     ImGui::SameLine();
-    ImGui::TextUnformatted(m_overlay.enabled ? "Streaming details shown in the stream"
-                                             : "Show streaming details in the stream");
+    ImGui::TextUnformatted("Show stream details on the picture");
     HelpMarker(
-        "Draws the details you pick into the frames themselves, so every player shows "
-        "them: in a corner of the picture, or of each eye in VR mode.",
+        "Draws the details you choose onto the picture itself, so every player shows "
+        "them. They appear in a corner of the picture, or of each eye in VR mode.",
         S(380));
 
     ImGui::BeginDisabled(!m_overlay.enabled);
-    FieldLabel(m_fonts.caption, "Details");
+    FieldLabel(m_fonts.caption, "Details to show");
     struct Detail {
         const char* label;
         bool* value;
@@ -432,7 +436,7 @@ void App::DrawOverlayCard(float width) {
         {"Codec", &m_overlay.codec},          {"Resolution", &m_overlay.resolution},
         {"Frame rate", &m_overlay.frameRate}, {"Bitrate", &m_overlay.bitrate},
         {"Packet loss", &m_overlay.loss},     {"Encoder", &m_overlay.encoder},
-        {"PC clock", &m_overlay.clock},
+        {"PC time", &m_overlay.clock},
     };
     if (ImGui::BeginTable("##overlaydetails", 3)) {
         for (const Detail& detail : details) {
@@ -442,11 +446,11 @@ void App::DrawOverlayCard(float width) {
         ImGui::EndTable();
     }
 
-    FieldLabel(m_fonts.caption, "Your own text (a line under the details)");
+    FieldLabel(m_fonts.caption, "Custom text (shown under the details)");
     std::string text = U8(m_overlay.text);
     ImGui::SetNextItemWidth(-FLT_MIN);
     bool edited = ImGui::InputTextWithHint("##overlaytext",
-                                           "e.g. a name, or where it's streaming from", &text);
+                                           "For example, a name or a place", &text);
     TypeOnSelect();
     if (edited) {
         int size = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), int(text.size()), nullptr, 0);
@@ -504,19 +508,19 @@ void App::DrawVrCard(float width) {
         changed |= ImGui::IsItemDeactivatedAfterEdit();
     };
 
-    changed |= ImGui::Checkbox("Side by side for a phone in a VR viewer", &m_vr.enabled);
+    changed |= ImGui::Checkbox("Split the picture for a phone VR viewer", &m_vr.enabled);
     HelpMarker(
-        "Shows the picture once per eye, pre-distorted for the viewer's lenses. Play the "
-        "stream full screen in landscape. Changes apply live, so you can tune them with "
-        "the headset on.",
+        "Shows the picture once for each eye, shaped for the viewer's lenses. Play the "
+        "stream full screen in landscape. Changes apply live, so you can adjust them "
+        "while wearing the headset.",
         S(380));
 
     if (m_vr.enabled) {
         FieldLabel(m_fonts.caption, "Lens correction done by");
         HelpMarker(
-            "On the phone, the stream carries the game's picture as it is, every pixel "
-            "for the game, and the app draws it into both eyes for its own screen. On "
-            "this PC, frames go out already split and warped, so any player can show "
+            "The phone: the stream sends the game's picture as is, and the Gazeora app "
+            "splits and shapes it for its own screen. Sharper.\n\nThis PC: frames are "
+            "split and shaped before they're sent, so any player, such as VLC, can show "
             "them.",
             S(380));
         ImGui::SetNextItemWidth(-FLT_MIN);
@@ -569,27 +573,27 @@ void App::DrawVrCard(float width) {
             }
         }
 
-        slider("Barrel distortion (k1)", "##vrk1", &m_vr.k1, 0.0f, 1.0f, "%.3f");
+        slider("Lens distortion (k1)", "##vrk1", &m_vr.k1, 0.0f, 1.0f, "%.3f");
         slider("Edge distortion (k2)", "##vrk2", &m_vr.k2, 0.0f, 1.0f, "%.3f");
         slider("Picture size", "##vrscale", &m_vr.imageScale, 0.3f, 1.5f, "%.2f");
-        slider("Lens separation (share of the screen width)", "##vrsep", &m_vr.lensSeparation, 0.3f,
-               0.7f, "%.3f");
+        slider("Distance between lenses (share of screen width)", "##vrsep",
+               &m_vr.lensSeparation, 0.3f, 0.7f, "%.3f");
         slider("Color fringe correction", "##vrchroma", &m_vr.chromaCorrection, 0.0f, 0.05f,
                "%.3f");
 
         ImGui::Dummy(ImVec2(0, S(kGroupGap)));
         changed |= ImGui::Checkbox("3D from the game's depth", &m_vr.stereo);
         HelpMarker(
-            "Gives each eye its own view of the scene, made from the game's depth buffer. "
-            "The subject in the middle of the view sits at the screen; farther things go "
-            "back, nearer ones come out. Works in D3D11 and D3D12 games while they draw "
-            "a 3D scene; the logo and videos stay flat. Things drawn over the scene, "
-            "like the HUD, take the depth of what's behind them.",
+            "Gives each eye its own view, built from the game's depth information. "
+            "Whatever is in the middle of the view sits at the screen; farther things "
+            "recede and nearer ones come forward. Works in D3D11 and D3D12 games during "
+            "3D scenes; the logo and videos stay flat. Overlays such as the HUD take the "
+            "depth of what's behind them.",
             S(380));
         if (m_vr.stereo) {
-            slider("3D depth (how far back the distance goes)", "##vrdepth", &m_vr.stereoDepth,
+            slider("3D depth (how far back distant things go)", "##vrdepth", &m_vr.stereoDepth,
                    0.002f, 0.04f, "%.3f");
-            slider("Pop-out (how far near things come out, share of the depth)", "##vrpop",
+            slider("Pop-out (how far near things come forward)", "##vrpop",
                    &m_vr.stereoPopOut, 0.0f, 1.0f, "%.2f");
         }
 
@@ -601,7 +605,7 @@ void App::DrawVrCard(float width) {
         }
 
         if (m_logoPreview) {
-            FieldLabel(m_fonts.caption, "Preview of the idle frame");
+            FieldLabel(m_fonts.caption, "Preview: what streams while no game runs");
             float previewWidth = ImGui::GetContentRegionAvail().x;
             ImGui::Image(reinterpret_cast<ImTextureID>(m_logoPreview.Get()),
                          ImVec2(previewWidth, previewWidth / m_logoPreviewAspect));

@@ -44,7 +44,7 @@ void App::AddGamePaths(const std::vector<std::wstring>& paths) {
         Game game;
         if (EndsWithI(path, L".lnk")) {
             if (!m_libraryServices.Shortcuts().Resolve(path, game)) {
-                ShowToast("Skipped a shortcut that doesn't point at a program", true);
+                ShowToast("Skipped a shortcut that doesn't open a program", true);
                 continue;
             }
         } else if (EndsWithI(path, L".exe")) {
@@ -104,7 +104,7 @@ void App::RemoveGame(uint32_t gameId) {
     std::string name = U8(game->name);
     m_library.Remove(gameId);
     SaveLibrary();
-    ShowToast("Removed " + name);
+    ShowToast("Removed " + name + " from your library");
     if (m_page == Page::Details && m_detailsId == gameId) {
         m_page = Page::Library;
     }

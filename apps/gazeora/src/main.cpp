@@ -217,7 +217,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
     StyleTitleBar(hwnd);
 
     if (!g_renderer.Create(hwnd)) {
-        MessageBoxW(hwnd, L"Could not create a Direct3D 11 device.", L"Gazeora", MB_ICONERROR);
+        MessageBoxW(hwnd,
+                    L"Gazeora couldn't start because Direct3D 11 isn't available. Update "
+                    L"your graphics driver and try again.",
+                    L"Gazeora", MB_ICONERROR);
         return 1;
     }
 

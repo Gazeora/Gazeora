@@ -12,13 +12,13 @@ constexpr float kHelpWidth = 380.0f;
 
 // Buttons by where they sit, as every make reads them; each make's own names in brackets.
 constexpr const char* kGuide[] = {
-    "Move: the d-pad or the left stick; left and right go between the menu and the page",
-    "Select: the bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo)",
-    "Back: the right face button (B, Circle, A): closes what's open, or goes back a step",
-    "Game options: the Menu or Options button on a game: play, details, remove",
-    "Pages: the shoulder buttons (LB and RB, L1 and R1, L and R)",
-    "Scroll: the right stick",
-    "Type: select a text box, and a keyboard comes up on screen",
+    "Move: d-pad or left stick. Left and right switch between the menu and the page",
+    "Select: bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo)",
+    "Back: right face button (B, Circle, A). Closes what's open or goes back a step",
+    "Game options: Menu or Options button on a game: play, details, remove",
+    "Switch pages: shoulder buttons (LB and RB, L1 and R1, L and R)",
+    "Scroll: right stick",
+    "Type: select a text box to bring up the on-screen keyboard",
 };
 
 }  // namespace
@@ -46,11 +46,11 @@ void GamepadCard::DrawSwitch() {
     ImGui::SameLine();
     ImGui::TextUnformatted("Move around Gazeora with a game controller");
     HelpMarker(
-        "Any controller works: Xbox, PlayStation, Nintendo Switch Pro and most others, "
-        "plugged in or over Bluetooth. Several at once work too.\n\nIt drives Gazeora while "
-        "its window is in front, or while the stream shows it, as in the headset. While a "
-        "game launched from here runs, Gazeora lets go of the controller and leaves it to "
-        "the game.",
+        "Works with Xbox, PlayStation, Nintendo Switch Pro and most other controllers, "
+        "wired or over Bluetooth. You can use several at once.\n\nThe controller works "
+        "Gazeora while its window is in front or showing on the stream, such as in the "
+        "headset. While a game you launched from here runs, Gazeora leaves the controller "
+        "to the game.",
         S(kHelpWidth));
 }
 

@@ -289,7 +289,7 @@ PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstr
     HCRYPTPROV provider = 0;
     if (!CryptAcquireContextW(&provider, container.c_str(), kProvider, PROV_RSA_AES,
                               CRYPT_NEWKEYSET | CRYPT_MACHINE_KEYSET)) {
-        error = ErrorText(L"Couldn't make a signing key");
+        error = ErrorText(L"Couldn't create a signing key");
         return nullptr;
     }
     HCRYPTKEY key = 0;
@@ -300,7 +300,7 @@ PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstr
     }
     CryptReleaseContext(provider, 0);
     if (!made) {
-        error = ErrorText(L"Couldn't make a signing key", code);
+        error = ErrorText(L"Couldn't create a signing key", code);
         return nullptr;
     }
 
@@ -341,7 +341,7 @@ PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstr
     PCCERT_CONTEXT certificate = CertCreateSelfSignCertificate(
         0, &nameBlob, 0, &keyInfo, &algorithm, nullptr, &expiry, &extensions);
     if (!certificate) {
-        error = ErrorText(L"Couldn't make a signing certificate");
+        error = ErrorText(L"Couldn't create a signing certificate");
     }
     return certificate;
 }
@@ -426,7 +426,8 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
                            ? CryptCATCDFOpen(const_cast<LPWSTR>(definition.c_str()), onError)
                            : nullptr;
     if (!cdf) {
-        error = ErrorText(L"Couldn't make the driver catalog", failure ? failure : GetLastError());
+        error =
+            ErrorText(L"Couldn't create the driver catalog", failure ? failure : GetLastError());
         DeleteFileW(definition.c_str());
         return false;
     }
@@ -443,9 +444,9 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
     }
     bool ok = CryptCATCDFClose(cdf) && !failure;
     if (!ok) {
-        error = failure ? ErrorText((L"Couldn't make the driver catalog (" + where + L")").c_str(),
-                                    failure)
-                        : ErrorText(L"Couldn't make the driver catalog");
+        DWORD code = failure ? failure : GetLastError();
+        std::wstring what = L"Couldn't create the driver catalog";
+        error = ErrorText(failure ? (what + L" (" + where + L")").c_str() : what.c_str(), code);
     }
     DeleteFileW(definition.c_str());
     return ok;
@@ -560,7 +561,7 @@ bool CreatePrivateFolder(std::wstring& folder, std::wstring& error) {
     DWORD code = GetLastError();
     LocalFree(descriptor);
     if (!made) {
-        error = ErrorText((L"Couldn't make the folder " + folder).c_str(), code);
+        error = ErrorText((L"Couldn't create the folder " + folder).c_str(), code);
     }
     return made;
 }
@@ -866,7 +867,7 @@ bool RunElevated(HWND owner, const wchar_t* command, const std::wstring& argumen
     // starts it have an administrator write wherever it liked.
     HANDLE readEnd = nullptr, writeEnd = nullptr;
     if (!CreatePipe(&readEnd, &writeEnd, nullptr, kResultPipeBytes)) {
-        error = ErrorText(L"Couldn't make a pipe for the result");
+        error = ErrorText(L"Couldn't create a pipe for the result");
         return false;
     }
     std::wstring parameters = std::wstring(command) + L" " +
@@ -882,8 +883,8 @@ bool RunElevated(HWND owner, const wchar_t* command, const std::wstring& argumen
     info.nShow = SW_HIDE;
     if (!ShellExecuteExW(&info)) {
         error = GetLastError() == ERROR_CANCELLED
-                    ? std::wstring(what) + L" didn't happen: Windows needs an administrator's yes"
-                    : ErrorText(L"Couldn't start as an administrator");
+                    ? std::wstring(what) + L" was cancelled: it needs administrator permission"
+                    : ErrorText(L"Couldn't get administrator permission");
         CloseHandle(readEnd);
         CloseHandle(writeEnd);
         return false;
@@ -941,8 +942,8 @@ bool RestoreFileTransfer(std::wstring& error) {
     // A phone streaming now stays in accessory mode until it's disconnected: reconnect it.
     if (!ReconnectAccessories(serials)) {
         error =
-            L"File transfer is restored, but Gazeora couldn't reconnect the phone that's "
-            L"streaming: unplug it and plug it in again to use file transfer.";
+            L"File transfer is restored, but Gazeora couldn't reconnect the streaming phone. "
+            L"Unplug it and plug it back in to use file transfer.";
         return false;
     }
     return true;
