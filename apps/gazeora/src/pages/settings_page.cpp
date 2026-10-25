@@ -32,6 +32,9 @@ namespace gazeora::app {
 
 namespace {
 
+// Extra space between groups of controls in a card, at 100% scaling.
+constexpr float kGroupGap = 4.0f;
+
 // What each protocol is good for, in the protocol choice's help.
 const char* ProtocolHelp(StreamProtocol protocol) {
     switch (protocol) {
@@ -574,7 +577,7 @@ void App::DrawVrCard(float width) {
         slider("Color fringe correction", "##vrchroma", &m_vr.chromaCorrection, 0.0f, 0.05f,
                "%.3f");
 
-        ImGui::Dummy(ImVec2(0, S(4)));
+        ImGui::Dummy(ImVec2(0, S(kGroupGap)));
         changed |= ImGui::Checkbox("3D from the game's depth", &m_vr.stereo);
         HelpMarker(
             "Gives each eye its own view of the scene, made from the game's depth buffer. "
@@ -590,6 +593,7 @@ void App::DrawVrCard(float width) {
                    &m_vr.stereoPopOut, 0.0f, 1.0f, "%.2f");
         }
 
+        ImGui::Dummy(ImVec2(0, S(kGroupGap)));
         if (ImGui::Button(ICON_REFRESH "  Reset VR settings")) {
             m_vr = VrLayout();
             m_vr.enabled = true;
