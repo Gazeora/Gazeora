@@ -348,6 +348,12 @@ void App::DrawQualityChoice() {
         if (choice.bitrate == current) shown = choice.name;
     }
     FieldLabel(m_fonts.caption, "Stream quality");
+    HelpMarker(
+        "The bitrate at full quality: more bits keep fine detail and motion sharp. H.265 "
+        "uses 70% of it for about the same picture. While the phone reports lost "
+        "packets, the stream steps down to as little as a quarter of it, and back up "
+        "once the link is clean. Applies at once.",
+        S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##quality", shown)) {
         for (const Choice& choice : kChoices) {
@@ -358,12 +364,6 @@ void App::DrawQualityChoice() {
         }
         ImGui::EndCombo();
     }
-    HelpMarker(
-        "The bitrate at full quality: more bits keep fine detail and motion sharp. H.265 "
-        "uses 70% of it for about the same picture. While the phone reports lost "
-        "packets, the stream steps down to as little as a quarter of it, and back up "
-        "once the link is clean. Applies at once.",
-        S(380));
 }
 
 void App::DrawFrameRateChoice() {
@@ -383,6 +383,12 @@ void App::DrawFrameRateChoice() {
         if (choice.fps == current) shown = choice.name;
     }
     FieldLabel(m_fonts.caption, "Frame rate");
+    HelpMarker(
+        "Frames streamed a second. 60 halves the wait for the next frame and moves "
+        "smoother; from the same stream quality each frame gets half the bits, so pick "
+        "a higher quality with it if the Wi-Fi allows. Games drawing fewer frames have "
+        "their last one sent again. Applies at once, with a key frame.",
+        S(380));
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::BeginCombo("##framerate", shown)) {
         for (const Choice& choice : kChoices) {
@@ -393,12 +399,6 @@ void App::DrawFrameRateChoice() {
         }
         ImGui::EndCombo();
     }
-    HelpMarker(
-        "Frames streamed a second. 60 halves the wait for the next frame and moves "
-        "smoother; from the same stream quality each frame gets half the bits, so pick "
-        "a higher quality with it if the Wi-Fi allows. Games drawing fewer frames have "
-        "their last one sent again. Applies at once, with a key frame.",
-        S(380));
 }
 
 void App::DrawOverlayCard(float width) {
@@ -510,6 +510,12 @@ void App::DrawVrCard(float width) {
 
     if (m_vr.enabled) {
         FieldLabel(m_fonts.caption, "Lens correction done by");
+        HelpMarker(
+            "On the phone, the stream carries the game's picture as it is, every pixel "
+            "for the game, and the app draws it into both eyes for its own screen. On "
+            "this PC, frames go out already split and warped, so any player can show "
+            "them.",
+            S(380));
         ImGui::SetNextItemWidth(-FLT_MIN);
         const char* where[] = {"The phone (Gazeora app): sharper",
                                "This PC: for other players, such as VLC"};
@@ -518,12 +524,6 @@ void App::DrawVrCard(float width) {
             m_vr.lensOnPhone = onPc == 0;
             changed = true;
         }
-        HelpMarker(
-            "On the phone, the stream carries the game's picture as it is, every pixel "
-            "for the game, and the app draws it into both eyes for its own screen. On "
-            "this PC, frames go out already split and warped, so any player can show "
-            "them.",
-            S(380));
 
         int lens = IM_ARRAYSIZE(kLensPresets);  // custom
         for (int i = 0; i < IM_ARRAYSIZE(kLensPresets); ++i) {
