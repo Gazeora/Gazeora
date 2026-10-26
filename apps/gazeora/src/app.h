@@ -20,7 +20,6 @@
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/input/gamepad_services.h"
-#include "gazeora/input/hand_gesture_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
 #include "keyboard/imgui_text_sink.h"
@@ -155,7 +154,7 @@ private:
     void SetIdlePicture(IdlePicture picture);
 
     GameSession* SessionFor(uint32_t gameId) const;
-    // A game is launching or running: the phone's touches and hand gestures are off.
+    // A game is launching or running: the phone's touches are off.
     bool GameRunning() const;
     // Game controllers may drive this window: it's in front or streamed, and no game runs.
     bool GamepadDrivesWindow() const;
@@ -217,9 +216,8 @@ private:
     // hold pointers into a library that changed under them.
     std::vector<std::function<void()>> m_deferred;
 
-    // Hand gestures, game controllers and the Controls page; the page is declared last, as it
-    // holds references to the others.
-    input::HandGestureServices m_hands;
+    // Game controllers and the Controls page; the page is declared last, as it holds
+    // references to the others.
     ControlsSettings m_controlsSettings;
     // What the controllers do, from their session's thread; declared before m_gamepads, whose
     // thread delivers it. Each change wakes the UI thread to draw.
@@ -238,7 +236,7 @@ private:
     bool m_gamepadBusy = false;
     GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
     GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
-    ControlsPage m_controls{m_hands, m_controlsSettings, m_gamepadCard, m_scale};
+    ControlsPage m_controls{m_gamepadCard, m_scale};
 };
 
 }  // namespace gazeora::app

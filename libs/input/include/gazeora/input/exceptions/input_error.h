@@ -7,7 +7,7 @@
 
 namespace gazeora::input {
 
-// A camera, model or input device couldn't be used; the message says what, for people.
+// An input device couldn't be used; the message says what, for people.
 class InputError : public std::runtime_error {
 public:
     explicit InputError(std::wstring message)

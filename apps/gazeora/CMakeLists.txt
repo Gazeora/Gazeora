@@ -36,11 +36,9 @@ add_executable(Gazeora WIN32
     src/ui/focus_edge.cpp
     src/ui/gamepad_scroll.cpp
     src/ui/gamepad_status_line.cpp
-    src/ui/hand_preview.cpp
     src/ui/logo_frame.cpp
     src/ui/text_format.cpp
     src/ui/theme.cpp
-    src/ui/tracking_status_line.cpp
     src/ui/ui_scale.cpp
     src/ui/widgets.cpp
     resources/gazeora.rc)

@@ -36,7 +36,7 @@ administrator. The wizard's feature tree has:
 
 | Feature | Default | What it does |
 |---|---|---|
-| Gazeora | Always | `Uninstall.exe`, the programs, the hook, ONNX Runtime and the models in `bin\`, the guides and licenses in `share\doc\Gazeora`, and a Start menu shortcut |
+| Gazeora | Always | `Uninstall.exe`, the programs and the hook in `bin\`, the guides and licenses in `share\doc\Gazeora`, and a Start menu shortcut |
 | Desktop shortcut | On | A shortcut on the desktop |
 | Add GazeoraCLI to PATH | On | Adds `bin\` to the system PATH, so `GazeoraCLI` runs from any new command prompt |
 | Open with Gazeora in Explorer | On | Right-click a game's `.exe` or shortcut and pick **Open with Gazeora** to add it to the library. On Windows 11 it's under **Show more options**. If Gazeora is already open, the game goes to that window |
