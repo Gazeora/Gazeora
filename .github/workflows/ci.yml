@@ -1,20 +1,26 @@
 # Builds and tests both releases (x64 and x86) and packs their MSIs. A published GitHub
 # release also gets the two MSIs attached, and then gazeora.github.io is told about it.
+# weekly-release.yml calls this with a tag it made: that tag is built, and released as a
+# pre-release with its MSIs.
 name: CI
 
 on:
   pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * 1"  # every Monday, 00:00 UTC
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        description: The pre-release's tag, already pushed
+        type: string
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ inputs.tag || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -23,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ inputs.tag }}  # empty: the event's own
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: "3.12"
@@ -42,6 +50,8 @@ jobs:
             vcvars: amd64_x86
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ inputs.tag }}  # empty: the event's own
 
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756  # v1
@@ -67,21 +77,23 @@ jobs:
           path: build/Gazeora-*-${{ matrix.arch }}.msi
           if-no-files-found: error
           # Release runs keep theirs longest; the release itself holds the permanent copy
-          retention-days: ${{ github.event_name == 'release' && 90 || 7 }}
+          retention-days: ${{ (github.event_name == 'release' || inputs.tag) && 90 || 7 }}
 
   publish:
     name: Attach MSIs to the release
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || inputs.tag
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ inputs.tag }}  # empty: the event's own
 
       - name: Check the tag matches VERSION
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
           expected="v$(tr -d '[:space:]' < VERSION)"
           if [ "$TAG" != "$expected" ]; then
@@ -90,6 +102,7 @@ jobs:
           fi
 
       - name: Check release candidates are pre-releases
+        if: github.event_name == 'release'
         env:
           TAG: ${{ github.event.release.tag_name }}
           PRERELEASE: ${{ github.event.release.prerelease }}
@@ -110,10 +123,21 @@ jobs:
           merge-multiple: true
 
       - name: Upload to the release
+        if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
         run: gh release upload "$TAG" dist/*.msi --clobber --repo "$GITHUB_REPOSITORY"
+
+      # Notes from the pull requests merged since the last release
+      - name: Publish the weekly pre-release
+        if: inputs.tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release create "$TAG" dist/*.msi --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --prerelease --title "Gazeora $TAG" --generate-notes
 
       # Once the MSIs are attached, so the website lists them with the release
       - name: Tell the website
@@ -121,3 +145,4 @@ jobs:
         with:
           platform: windows
           site-token: ${{ secrets.GAZEORA_SITE_TOKEN }}
+          tag: ${{ inputs.tag || github.event.release.tag_name }}

@@ -147,9 +147,23 @@ either replaces the other. To release:
 
 When a candidate is good, set `VERSION` to `1.1.0` and release `v1.1.0` the same way.
 
-CI also runs on every pull request, every Monday at 00:00 UTC, and by hand from the Actions tab
-(`workflow_dispatch`); the MSIs of each run are kept as workflow artifacts for 7 days (90 for a
-release run). The MSIs attached to a release never expire.
+### Weekly pre-release
+
+Every Monday at 00:00 UTC (or by hand: **Actions → Weekly pre-release → Run workflow**),
+`.github/workflows/weekly-release.yml` compares `master` with the highest release so far. If
+anything other than `VERSION` has changed, it releases the next patch as a candidate: after
+`v1.0.1-rc.1` comes `v1.0.2-rc.1`, and after a stable `v1.0.3`, `v1.0.4-rc.1`. If nothing has
+changed, there's no release that week. `master` only takes pull requests, so the workflow makes
+its own commit on top of `master` that sets `VERSION` (`chore: release v1.0.2-rc.1`), tags it,
+and runs CI on the tag. CI builds and tests both releases, then publishes the pre-release with
+its MSIs and notes from the pull requests merged since the last release, and sends it to the
+website. That commit stays off `master`, so `VERSION` on `master` keeps the last version set by
+hand; builds from `master` show that one. A week whose build fails publishes nothing (only its
+tag is left), and the next week tags the same version again from the newer `master`.
+
+CI also runs on every pull request and by hand from the Actions tab (`workflow_dispatch`); the
+MSIs of each run are kept as workflow artifacts for 7 days (90 for a release run). The MSIs
+attached to a release never expire.
 
 A newer MSI replaces the installed version, keeping the user's library and settings.
 
