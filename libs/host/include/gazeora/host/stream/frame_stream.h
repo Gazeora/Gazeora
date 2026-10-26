@@ -19,6 +19,7 @@
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_output.h"
+#include "gazeora/host/stream/frame_source.h"
 #include "gazeora/host/stream/live_frame_sink.h"
 #include "gazeora/host/stream/net.h"
 #include "gazeora/host/stream/pointer_gate.h"
@@ -46,7 +47,7 @@ struct RtspRequest;
 // Frames are pushed from the capture thread and encoded on the server's own thread; frames
 // arriving faster than they can be encoded are dropped, newest wins. They come as BGRA8 in
 // memory, or as NV12 textures that go to a GPU encoder without leaving the GPU. While no frame has
-// been pushed for a second, the idle frame (the logo) is streamed instead.
+// been pushed for a second, the idle frame (Gazeora's window) is streamed instead.
 //
 // The server coordinates; the work is done by its parts: FrameMailbox (frames in),
 // VideoPipeline (encoding, RTP), BitrateController (adapting to loss), RtspConnection (one
@@ -223,7 +224,8 @@ private:
     uint32_t BitrateAt(int step) const;  // on the ladder, for the codec in use
     // Encodes one picture and streams it, or only encodes it when !send (for the parameter
     // sets). False if it couldn't be.
-    bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, bool send);
+    bool StreamPicture(VideoPipeline& pipeline, const Picture& picture, FrameSource source,
+                       bool send);
     // `picture` with the overlay drawn on, when it's on: drawn in `target`, a copy, so the
     // picture itself can be encoded again. `picture` as it is otherwise, and for textures.
     const Picture* DrawOverlay(const Picture& picture, Picture& target, OverlayRenderer& renderer,

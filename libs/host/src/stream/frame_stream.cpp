@@ -876,7 +876,8 @@ void FrameStreamServer::AdaptQuality(uint64_t now) {
     }
 }
 
-bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& picture, bool send) {
+bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& picture,
+                                      FrameSource source, bool send) {
     VideoPipeline::Config config;
     config.codec = Codec();
     config.fps = FrameRate();
@@ -916,7 +917,7 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     if (m_keyFrameWanted.exchange(false)) {
         pipeline.RequestKeyFrame();
     }
-    pipeline.SetViewInfo(ViewInfoText(GetVrLayout(), picture.stereo));
+    pipeline.SetViewInfo(ViewInfoText(GetVrLayout(), picture.stereo, source));
 
     bool fmtpChanged = false;
     bool ok = pipeline.Encode(
@@ -1006,7 +1007,8 @@ void FrameStreamServer::EncodeLoop() {
             // The idle frame with no one watching is only for a DESCRIBE's parameter sets: it
             // isn't sent, and the first player gets a fresh encoder, so its first frame is a
             // key frame rather than one still in the encoder.
-            bool probe = source == &idle && m_viewers == 0;
+            const FrameSource kind = source == &idle ? FrameSource::App : FrameSource::Game;
+            bool probe = kind == FrameSource::App && m_viewers == 0;
             if (probed && !probe) {
                 pipeline.Close();
                 probed = false;
@@ -1015,7 +1017,7 @@ void FrameStreamServer::EncodeLoop() {
                 frameRate.Add(now);
                 source = DrawOverlay(*source, overlaid, overlay, frameRate.PerSecond(now));
             }
-            StreamPicture(pipeline, *source, !probe);
+            StreamPicture(pipeline, *source, kind, !probe);
             probed |= probe;
         }
     }

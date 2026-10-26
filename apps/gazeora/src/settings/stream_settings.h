@@ -33,9 +33,6 @@ public:
     // A stream_protocol.h id; RTSP over TCP by default.
     StreamProtocol LoadProtocol() const;
     void SaveProtocol(StreamProtocol protocol) const;
-    // What streams when no game is: Gazeora's window (true, the default) or the logo.
-    bool LoadIdlePicture() const;
-    void SaveIdlePicture(bool window) const;
     // Off, with the usual details, unless saved otherwise.
     OverlaySettings LoadOverlay() const;
     void SaveOverlay(const OverlaySettings& overlay) const;

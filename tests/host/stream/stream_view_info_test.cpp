@@ -15,10 +15,10 @@ VrLayout PhoneVr() {
 }
 
 TEST(StreamViewInfoTest, SaysNothingUnlessThePhoneDoesTheLenses) {
-    EXPECT_EQ(ViewInfoText(VrLayout(), false), "");
+    EXPECT_EQ(ViewInfoText(VrLayout(), false, FrameSource::App), "");
     VrLayout pc = PhoneVr();
     pc.lensOnPhone = false;  // the frames are warped already
-    EXPECT_EQ(ViewInfoText(pc, true), "");
+    EXPECT_EQ(ViewInfoText(pc, true, FrameSource::Game), "");
 }
 
 TEST(StreamViewInfoTest, CarriesTheLensSettingsAndWhetherItsAPair) {
@@ -28,9 +28,16 @@ TEST(StreamViewInfoTest, CarriesTheLensSettingsAndWhetherItsAPair) {
     vr.imageScale = 0.8f;
     vr.lensSeparation = 0.52f;
     vr.chromaCorrection = 0.01f;
-    EXPECT_EQ(ViewInfoText(vr, true),
+    EXPECT_EQ(ViewInfoText(vr, true, FrameSource::Game),
               "vr=1 pair=1 k1=0.250 k2=0.500 scale=0.800 sep=0.520 chroma=0.010");
-    EXPECT_EQ(ViewInfoText(vr, false).substr(0, 11), "vr=1 pair=0");
+    EXPECT_EQ(ViewInfoText(vr, false, FrameSource::Game).substr(0, 11), "vr=1 pair=0");
+}
+
+TEST(StreamViewInfoTest, MarksGazeorasOwnWindow) {
+    VrLayout vr = PhoneVr();
+    std::string app = ViewInfoText(vr, false, FrameSource::App);
+    EXPECT_EQ(app.substr(app.size() - 8), " src=app");
+    EXPECT_EQ(ViewInfoText(vr, false, FrameSource::Game).find("src="), std::string::npos);
 }
 
 TEST(StreamViewInfoTest, IsAnUnregisteredUserDataSei) {
