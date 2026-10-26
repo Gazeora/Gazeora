@@ -41,8 +41,8 @@ namespace gazeora::app {
 // details and settings. Owns the game library, the sessions of launched games and the
 // local server that streams their captured frames.
 //
-// The implementation is split by concern: app.cpp (lifetime, frame loop, the stream's logo
-// and VR layout), app_actions.cpp (what buttons do), and one file per page under pages/.
+// The implementation is split by concern: app.cpp (lifetime, frame loop, the VR layout and
+// its preview), app_actions.cpp (what buttons do), and one file per page under pages/.
 // The controls and colors the pages draw with live in ui/.
 class App {
 public:
@@ -70,7 +70,7 @@ public:
     void ApplyGamepadInput();
 
     // After a frame is drawn, before it's presented: when no game is running, this window is
-    // what streams (unless the logo is chosen), so the launcher can be seen from the headset.
+    // what streams, so the launcher can be seen from the headset.
     void StreamWindow(IDXGISwapChain* swapChain);
 
     void OnFilesDropped(const std::vector<std::wstring>& paths);
@@ -79,8 +79,6 @@ public:
 
 private:
     enum class Page { Home, Library, Details, Controls, Settings };
-    // What streams when no game is.
-    enum class IdlePicture { Window, Logo };
     enum class Sort { RecentlyPlayed, Name, RecentlyAdded };
 
     // A sidebar entry, in the order the sidebar shows them.
@@ -146,12 +144,10 @@ private:
     // Starts the stream with its protocol, on kStreamPort or any free port; m_streamError
     // says why if it can't.
     void StartStream();
-    // Applies m_vr to the stream and saves it; the logo frame is redone on the next Tick.
+    // Applies m_vr to the stream and saves it; the preview is redone on the next Tick.
     void ApplyVrLayout();
-    // Streams the logo, through the VR layout when it's on, and refreshes its preview.
+    // Draws the logo through the VR layout, for the preview under the VR settings.
     void UpdateLogoFrame();
-    // Picks what streams when no game is, and saves the choice.
-    void SetIdlePicture(IdlePicture picture);
 
     GameSession* SessionFor(uint32_t gameId) const;
     // A game is launching or running: the phone's touches are off.
@@ -178,13 +174,12 @@ private:
     StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout
     VrLayout m_vr;
     OverlaySettings m_overlay;
-    IdlePicture m_idlePicture = IdlePicture::Window;
     // This window, streamed: a copy of the back buffer, read back like game frames.
     Microsoft::WRL::ComPtr<ID3D11Texture2D> m_windowCopy;
     TextureReader m_windowReader;
     uint64_t m_windowStreamedAtMs = 0;  // 0: not yet
     bool m_logoDirty = true;
-    // What the logo frame looks like in the stream, shown under the VR settings.
+    // The logo as the VR layout shapes it, shown under the VR settings.
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_logoPreview;
     float m_logoPreviewAspect = 1.0f;
     std::vector<std::unique_ptr<GameSession>> m_sessions;

@@ -207,7 +207,7 @@ void GameSession::RunCapture(CaptureClient& client, LaunchedGame& game) {
         // A game below the stream's frame rate, or one that stalls, leaves slots empty; the last
         // frame goes out again to fill them, as players such as VLC drop frames as late when a
         // stream runs slow; the stream encodes the picture it holds again, nothing is read
-        // back. After a second without game frames the server shows the logo.
+        // back. After a second without game frames the server shows Gazeora's window.
         bool due = now.QuadPart >= nextStream - interval / 4;
         bool repeat = !gotFrame && lastGameFrame && now.QuadPart - lastGameFrame < m_qpcFreq &&
                       now.QuadPart >= nextStream + interval / 4;

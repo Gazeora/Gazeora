@@ -35,7 +35,7 @@ namespace {
 // Port for the frame stream, whatever the protocol (8554 is RTSP's usual alternative to
 // 554). If it's taken, any free port is used.
 constexpr uint16_t kStreamPort = 8554;
-// Size of the logo frame streamed while no game is capturing.
+// Size of the logo frame in the VR settings' preview.
 constexpr int kLogoFrameWidth = 1280;
 constexpr int kLogoFrameHeight = 720;
 
@@ -47,13 +47,12 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     if (!m_library.Load(error)) {
         ShowToast(U8(error), true);
     }
-    // The stream is always on and open to the whole network. It shows the logo frame until a
+    // The stream is always on and open to the whole network. It shows this window until a
     // game is captured.
     m_vr = m_settings.LoadVrLayout();
     m_stream.SetVrLayout(m_vr);
     m_overlay = m_settings.LoadOverlay();
     m_stream.SetOverlay(m_overlay);
-    m_idlePicture = m_settings.LoadIdlePicture() ? IdlePicture::Window : IdlePicture::Logo;
     m_stream.SetLogFile(StreamSettings::LogPath());
     m_stream.SetCodec(m_settings.LoadCodec());
     m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());
@@ -224,9 +223,7 @@ void App::Tick() {
     }
 }
 
-bool App::WantsFramesWhileMinimized() const {
-    return m_idlePicture == IdlePicture::Window && m_stream.Running() && m_stream.Viewers() > 0;
-}
+bool App::WantsFramesWhileMinimized() const { return m_stream.Running() && m_stream.Viewers() > 0; }
 
 void App::ApplyRemoteInput() {
     std::vector<PointerEvent> touches = m_remoteTouches.Take();
@@ -380,7 +377,7 @@ void App::UpdateLogoFrame() {
         return;
     }
 
-    // Through the same GPU pass as game frames, so the logo matches them in the headset.
+    // Through the same GPU pass as game frames, so the preview matches them in the headset.
     D3D11_TEXTURE2D_DESC desc = {};
     desc.Width = width;
     desc.Height = height;
@@ -406,7 +403,6 @@ void App::UpdateLogoFrame() {
         }
     }
 
-    // The preview shows exactly what goes out.
     m_logoPreview.Reset();
     desc.Width = width;
     desc.Height = height;
@@ -415,22 +411,10 @@ void App::UpdateLogoFrame() {
         m_device->CreateShaderResourceView(texture.Get(), nullptr, &m_logoPreview);
         m_logoPreviewAspect = float(width) / float(height);
     }
-    // Kept by the stream across restarts, and for a stream that starts later. Streamed when no
-    // game is, unless this window is (StreamWindow).
-    if (m_idlePicture == IdlePicture::Logo) {
-        m_stream.SetIdleFrame(width, height, std::move(logo));
-    }
-}
-
-void App::SetIdlePicture(IdlePicture picture) {
-    m_idlePicture = picture;
-    m_settings.SaveIdlePicture(picture == IdlePicture::Window);
-    m_windowStreamedAtMs = 0;  // the window's next frame goes out at once
-    m_logoDirty = true;        // and the logo, when it's the one
 }
 
 void App::StreamWindow(IDXGISwapChain* swapChain) {
-    if (m_idlePicture != IdlePicture::Window || !m_stream.Running()) {
+    if (!m_stream.Running()) {
         return;
     }
     // While someone watches, at the stream's frame rate at most; otherwise once, so the
