@@ -21,7 +21,7 @@
 
     <Feature Id="Main" Title="Gazeora" AllowAbsent="no" Display="expand"
              ConfigurableDirectory="INSTALLFOLDER"
-             Description="The launcher, GazeoraCLI, the capture hook and the hand gesture models.">
+             Description="The launcher, GazeoraCLI and the capture hook.">
       <ComponentGroupRef Id="RuntimeFiles" />
       <ComponentRef Id="StartMenuShortcut" />
 

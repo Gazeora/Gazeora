@@ -60,7 +60,6 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_stream.SetProtocol(m_settings.LoadProtocol());
     m_stream.SetPointerSink(&m_remoteTouches);
     StartStream();
-    m_controls.Resume();
     m_gamepadControl.Resume();
 }
 
@@ -191,8 +190,6 @@ void App::SetupImGui() {
 }
 
 void App::Tick() {
-    m_controls.SetPhoneInVr(m_stream.AppViewers() > 0 && m_vr.enabled);
-    m_controls.SetGameRunning(GameRunning());
     m_gamepadControl.SetGameRunning(GameRunning());
     if (m_logoDirty) {
         UpdateLogoFrame();  // here rather than in Draw: it uses the UI's device context
@@ -272,9 +269,6 @@ bool App::WantsContinuousFrames() const {
         m_gamepadInput.Holding() || m_gamepadPresses.Holding() || m_panes.Settling()) {
         return true;
     }
-    if (m_page == Page::Controls && m_controls.Animating()) {
-        return true;  // the hand preview
-    }
     for (const auto& session : m_sessions) {
         if (session->Snapshot().state == GameSession::State::Launching) {
             return true;
@@ -345,7 +339,7 @@ void App::Draw() {
             DrawDetails();
             break;
         case Page::Controls:
-            m_controls.Draw({m_fonts.title, m_fonts.heading, m_fonts.caption});
+            m_controls.Draw({m_fonts.title, m_fonts.heading});
             break;
         case Page::Settings:
             DrawSettings();

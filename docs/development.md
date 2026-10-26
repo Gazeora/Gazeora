@@ -20,7 +20,7 @@ block:
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
 | `gazeora_installer_tests` | The MSI's custom action that deletes the user's data on uninstall, against a fake installer session |
-| `gazeora_input_tests` | Hand gestures: crops and anchors, finger poses and clicks, the air touch pointer and smoothing, synthetic video (photos moved, turned and tipped) through the real models, the camera-to-pointer loop, and the real models on photos in `tests/input/data` (needs the build's `onnxruntime.dll` and `models`); game controllers: steadying the sticks, the polling session, and SDL starting without a window |
+| `gazeora_input_tests` | Game controllers: steadying the sticks, the polling session, and SDL starting without a window |
 | `gazeora_app_tests` | The launcher's game controller support: ImGui navigation driven by controller states on a headless ImGui (across the sidebar and the page, pressing, the stick's hysteresis), the queue to the UI thread, and the switch in `controls.ini` |
 
 ## Benchmarks
@@ -58,13 +58,10 @@ libs/                 Libraries, in dependency order
     encode/               The VideoEncoder interface, Media Foundation behind it, BGRA to NV12
     stream/               The stream server, its protocols and what it's made of (see below)
   library/              The game library behind both front ends
-  input/                Hand gestures (webcam, hand tracking, gestures, the pointer) and game
-                        controllers
-    tracking/             MediaPipe's palm detector and hand landmark model, and following a hand
-    gestures/             Finger aim, hand poses to steer, hold and click (a state machine), smoothing
+  input/                Game controllers
     gamepad/              Steadying a controller's sticks
-    services/             The camera-to-pointer loop, the controller polling, their sessions
-    platform/             Media Foundation cameras, ONNX Runtime, SendInput, SDL controllers
+    services/             The controller polling and its session
+    platform/             SDL controllers
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/ (one file per page), ui/ (theme, widgets),
@@ -87,8 +84,7 @@ The hook runs inside the game, so it has the game's bitness, and so does the pro
 injects it: `CreateRemoteThread` + `LoadLibraryW` only works between processes of the same
 bitness. So Gazeora is built twice, as two releases: x64 for 64-bit games and x86 for 32-bit
 ones, each the whole of Gazeora. The compiler picks which (`GAZEORA_ARCH`, in
-`CompilerSettings.cmake`), and so does what depends on it: the ONNX Runtime package, and the
-default install folder. `InjectDll` refuses a game of the other bitness with a message naming
+`CompilerSettings.cmake`), and so does what depends on it: the default install folder. `InjectDll` refuses a game of the other bitness with a message naming
 the release that captures it.
 
 To test both on one PC, build both: the tests and the test app of each run as that release.

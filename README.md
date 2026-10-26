@@ -52,10 +52,6 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 - **3D from depth.** In D3D11 and D3D12 games, the hook copies the game's depth buffer and
   Gazeora makes a separate view for each eye from it, so the scene has real depth in the
   viewer.
-- **Hand gestures.** A webcam on the PC turns your hands into a touch screen in the air: the
-  right index fingertip moves the pointer; with the left index up, folding the right index
-  and opening it again clicks; with the left hand pinching, the right index scrolls. Runs
-  MediaPipe's hand models on the CPU.
 - **Game controllers.** Any controller (Xbox, PlayStation, Nintendo Switch Pro and most
   others, wired or Bluetooth) runs the whole launcher, as in Steam's Big Picture: the d-pad or
   left stick between controls, the bottom button to press, the right one to go back, the
@@ -65,9 +61,9 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
 - **Touch from the phone.** While VR viewer mode is off, touches on the picture in the Android
   app control the Gazeora window, and only it: the PC's own mouse and other programs are left
   alone. A tap clicks and a finger moving scrolls. It works with Gazeora minimized too, as
-  long as the stream shows the window. While a game is launching or running, touches and hand
-  gestures are both off; they come back when it closes. Touches arrive on the USB cable, or
-  over UDP port 8557 for the network protocols.
+  long as the stream shows the window. While a game is launching or running, touches are off;
+  they come back when it closes. Touches arrive on the USB cable, or over UDP port 8557 for
+  the network protocols.
 - **Command line.** `GazeoraCLI` manages the same library and can attach to a running game.
 
 ## How it works
@@ -109,10 +105,8 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   [MinHook](https://github.com/TsudaKageyu/minhook) 1.3.3,
   [Dear ImGui](https://github.com/ocornut/imgui) 1.91.5,
   [libusb](https://github.com/libusb/libusb) 1.0.29 (for the USB protocol),
-  [SDL](https://github.com/libsdl-org/SDL) 3.4.18 (for game controllers),
-  [ONNX Runtime](https://github.com/microsoft/onnxruntime) 1.20.1 and MediaPipe's palm detection
-  and hand landmark models as converted by the [OpenCV model zoo](https://github.com/opencv/opencv_zoo)
-  (for hand gestures), and [GoogleTest](https://github.com/google/googletest) 1.15.2.
+  [SDL](https://github.com/libsdl-org/SDL) 3.4.18 (for game controllers), and
+  [GoogleTest](https://github.com/google/googletest) 1.15.2.
 
 ## Building
 
@@ -136,9 +130,8 @@ generators work too (`-G "Visual Studio 17 2022" -A x64`, or `-A Win32` for x86)
 programs in `bin/<config>/`.
 
 Everything is placed in `build/bin/`. Keep the executables and `gazeora_hook.dll` in the same
-folder, because the launcher loads the hook from its own directory. The same goes for
-`onnxruntime.dll` and the `models` folder, which hand gestures load from there, and with MSVC
-for `vcomp140.dll`, its OpenMP runtime, which the build copies from Visual Studio's
+folder, because the launcher loads the hook from its own directory. The same goes, with
+MSVC, for `vcomp140.dll`, its OpenMP runtime, which the build copies from Visual Studio's
 redistributable files so the programs run without the Visual C++ Redistributable.
 
 | Output | Description |
@@ -154,8 +147,8 @@ redistributable files so the programs run without the Visual C++ Redistributable
 ### Installing
 
 `cmake --install` puts what Gazeora needs to run in `bin\` under the install folder, side by
-side as the programs expect: `Gazeora.exe`, `GazeoraCLI.exe`, `gazeora_hook.dll`,
-`onnxruntime.dll` and `models\` (and `vcomp140.dll` with MSVC). The README and the guides go in
+side as the programs expect: `Gazeora.exe`, `GazeoraCLI.exe` and `gazeora_hook.dll` (and
+`vcomp140.dll` with MSVC). The README and the guides go in
 `share\doc\Gazeora`. Tests and benchmarks are never installed; the test apps and the stream
 probe are the `Tools` component, installed only when asked for.
 
@@ -188,7 +181,6 @@ see [Streaming](docs/streaming.md).
 |---|---|
 | [Streaming](docs/streaming.md) | Watching the stream, protocols, USB setup, overlay, codecs, Wi-Fi |
 | [VR viewer mode](docs/vr-viewer.md) | Lens correction and 3D from depth |
-| [Hand gestures](docs/hand-gestures.md) | Controlling the pointer with a webcam |
 | [Game controller](docs/game-controller.md) | Moving around the launcher with a gamepad |
 | [Command line](docs/command-line.md) | `GazeoraCLI` commands |
 | [Tools](docs/tools.md) | The stream probe and the test app |

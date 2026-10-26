@@ -5,8 +5,7 @@
 #  - gazeora_host_tests:      host library and the shared protocol header
 #  - gazeora_transport_tests: real hook and host talking to each other in one process
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
-#  - gazeora_input_tests:     hand gesture control, with the real models on photos in input/data,
-#                             and game controllers
+#  - gazeora_input_tests:     game controllers
 #  - gazeora_app_tests:       the launcher's game controller support and on-screen keyboard,
 #                             on a headless ImGui
 #  - gazeora_installer_tests: the MSI's custom actions, on a fake installer session
@@ -81,30 +80,12 @@ gazeora_add_test(gazeora_transport_tests
 
 gazeora_add_test(gazeora_input_tests
     SOURCES
-        input/support/image_file.cpp
-        input/support/synthetic_video.cpp
-        input/tracking/image_sampler_test.cpp
-        input/tracking/mediapipe_hand_tracker_test.cpp
-        input/tracking/palm_anchors_test.cpp
-        input/tracking/palm_detector_test.cpp
-        input/tracking/roi_calculator_test.cpp
-        input/tracking/roi_stabilizer_test.cpp
-        input/gestures/hand_gesture_detector_test.cpp
-        input/gestures/left_hand_test.cpp
-        input/gestures/two_hand_scroll_test.cpp
-        input/gestures/landmark_smoother_test.cpp
-        input/gestures/air_touch_pointer_test.cpp
-        input/services/hand_gesture_controller_test.cpp
-        input/services/hand_gesture_session_test.cpp
-        input/services/synthetic_video_test.cpp
         input/gamepad/gamepad_state_test.cpp
         input/gamepad/gamepad_state_filter_test.cpp
         input/services/gamepad_session_test.cpp
         input/platform/sdl_gamepad_driver_test.cpp
-    LIBS gazeora_input windowscodecs ole32)
+    LIBS gazeora_input)
 target_include_directories(gazeora_input_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/input)
-target_compile_definitions(gazeora_input_tests PRIVATE
-    GAZEORA_INPUT_TEST_DATA=L"${CMAKE_CURRENT_SOURCE_DIR}/input/data")
 
 # The launcher's own sources under test; the rest of Gazeora.exe stays out.
 set(GAZEORA_APP_SOURCE_DIR ${PROJECT_SOURCE_DIR}/apps/gazeora/src)
