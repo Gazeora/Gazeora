@@ -29,7 +29,7 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   ([RFC 3550](https://www.rfc-editor.org/rfc/rfc3550)), interleaved in the RTSP connection or
   over UDP; MPEG-TS over HTTP; or bare frames over UDP or USB (Android Open Accessory) for the
   Android app. Any device on the LAN can watch. When no game is being captured, the stream shows
-  the Gazeora logo.
+  Gazeora's own window.
 - **Found by the Android app.** The PC answers the app's search on the network, so nobody types
   an address.
 - **H.264 or H.265.** H.264 (High profile) plays on every device. H.265 gives the same picture

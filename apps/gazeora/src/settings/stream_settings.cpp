@@ -110,17 +110,6 @@ StreamProtocol StreamSettings::LoadProtocol() const {
     return protocol;
 }
 
-bool StreamSettings::LoadIdlePicture() const {
-    wchar_t text[16];
-    GetPrivateProfileStringW(L"stream", L"idle", L"window", text, 16, m_path.c_str());
-    return _wcsicmp(text, L"logo") != 0;
-}
-
-void StreamSettings::SaveIdlePicture(bool window) const {
-    EnsureFolder();
-    WritePrivateProfileStringW(L"stream", L"idle", window ? L"window" : L"logo", m_path.c_str());
-}
-
 namespace {
 
 // The [overlay] switches, by key, with where each one lives.

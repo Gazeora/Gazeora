@@ -112,9 +112,8 @@ void App::DrawSettings() {
     CardTitle(m_fonts.heading, ICON_CAMERA "  Frame stream");
     const StreamProtocol protocol = m_stream.Protocol();
     std::string help = std::string(ProtocolHelp(protocol)) +
-                       "\n\nThe stream is always on: while no game runs, it shows this window "
-                       "or the logo. The Gazeora app finds this PC by itself on the same "
-                       "network.";
+                       "\n\nThe stream is always on: while no game runs, it shows this window. "
+                       "The Gazeora app finds this PC by itself on the same network.";
     if (protocol != StreamProtocol::Udp && protocol != StreamProtocol::Usb) {
         // VLC buffers a second of any network stream by default; that's most of the delay.
         help +=
@@ -132,13 +131,6 @@ void App::DrawSettings() {
         DrawCodecChoice();
         DrawQualityChoice();
         DrawFrameRateChoice();
-        FieldLabel(m_fonts.caption, "While no game is running, show");
-        static const char* kIdlePictures[] = {"This window", "The Gazeora logo"};
-        int idle = int(m_idlePicture);
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::Combo("##idlepicture", &idle, kIdlePictures, IM_ARRAYSIZE(kIdlePictures))) {
-            SetIdlePicture(IdlePicture(idle));
-        }
         std::vector<std::wstring> urls = m_stream.Urls();
         if (!urls.empty()) {
             FieldLabel(m_fonts.caption, "Stream URL");
@@ -586,7 +578,7 @@ void App::DrawVrCard(float width) {
             "Gives each eye its own view, built from the game's depth information. "
             "Whatever is in the middle of the view sits at the screen; farther things "
             "recede and nearer ones come forward. Works in D3D11 and D3D12 games during "
-            "3D scenes; the logo and videos stay flat. Overlays such as the HUD take the "
+            "3D scenes; this window and videos stay flat. Overlays such as the HUD take the "
             "depth of what's behind them.",
             S(380));
         if (m_vr.stereo) {
@@ -604,7 +596,7 @@ void App::DrawVrCard(float width) {
         }
 
         if (m_logoPreview) {
-            FieldLabel(m_fonts.caption, "Preview: what streams while no game runs");
+            FieldLabel(m_fonts.caption, "Preview: how these settings shape the picture");
             float previewWidth = ImGui::GetContentRegionAvail().x;
             ImGui::Image(reinterpret_cast<ImTextureID>(m_logoPreview.Get()),
                          ImVec2(previewWidth, previewWidth / m_logoPreviewAspect));
