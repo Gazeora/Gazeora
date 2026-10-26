@@ -23,9 +23,14 @@ phone, the app floats that window in the air, about 2.4 m wide and 2 m away, ove
 from the phone's back camera, so the room around you stays in view. It stays where it is as you
 turn your head (the phone's rotation sensor; leaning doesn't move it), and is put straight in
 front of you whenever it appears. A viewer that covers the back camera, a denied camera
-permission, or a camera in use elsewhere shows a 360° scene instead of the room. The camera is
-one lens, so the room looks the same to both eyes; only the window is placed in depth. Touches
-on the phone don't reach the PC while the window floats.
+permission, or a camera in use elsewhere shows a 360° scene instead of the room. The camera's
+picture is stretched evenly to fill the whole view, edge to edge like the 360° scene, so the
+room looks somewhat bigger than it is (phones that can zoom out to an ultra-wide camera need
+less stretching). The camera is one lens, so the room looks the same to both eyes; only the
+window is placed in depth. Touches on the phone don't reach the PC while the window floats.
+
+While the picture is laid out for the viewer, the phone's screen stays in the landscape it was
+in: tilting your head doesn't turn it over. A flat picture turns with the phone again.
 
 Games still fill both eyes as before. With the lens correction done by this PC, or VR off,
 Gazeora's window streams like a game.
