@@ -16,6 +16,20 @@ headset on.
 - **This PC**, for VLC and other players. Frames go out split, warped and shaped to the phone's
   screen, which you pick here.
 
+## Gazeora's window in the room
+
+While no game runs, the stream shows Gazeora's own window. With the lens correction done by the
+phone, the app floats that window in the air, about 2.4 m wide and 2 m away, over the picture
+from the phone's back camera, so the room around you stays in view. It stays where it is as you
+turn your head (the phone's rotation sensor; leaning doesn't move it), and is put straight in
+front of you whenever it appears. A viewer that covers the back camera, a denied camera
+permission, or a camera in use elsewhere shows a 360° scene instead of the room. The camera is
+one lens, so the room looks the same to both eyes; only the window is placed in depth. Touches
+on the phone don't reach the PC while the window floats.
+
+Games still fill both eyes as before. With the lens correction done by this PC, or VR off,
+Gazeora's window streams like a game.
+
 ## 3D from depth
 
 **3D from the game's depth** gives each eye its own view. The hook finds the game's main depth

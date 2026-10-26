@@ -29,13 +29,14 @@ std::string Escape(const std::string& payload) {
 
 }  // namespace
 
-std::string ViewInfoText(const VrLayout& vr, bool pair) {
+std::string ViewInfoText(const VrLayout& vr, bool pair, FrameSource source) {
     if (!vr.enabled || !vr.lensOnPhone) {
         return {};
     }
     char text[160];
-    snprintf(text, sizeof(text), "vr=1 pair=%d k1=%.3f k2=%.3f scale=%.3f sep=%.3f chroma=%.3f",
-             pair ? 1 : 0, vr.k1, vr.k2, vr.imageScale, vr.lensSeparation, vr.chromaCorrection);
+    snprintf(text, sizeof(text), "vr=1 pair=%d k1=%.3f k2=%.3f scale=%.3f sep=%.3f chroma=%.3f%s",
+             pair ? 1 : 0, vr.k1, vr.k2, vr.imageScale, vr.lensSeparation, vr.chromaCorrection,
+             source == FrameSource::App ? " src=app" : "");
     return text;
 }
 
