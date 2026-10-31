@@ -22,20 +22,21 @@ Found a security problem? Don't open an issue:
 
 ## Setting up
 
-1. Build Gazeora as the [README](README.md#building) describes: CMake 3.20 or newer, and
-   MinGW-w64 or Visual Studio 2022 or newer. The compiler's bitness picks the release (x64 or
-   x86).
-2. Run the tests from the build folder with `ctest --output-on-failure`. They run Direct3D on
-   WARP, so no GPU is needed.
+1. Build Gazeora as [Development](docs/development.md#building) describes: CMake 3.20 or
+   newer, and MinGW-w64 or Visual Studio 2022 or newer. The compiler's bitness picks the
+   release (x64 or x86).
+2. Run the tests with `ctest --test-dir build --output-on-failure`. They run Direct3D on WARP,
+   so no GPU is needed.
 3. Install the pre-commit hook, which formats C and C++ with clang-format and checks line
-   endings and whitespace before each commit:
+   endings, whitespace and license headers before each commit:
 
    ```powershell
    pip install pre-commit
    pre-commit install
    ```
 
-[Development](docs/development.md) covers the tests, the benchmarks and the project layout. The
+[Development](docs/development.md) covers building, the tests and the benchmarks, and
+[Architecture](docs/architecture.md) the project layout. The
 [stream format](docs/stream-format.md) and the other guides in `docs/` describe how each part
 works.
 
@@ -73,7 +74,8 @@ Match the code around your change. When in doubt, look at how a similar part alr
    Types: `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `chore`, `style`. Make small
    commits, one logical change each.
 3. Add tests for new logic where it can run without a GPU or a game, and update the README or
-   the guides in `docs/` when users will notice the change.
+   the guides in `docs/` when users will notice the change, following
+   [DOCUMENTATION_RULES.md](DOCUMENTATION_RULES.md).
 4. Check that both releases still build if your change touches anything bitness-specific, and
    that `ctest` passes.
 5. Open the pull request and fill in its template: what changed, which part, and how you tested
