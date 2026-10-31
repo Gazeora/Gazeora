@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Stream settings, kept in stream.ini next to the library file so they're easy to edit by
 // hand: the codec and protocol in [stream], the VR viewer in [vr], the details drawn into
 // the frames in [overlay].

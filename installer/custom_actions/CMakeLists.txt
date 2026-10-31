@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # gazeora_setup_actions.dll: the MSI's own custom actions. The logic is a library of its own so
 # the tests can run it against a fake installer session.
 add_library(gazeora_setup_actions_core STATIC

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Dear ImGui with the Win32 + D3D11 backends, for the Gazeora.exe launcher UI.
 
 include(FetchContent)

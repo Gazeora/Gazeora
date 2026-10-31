@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Pixel layouts the CPU readback paths (D3D8, D3D9, OpenGL fallback) can hand to the
 // host, and conversion of each row into a DXGI format the frame ring can hold.
 #pragma once

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // A D3D12 swapchain doesn't expose the command queue it presents on, but our copy
 // must run on that queue. We hook ID3D12CommandQueue::ExecuteCommandLists to learn
 // every queue the game uses, then find the one the swapchain object points to.

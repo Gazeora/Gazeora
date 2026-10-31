@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // End-to-end tests of the frame transport (common/shared.h): the real hook core and the
 // real CaptureClient in one process, which plays the game. The hook side renders into
 // its D3D11FrameRing on WARP; the host opens the same adapter and reads frames back.

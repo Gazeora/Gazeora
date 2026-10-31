@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Ways to control Gazeora besides the PC's own mouse and keyboard: game controllers.
 include(Sdl)
 

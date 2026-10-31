@@ -1,3 +1,6 @@
+<!-- Copyright (C) 2026 Nithin Aashik -->
+<!-- SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial -->
+
 <!-- Shortcuts. Their key paths are under HKCU, as Windows Installer wants for anything in a
      profile folder, though a per-machine install puts them in the all-users folders. -->
 <?include Release.wxi ?>

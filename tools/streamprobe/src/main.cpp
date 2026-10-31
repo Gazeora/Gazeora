@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Minimal RTSP player for measuring Gazeora's frame stream without VLC: plays an rtsp://
 // URL over UDP the way VLC does, rebuilds every H.264 or H.265 frame, and reports what
 // arrived, what was damaged by loss, and when.

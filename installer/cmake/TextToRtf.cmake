@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # cmake -P TextToRtf.cmake: the license page's text (WiX shows only RTF there). Takes INPUTS, the
 # plain-text files in order separated by | (a ; wouldn't survive the command line), and OUTPUT.
 # Lines wrapped by hand are joined so the text flows in the dialog; blank lines and list items

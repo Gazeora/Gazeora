@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # `format` rewrites all project sources with clang-format; `format-check` fails if any
 # file isn't formatted. Both use the .clang-format file at the repository root.
 

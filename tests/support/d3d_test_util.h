@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // D3D11 helpers shared by the tests. Everything runs on WARP so the tests don't
 // depend on the machine's GPU.
 #pragma once

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # The libraries, in dependency order. Each keeps its public headers under
 # include/gazeora/<module>/ and its sources under src/, with the same subfolders.
 add_subdirectory(common)   # gazeora_common: shared-memory protocol between hook and host

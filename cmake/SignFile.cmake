@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # cmake -P SignFile.cmake: signs FILE with signtool, at build time (see CodeSigning.cmake).
 # Takes SIGNTOOL, FILE, TIMESTAMP_URL, and CERT_FILE or CERT_THUMBPRINT.
 

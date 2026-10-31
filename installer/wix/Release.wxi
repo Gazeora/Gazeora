@@ -1,3 +1,6 @@
+<!-- Copyright (C) 2026 Nithin Aashik -->
+<!-- SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial -->
+
 <!-- What differs between the x64 and x86 packages besides ProductName and UpgradeCode, which
      installer/CMakeLists.txt passes in. Each has its own Explorer verb, so both can be there. -->
 <Include>

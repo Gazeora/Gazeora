@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The stream's protocol work, per frame or per message: RTP packetization of both codecs and
 // the receiver's depacketization, parameter sets, RTCP reports, RTSP requests and responses,
 // and the bitrate controller.

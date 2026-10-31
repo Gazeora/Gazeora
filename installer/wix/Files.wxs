@@ -1,3 +1,6 @@
+<!-- Copyright (C) 2026 Nithin Aashik -->
+<!-- SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial -->
+
 <!-- Everything the install rules staged, so the MSI ships exactly what they list. Gazeora.exe
      gets an ID of its own for the shortcuts, verbs and custom actions. -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">

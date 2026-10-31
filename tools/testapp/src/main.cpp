@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Minimal "game" for testing the capture hook without touching a real game:
 // a 1280x720 window with a color-cycling background and a moving white square, and in D3D11
 // and D3D12 a depth-tested 3D scene, for 3D from depth.

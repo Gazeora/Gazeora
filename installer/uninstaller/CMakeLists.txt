@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Uninstall.exe: in the install folder, for those who look for one there. The MSI adds it.
 enable_language(RC)
 

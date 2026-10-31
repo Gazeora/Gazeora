@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/frame_packet.h"

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The game library behind both front ends: loading and saving library.json, lookups, and
 // resolving how to launch a game.
 #include <windows.h>

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Gazeora.exe: the launcher UI (Dear ImGui on Direct3D 11).
 include(ImGui)
 enable_language(RC)

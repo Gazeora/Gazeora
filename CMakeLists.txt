@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 cmake_minimum_required(VERSION 3.20)
 include(cmake/Version.cmake)  # GAZEORA_VERSION, from the VERSION file
 project(Gazeora VERSION ${GAZEORA_VERSION} LANGUAGES C CXX)

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // 3D from depth in D3D12 games. The depth buffer's state at Present is unknown, so it's
 // copied where the game's own command lists show it: when a resource barrier takes the main
 // depth buffer (DepthPicker) out of DEPTH_WRITE, the scene is drawn, and a copy into a buffer

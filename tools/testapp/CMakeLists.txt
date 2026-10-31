@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Standalone window rendering with each supported API, to test the hook against.
 add_executable(gazeora_testapp
     src/main.cpp

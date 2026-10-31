@@ -1,3 +1,6 @@
+<!-- Copyright (C) 2026 Nithin Aashik -->
+<!-- SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial -->
+
 <!-- Uninstall clean-up, and starting Gazeora from the last page. The clean-up skips upgrades,
      which uninstall the earlier version on the way. -->
 <?include Release.wxi ?>

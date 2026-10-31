@@ -1,3 +1,6 @@
+<!-- Copyright (C) 2026 Nithin Aashik -->
+<!-- SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial -->
+
 <!-- What the optional features change outside the install folder: PATH, Explorer's
      right-click menu and the firewall. Uninstalling removes each again. -->
 <?include Release.wxi ?>

@@ -10,6 +10,14 @@ licenses; you pick the one that fits.
 | Your changes and combined works | Must be shared under the GPL version 3, with their source | Can stay closed |
 | Attribution and marking ([NOTICE](NOTICE)) | Required | As the agreement says |
 
+Each source file says the same in its header, which `tools/license_headers.py` checks:
+
+```
+SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+```
+
+`LicenseRef-Gazeora-Commercial` is the commercial license this file describes.
+
 ## When you need a commercial license
 
 The GPL already lets anyone use, sell and distribute Gazeora, including for money, as long as

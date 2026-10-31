@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The OpenGL entry points the hook uses, loaded from the game's opengl32.dll (the hook
 // doesn't link it) plus the constants it needs beyond GL 1.1, which is all the
 // Windows SDK's GL/gl.h declares.

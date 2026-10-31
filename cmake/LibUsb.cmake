@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # libusb: reaches Android phones in USB accessory mode, for the USB stream protocol. Built
 # from source here, like MinHook: it has no CMake build of its own.
 

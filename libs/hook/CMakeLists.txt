@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # The API-agnostic core and the D3D11 frame ring, as a static library so the unit
 # tests can link them without injecting the DLL anywhere.
 add_library(gazeora_hook_core STATIC

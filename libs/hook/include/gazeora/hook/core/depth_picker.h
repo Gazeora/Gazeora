@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Picks the game's main depth buffer, for 3D from depth: of the depth buffers a frame draws
 // with, the one with the most draws among those with the back buffer's shape. Shadow maps,
 // reflection and UI buffers have shapes of their own, or far fewer draws.

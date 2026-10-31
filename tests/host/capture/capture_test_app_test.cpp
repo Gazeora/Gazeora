@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The test app captured as Gazeora captures a game: launched with the real hook, its frames
 // read through the shared block and textures. The test app and hook of this build, so the x86
 // release tests 32-bit capture and the x64 release 64-bit capture.

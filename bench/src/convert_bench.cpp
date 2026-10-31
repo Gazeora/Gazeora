@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Per-pixel work on the CPU: the hook's row conversion for back buffers read back on the CPU
 // (D3D8, D3D9, OpenGL fallback), and the BGRA8 to NV12 conversion of every streamed frame.
 #include <gtest/gtest.h>

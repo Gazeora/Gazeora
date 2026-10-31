@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Only built when the toolchain ships d3d8.h (MinGW does; the Windows SDK doesn't).
 #include <d3d8.h>
 #include <wrl/client.h>

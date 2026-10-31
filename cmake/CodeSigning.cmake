@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Authenticode signing. Windows shows "Publisher: Unknown" in the UAC prompt (Gazeora asks for
 # an administrator to install the USB driver) and in SmartScreen for any unsigned exe; signed,
 # it shows the name on the certificate instead. Signing is off until a certificate is given:
