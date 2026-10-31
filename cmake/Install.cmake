@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # `cmake --install`: what Gazeora needs to run, in one folder, as the programs find their hook
 # beside their own exe. Two components:
 #  - Runtime (the default): Gazeora.exe, GazeoraCLI.exe and gazeora_hook.dll, plus the README,
@@ -16,7 +19,7 @@ install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
 
 # The license, its additional terms, and every shipped component's license (GPLv3 section 4
 # and theirs ask for them to travel with the program).
-install(FILES LICENSE NOTICE TRADEMARKS.md THIRD_PARTY_NOTICES.md
+install(FILES LICENSE NOTICE COMMERCIAL-LICENSE.md TRADEMARKS.md THIRD_PARTY_NOTICES.md
     DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
 foreach(dependency libusb minhook imgui sdl nlohmann_json)
     FetchContent_GetProperties(${dependency} SOURCE_DIR ${dependency}_dir)

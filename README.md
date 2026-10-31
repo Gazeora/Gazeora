@@ -221,3 +221,7 @@ share must stay under the same license, with their source.
 attribution "Gazeora by Nithin Aashik" in their About screen, are marked as modified, and
 don't use the Gazeora name or logo as their own ([TRADEMARKS.md](TRADEMARKS.md)). The
 components Gazeora is built with are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Gazeora is also available under a commercial license, for products that can't follow the GPL,
+such as closed-source software or hardware that builds it in. Royalties and terms are agreed
+with Nithin Aashik: see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
