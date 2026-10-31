@@ -164,3 +164,45 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] Dependencies are injected, not hard-coded.
 - [ ] No duplicated logic, magic values, or global state.
 - [ ] Commit message is a single line with no co-author or attribution.
+
+---
+
+## 7. Documentation Rules (Required)
+
+The shared documentation standard for this repository is [`DOCUMENTATION_RULES.md`](./DOCUMENTATION_RULES.md). Read it before changing documentation and follow it for every task that creates, updates, or affects documented behavior.
+
+The desktop-specific guidance at the end of this section supplements it and does not replace the existing OOP, SOLID, design-pattern, modularity, comments, or Git rules above.
+
+### Required workflow
+- Inspect the existing documentation and relevant source code before editing docs. Treat the implementation, build configuration, tests, and shipped assets as the source of truth.
+- Keep documentation accurate to the current repository state. Never invent features, commands, configuration keys, supported platforms, compatibility guarantees, performance claims, or roadmap commitments.
+- Update documentation in the same change whenever behavior, setup, configuration, interfaces, dependencies, architecture, or user-visible workflows change.
+- Prefer editing the existing relevant document over creating duplicates. Keep links relative where possible and verify that linked files and headings exist.
+- Use concise, direct language and runnable, repository-verified examples. Mark assumptions and limitations explicitly.
+- Do not remove or weaken existing coding, architecture, security, or Git rules to satisfy documentation work.
+
+### Before finishing
+- Follow the documentation review checklist in `DOCUMENTATION_RULES.md`.
+- Validate Markdown structure, links, code examples, and commands where practical.
+- Report exactly which documentation files changed and which checks were run. Do not claim a check passed unless it was actually run.
+
+
+### Desktop documentation responsibilities
+- Treat the checked-in source, build scripts, dependency manifests, tests, and runtime behavior as authoritative. Do not infer support for a graphics API, operating system, game, controller, or capture method from a planned feature or a dependency alone.
+- Keep the root README focused on the product purpose, current capabilities, prerequisites, verified build/run steps, limitations, and links to detailed documentation.
+- Document the real rendering and presentation pipeline as implemented: graphics APIs, capture/injection/hook boundaries, frame ownership, texture formats, synchronization, color space, resize behavior, and error paths only where confirmed by code.
+- For head tracking and input, document supported input sources, coordinate systems, units, axes, orientation conventions, calibration, smoothing/filtering, update rates, and fallback behavior. Clearly distinguish implemented support from experimental or planned work.
+- For game integration, compatibility, or per-game configuration, document only tested/verified behavior. State the tested environment and known limitations; do not promise universal compatibility or anti-cheat compatibility without evidence.
+- For streaming/encoding, document the actual codec, pixel formats, resolution/rate controls, latency-related settings, transport, buffering, and failure behavior. Do not publish benchmark or latency claims unless reproducible measurements and test conditions are recorded.
+- For desktop-to-Android communication, coordinate protocol documentation with the Android repository. Record message schemas, units, versioning, connection states, compatibility expectations, and security behavior from the actual implementation. Avoid duplicate conflicting protocol descriptions; identify the canonical document and link to it.
+- Document build instructions using the repository's actual toolchain, generators, dependencies, build configurations, and commands. Include Windows-specific details only where verified; state when a command is configuration- or generator-dependent.
+- Never include credentials, signing material, private endpoints, machine-specific paths, or unredacted logs containing personal information.
+
+### Desktop-specific documentation checks
+- [ ] Graphics API and rendering pipeline descriptions match the source implementation.
+- [ ] Frame formats, synchronization, coordinate conventions, and units are explicit where relevant.
+- [ ] Tracking/input source support and lifecycle behavior are verified.
+- [ ] Game compatibility claims identify evidence and tested environments.
+- [ ] Codec, streaming, and performance claims are measured or clearly qualified.
+- [ ] Desktop/Android protocol details agree with the canonical protocol documentation.
+- [ ] Build commands and dependencies are verified against the current repository.
