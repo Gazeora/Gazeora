@@ -150,6 +150,7 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     if (m_output) {
         m_output->SetPointerSink(&m_pointerGate);
         m_output->SetHeadPoseSink(&m_headMonitor);
+        m_output->SetCameraStatusSink(&m_cameraMonitor);
         if (!m_output->Start(bindAddress, port, error)) {
             Stop();
             return false;
@@ -1052,6 +1053,7 @@ const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& t
     stats.encoder = EncoderName();
     GetLocalTime(&stats.time);
     stats.head = m_headMonitor.Reading();
+    stats.camera = m_cameraMonitor.Reading();
     {
         std::lock_guard<std::mutex> lock(m_overlayMutex);
         stats.headStatus = m_headStatus;

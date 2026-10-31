@@ -11,6 +11,7 @@
 #include <string>
 #include <thread>
 
+#include "gazeora/host/stream/camera_status_sink.h"
 #include "gazeora/host/stream/head_pose_sink.h"
 #include "gazeora/host/stream/net.h"
 #include "gazeora/host/stream/pointer_event_sink.h"
@@ -18,17 +19,22 @@
 
 namespace gazeora {
 
-// The app's input over the network: GZF1 Pointer datagrams (pointer_message.h) and HeadPose
-// ones (head_pose_message.h) on a UDP port of their own, whichever protocol the frames go out
+// The app's input over the network: GZF1 Pointer datagrams (pointer_message.h), HeadPose
+// ones (head_pose_message.h) and CameraStatus ones (camera_status_message.h) on a UDP port of
+// their own, whichever protocol the frames go out
 // on. Only from the addresses `admits` takes: anything else on the network could click around
 // Gazeora, or turn a game's camera, otherwise.
 class RemoteInputReceiver {
 public:
     using Admits = std::function<bool(const in_addr& address)>;
 
-    RemoteInputReceiver(PointerEventSink& pointer, HeadPoseSink& head, StreamLog& log,
-                        Admits admits)
-        : m_pointer(pointer), m_head(head), m_log(log), m_admits(std::move(admits)) {}
+    RemoteInputReceiver(PointerEventSink& pointer, HeadPoseSink& head, CameraStatusSink& camera,
+                        StreamLog& log, Admits admits)
+        : m_pointer(pointer),
+          m_head(head),
+          m_camera(camera),
+          m_log(log),
+          m_admits(std::move(admits)) {}
     ~RemoteInputReceiver() { Stop(); }
     RemoteInputReceiver(const RemoteInputReceiver&) = delete;
     RemoteInputReceiver& operator=(const RemoteInputReceiver&) = delete;
@@ -45,6 +51,7 @@ private:
 
     PointerEventSink& m_pointer;
     HeadPoseSink& m_head;
+    CameraStatusSink& m_camera;
     StreamLog& m_log;
     Admits m_admits;
     net::Socket m_socket;

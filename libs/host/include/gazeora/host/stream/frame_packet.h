@@ -50,6 +50,7 @@ enum class FrameMessage : uint8_t {
     Pointer = 5,          // player to PC
     Challenge = 6,        // PC to player, over UDP
     HeadPose = 7,         // player to PC
+    CameraStatus = 8,     // player to PC
 };
 
 constexpr size_t kFrameHeaderSize = 24;

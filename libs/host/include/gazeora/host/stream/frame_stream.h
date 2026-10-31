@@ -19,6 +19,7 @@
 #include "gazeora/host/capture/vr_layout.h"
 #include "gazeora/host/encode/video_codec.h"
 #include "gazeora/host/stream/bitrate_controller.h"
+#include "gazeora/host/stream/camera_status_monitor.h"
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_output.h"
@@ -313,8 +314,9 @@ private:
     PointerGate m_pointerGate;
     HeadPoseGate m_headPoseGate;
     HeadPoseMonitor m_headMonitor{m_headPoseGate};
+    CameraStatusMonitor m_cameraMonitor;
     RemoteInputReceiver m_inputReceiver{
-        m_pointerGate, m_headMonitor, m_log,
+        m_pointerGate, m_headMonitor, m_cameraMonitor, m_log,
         [this](const in_addr& address) { return Watching(address); }};
 
     std::mutex m_overlayMutex;

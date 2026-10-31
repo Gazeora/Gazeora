@@ -435,6 +435,7 @@ void App::DrawOverlayCard(float width) {
         {"Frame rate", &m_overlay.frameRate}, {"Bitrate", &m_overlay.bitrate},
         {"Packet loss", &m_overlay.loss},     {"Encoder", &m_overlay.encoder},
         {"PC time", &m_overlay.clock},        {"Head tracking", &m_overlay.head},
+        {"Phone camera", &m_overlay.camera},
     };
     if (ImGui::BeginTable("##overlaydetails", 3)) {
         for (const Detail& detail : details) {

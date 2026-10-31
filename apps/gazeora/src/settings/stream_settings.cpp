@@ -132,6 +132,7 @@ constexpr OverlaySwitch kOverlaySwitches[] = {
     {L"encoder", &OverlaySettings::encoder},
     {L"clock", &OverlaySettings::clock},
     {L"head", &OverlaySettings::head},
+    {L"camera", &OverlaySettings::camera},
 };
 constexpr const wchar_t* kCorners[] = {L"top_left", L"top_right", L"bottom_left", L"bottom_right"};
 
