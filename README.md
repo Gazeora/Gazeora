@@ -63,7 +63,8 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   alone. A tap clicks and a finger moving scrolls. It works with Gazeora minimized too, as
   long as the stream shows the window. While a game is launching or running, touches are off;
   they come back when it closes. Touches arrive on the USB cable, or over UDP port 8557 for
-  the network protocols.
+  the network protocols. In a VR viewer, the Android app's hand pointer drives the window the
+  same way: pointing moves its pointer, and a pinch clicks or scrolls.
 - **Command line.** `GazeoraCLI` manages the same library and can attach to a running game.
 
 ## How it works

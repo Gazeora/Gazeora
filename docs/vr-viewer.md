@@ -16,18 +16,17 @@ headset on.
 - **This PC**, for VLC and other players. Frames go out split, warped and shaped to the phone's
   screen, which you pick here.
 
-## Gazeora's window in the room
+## Gazeora's window and your hand
 
-While no game runs, the stream shows Gazeora's own window. With the lens correction done by the
-phone, the app floats that window in the air, about 2.4 m wide and 2 m away, over the picture
-from the phone's back camera, so the room around you stays in view. It stays where it is as you
-turn your head (the phone's rotation sensor; leaning doesn't move it), and is put straight in
-front of you whenever it appears. A viewer that covers the back camera, a denied camera
-permission, or a camera in use elsewhere shows a 360° scene instead of the room. The camera's
-picture is stretched evenly to fill the whole view, edge to edge like the 360° scene, so the
-room looks somewhat bigger than it is (phones that can zoom out to an ultra-wide camera need
-less stretching). The camera is one lens, so the room looks the same to both eyes; only the
-window is placed in depth. Touches on the phone don't reach the PC while the window floats.
+While no game runs, the stream shows Gazeora's own window, and with the lens correction done by
+the phone, it fills both eyes as a game does. The Android app then tracks your hand with the
+phone's back camera (its picture never shows) and lets it point at the window, as VR headsets
+let a hand point at a screen out of reach: the middle of your palm moves a cursor the phone
+draws on the window, a pinch clicks, and a pinch that moves scrolls. The phone sends these to
+the PC as pointer messages on the window's own spots, the way it sends touches on a flat
+picture, so the PC takes pointer input in VR too. While a game is launching or running, they're
+off, like touches. A denied camera permission, or a camera in use elsewhere, leaves the window
+without a pointer.
 
 While the picture is laid out for the viewer, the phone's screen stays in the landscape it was
 in: tilting your head doesn't turn it over. A flat picture turns with the phone again.

@@ -338,7 +338,6 @@ void FrameStreamServer::SetFrameRate(uint32_t fps) {
 void FrameStreamServer::SetVrLayout(const VrLayout& vr) {
     std::lock_guard<std::mutex> lock(m_vrMutex);
     m_vr = vr;
-    m_pointerGate.SetVrOn(vr.enabled);
 }
 
 VrLayout FrameStreamServer::GetVrLayout() {

@@ -165,7 +165,8 @@ private:
     TextureCache m_textures;
     GameLibraryServices m_libraryServices{LibraryLocation::DefaultPath()};
     GameLibrary& m_library = m_libraryServices.Library();
-    // The phone's touches, while the stream isn't laid out for VR. Declared before m_stream,
+    // The phone's touches on a flat picture, and its hand pointing at this window in a VR
+    // viewer. Declared before m_stream,
     // whose threads deliver them; each one wakes the UI thread to draw.
     PointerEventQueue m_remoteTouches{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
     ImGuiPointerInput m_remoteInput;

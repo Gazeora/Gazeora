@@ -97,19 +97,16 @@ TEST(PointerMessageTest, RefusesShortOrUnknownPayloads) {
     EXPECT_FALSE(PointerMessage::Read(Bytes(payload), payload.size(), read));
 }
 
-TEST(PointerGateTest, PassesEventsOnOnlyWhileVrIsOff) {
+TEST(PointerGateTest, PassesEventsOnOnceItHasATarget) {
     RecordingSink sink;
     PointerGate gate;
     gate.OnPointer(Scroll(1, 0));  // no target yet
     gate.SetTarget(&sink);
-    gate.SetVrOn(true);
     gate.OnPointer(Scroll(2, 0));
-    gate.SetVrOn(false);
-    gate.OnPointer(Scroll(3, 0));
 
     std::vector<PointerEvent> heard = sink.WaitFor(1);
     ASSERT_EQ(heard.size(), 1u);
-    EXPECT_EQ(heard[0].wheelVertical, 3);
+    EXPECT_EQ(heard[0].wheelVertical, 2);
 }
 
 TEST(PointerInputReceiverTest, HearsPointerDatagramsFromAdmittedAddressesOnly) {

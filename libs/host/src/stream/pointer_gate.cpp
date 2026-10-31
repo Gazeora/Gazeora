@@ -4,7 +4,7 @@ namespace gazeora {
 
 void PointerGate::OnPointer(const PointerEvent& event) {
     PointerEventSink* target = m_target;
-    if (target && !m_vrOn) {
+    if (target) {
         target->OnPointer(event);
     }
 }
