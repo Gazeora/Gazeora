@@ -38,6 +38,7 @@ add_executable(Gazeora WIN32
     src/pages/home_page.cpp
     src/pages/library_page.cpp
     src/pages/settings_page.cpp
+    src/pages/update_card.cpp
     src/platform/game_open_request.cpp
     src/platform/shell.cpp
     src/platform/usb_driver.cpp
@@ -48,6 +49,7 @@ add_executable(Gazeora WIN32
     src/settings/controls_settings.cpp
     src/settings/settings_file.cpp
     src/settings/stream_settings.cpp
+    src/settings/update_settings.cpp
     src/ui/focus_edge.cpp
     src/ui/gamepad_scroll.cpp
     src/ui/gamepad_status_line.cpp
@@ -56,7 +58,9 @@ add_executable(Gazeora WIN32
     src/ui/text_format.cpp
     src/ui/theme.cpp
     src/ui/ui_scale.cpp
+    src/ui/update_status_line.cpp
     src/ui/widgets.cpp
+    src/update/update_control.cpp
     resources/gazeora.rc)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # config/build_features.h
@@ -66,7 +70,7 @@ target_compile_definitions(Gazeora PRIVATE
 configure_file(resources/version_info.h.in ${CMAKE_CURRENT_BINARY_DIR}/version_info.h @ONLY)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(Gazeora PRIVATE
-    gazeora_host_lib gazeora_library gazeora_input imgui
+    gazeora_host_lib gazeora_library gazeora_input gazeora_update imgui
     d3d11 dxgi dwmapi windowscodecs shell32 ole32 uuid
     crypt32 wintrust setupapi)  # the USB driver install
 if(NOT MSVC)

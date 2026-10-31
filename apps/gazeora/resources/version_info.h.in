@@ -6,6 +6,8 @@
 #define GAZEORA_VERSION_MINOR @PROJECT_VERSION_MINOR@
 #define GAZEORA_VERSION_PATCH @PROJECT_VERSION_PATCH@
 #define GAZEORA_VERSION_STRING "@GAZEORA_VERSION_LABEL@"  // v1.2.0, or v1.2.0-rc.1
+// The games this build captures, and the MSI that updates it: x64 or x86.
+#define GAZEORA_ARCH "@GAZEORA_ARCH@"
 #define GAZEORA_PUBLISHER "@GAZEORA_PUBLISHER@"
 #define GAZEORA_COPYRIGHT "Copyright (C) @GAZEORA_COPYRIGHT_YEAR@ @GAZEORA_AUTHOR@"
 // Kept in every version, as NOTICE's additional terms require.

@@ -188,6 +188,7 @@ void App::DrawSettings() {
         DrawOverlayCard(width);
     }
     DrawVrCard(width);
+    m_updateCard.Draw(m_fonts.heading, width, GameRunning());
 
     BeginCard("##about", m_scale, width);
     CardTitle(m_fonts.heading, ICON_INFO "  About");
