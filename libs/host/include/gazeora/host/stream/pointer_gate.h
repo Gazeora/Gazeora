@@ -6,19 +6,18 @@
 
 namespace gazeora {
 
-// Decorator pattern: passes pointer events on to a target, but not while the stream is laid
-// out for a VR viewer, where a touch has no spot in the picture to land on.
+// Decorator pattern: passes pointer events on to a target, once there is one. They come in VR
+// too: the phone's touches only while the picture is flat, and in a VR viewer its hand
+// pointing at this window, both on the window's own spots.
 class PointerGate final : public PointerEventSink {
 public:
     // Null drops every event. Set before the stream starts.
     void SetTarget(PointerEventSink* target) { m_target = target; }
-    void SetVrOn(bool vrOn) { m_vrOn = vrOn; }
 
     void OnPointer(const PointerEvent& event) override;
 
 private:
     std::atomic<PointerEventSink*> m_target{nullptr};
-    std::atomic<bool> m_vrOn{false};
 };
 
 }  // namespace gazeora

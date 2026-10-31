@@ -6,9 +6,8 @@
 //   vr=1 pair=0 k1=0.340 k2=0.550 scale=0.700 sep=0.500 chroma=0.000
 // vr: the phone does the lens correction (VrLayout::lensOnPhone), with these lens settings
 // (VrLayout); pair: the frame holds two views side by side, left eye's on the left, each
-// squeezed to half the width; src=app, only on frames of Gazeora's own window: the phone
-// floats it in the room rather than filling the eyes. A frame without the message is shown as
-// it is.
+// squeezed to half the width; src=app, only on frames of Gazeora's own window: the phone lets
+// the viewer's hand point at it. A frame without the message is shown as it is.
 #pragma once
 
 #include <string>
