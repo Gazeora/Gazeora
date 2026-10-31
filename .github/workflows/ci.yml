@@ -59,7 +59,7 @@ jobs:
           arch: ${{ matrix.vcvars }}
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DGAZEORA_STREAM_OVERLAY=OFF
 
       - name: Build
         run: cmake --build build
