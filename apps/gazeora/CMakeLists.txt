@@ -57,6 +57,9 @@ add_executable(Gazeora WIN32
     src/ui/widgets.cpp
     resources/gazeora.rc)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# config/build_features.h
+target_compile_definitions(Gazeora PRIVATE
+    GAZEORA_STREAM_OVERLAY=$<BOOL:${GAZEORA_STREAM_OVERLAY}>)
 # version_info.h, for gazeora.rc's version info.
 configure_file(resources/version_info.h.in ${CMAKE_CURRENT_BINARY_DIR}/version_info.h @ONLY)
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

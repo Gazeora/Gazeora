@@ -149,6 +149,10 @@ redistributable files so the programs run without the Visual C++ Redistributable
 | `gazeora_*_tests.exe` | Unit tests (with `GAZEORA_BUILD_TESTS=ON`, the default) |
 | `gazeora_bench.exe` | Benchmarks of every stage, from capture to RTP packets (with `GAZEORA_BUILD_BENCH=ON`, the default) |
 
+`-DGAZEORA_STREAM_OVERLAY=OFF` leaves the [stream overlay](docs/streaming.md#stream-overlay) out
+of `Gazeora.exe`: its settings card is gone and nothing is drawn into the frames, whatever
+`stream.ini` says. It's on by default; CI builds, and so the released MSIs, have it off.
+
 ### Installing
 
 `cmake --install` puts what Gazeora needs to run in `bin\` under the install folder, side by
