@@ -29,6 +29,7 @@ void ControlsPage::Draw(const Fonts& fonts) {
                         ImVec2(S(kCardItemSpacing.x), S(kCardItemSpacing.y)));
     float width = std::min(ImGui::GetContentRegionAvail().x, S(kMaxCardWidth));
     m_gamepad.Draw(fonts.heading, width);
+    m_head.Draw(fonts.heading, fonts.caption, width);
     ImGui::PopStyleVar();
 }
 

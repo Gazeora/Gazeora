@@ -8,7 +8,8 @@
 namespace gazeora::app {
 
 // Repository pattern: the controls settings, in controls.ini next to the library file so
-// they're easy to edit by hand. Game controllers in [game_controller].
+// they're easy to edit by hand. Game controllers in [game_controller], head tracking in
+// [head_tracking].
 class ControlsSettings {
 public:
     // The default location: next to LibraryLocation::DefaultPath().
@@ -19,9 +20,21 @@ public:
     bool LoadGamepadEnabled() const;
     void SaveGamepadEnabled(bool enabled) const;
 
+    // On unless saved off.
+    bool LoadHeadTrackingEnabled() const;
+    void SaveHeadTrackingEnabled(bool enabled) const;
+    // Mouse counts per degree the head turns; `fallback` if none is saved.
+    float LoadHeadCountsPerDegree(float fallback) const;
+    void SaveHeadCountsPerDegree(float counts) const;
+
     const std::wstring& Path() const { return m_path; }
 
 private:
+    // A number above 0 under `key` in [head_tracking]; `fallback` if there's none.
+    float LoadHeadNumber(const wchar_t* key, float fallback) const;
+    void SaveHeadNumber(const wchar_t* key, float value) const;
+    bool LoadSwitch(const wchar_t* section) const;
+    void SaveSwitch(const wchar_t* section, bool enabled) const;
     std::wstring ReadText(const wchar_t* section, const wchar_t* key) const;
     void WriteText(const wchar_t* section, const wchar_t* key, const std::wstring& value) const;
     void CreateFolder() const;

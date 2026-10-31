@@ -25,11 +25,17 @@
 #include "gazeora/input/gamepad_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "head/foreground_game_focus.h"
+#include "head/head_look.h"
+#include "head/head_tracking_control.h"
+#include "head/mouse_look_driver.h"
+#include "head/send_input_mouse_mover.h"
 #include "keyboard/imgui_text_sink.h"
 #include "keyboard/keyboard_view.h"
 #include "keyboard/on_screen_keyboard.h"
 #include "pages/controls_page.h"
 #include "pages/gamepad_card.h"
+#include "pages/head_tracking_card.h"
 #include "remote/imgui_pointer_input.h"
 #include "remote/pointer_event_queue.h"
 #include "settings/controls_settings.h"
@@ -155,6 +161,8 @@ private:
     GameSession* SessionFor(uint32_t gameId) const;
     // A game is launching or running: the phone's touches are off.
     bool GameRunning() const;
+    // The process of the game running, for head tracking; 0 if none is.
+    DWORD RunningGamePid() const;
     // Game controllers may drive this window: it's in front or streamed, and no game runs.
     bool GamepadDrivesWindow() const;
     const Texture& ArtFor(const Game& game);
@@ -173,6 +181,12 @@ private:
     // whose threads deliver them; each one wakes the UI thread to draw.
     PointerEventQueue m_remoteTouches{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
     ImGuiPointerInput m_remoteInput;
+    // Head tracking: the phone's head turns, as mouse moves into the game in front. Declared
+    // before m_stream, whose threads deliver the head poses.
+    SendInputMouseMover m_mouseMover;
+    MouseLookDriver m_mouseLook{m_mouseMover};
+    ForegroundGameFocus m_gameFocus;
+    HeadLook m_headLook{m_mouseLook, m_gameFocus};
     FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
     std::wstring m_streamError;  // why it isn't running
     StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout
@@ -235,7 +249,9 @@ private:
     bool m_gamepadBusy = false;
     GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
     GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
-    ControlsPage m_controls{m_gamepadCard, m_scale};
+    HeadTrackingControl m_headTracking{m_headLook, m_mouseLook, m_controlsSettings};
+    HeadTrackingCard m_headTrackingCard{m_headTracking, m_scale};
+    ControlsPage m_controls{m_gamepadCard, m_headTrackingCard, m_scale};
 };
 
 }  // namespace gazeora::app

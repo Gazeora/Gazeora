@@ -102,6 +102,8 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_presses.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/imgui_gamepad_input.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/pane_navigation.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/head/head_look.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/head/mouse_look_driver.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/keyboard_layout.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/on_screen_keyboard.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
@@ -113,8 +115,10 @@ gazeora_add_test(gazeora_app_tests
         app/gamepad/gamepad_presses_test.cpp
         app/gamepad/imgui_gamepad_input_test.cpp
         app/gamepad/pane_navigation_test.cpp
+        app/head/head_look_test.cpp
+        app/head/mouse_look_driver_test.cpp
         app/keyboard/keyboard_layout_test.cpp
         app/keyboard/on_screen_keyboard_test.cpp
-    LIBS gazeora_input gazeora_library imgui shell32 ole32 uuid)
+    LIBS gazeora_input gazeora_library gazeora_host_lib imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
     ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)

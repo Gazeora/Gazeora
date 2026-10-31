@@ -121,11 +121,17 @@ struct OverlaySwitch {
     bool OverlaySettings::* field;
 };
 constexpr OverlaySwitch kOverlaySwitches[] = {
-    {L"enabled", &OverlaySettings::enabled},       {L"protocol", &OverlaySettings::protocol},
-    {L"viewers", &OverlaySettings::viewers},       {L"codec", &OverlaySettings::codec},
-    {L"resolution", &OverlaySettings::resolution}, {L"frame_rate", &OverlaySettings::frameRate},
-    {L"bitrate", &OverlaySettings::bitrate},       {L"loss", &OverlaySettings::loss},
-    {L"encoder", &OverlaySettings::encoder},       {L"clock", &OverlaySettings::clock},
+    {L"enabled", &OverlaySettings::enabled},
+    {L"protocol", &OverlaySettings::protocol},
+    {L"viewers", &OverlaySettings::viewers},
+    {L"codec", &OverlaySettings::codec},
+    {L"resolution", &OverlaySettings::resolution},
+    {L"frame_rate", &OverlaySettings::frameRate},
+    {L"bitrate", &OverlaySettings::bitrate},
+    {L"loss", &OverlaySettings::loss},
+    {L"encoder", &OverlaySettings::encoder},
+    {L"clock", &OverlaySettings::clock},
+    {L"head", &OverlaySettings::head},
 };
 constexpr const wchar_t* kCorners[] = {L"top_left", L"top_right", L"bottom_left", L"bottom_right"};
 

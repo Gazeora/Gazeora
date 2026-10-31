@@ -62,6 +62,7 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_stream.SetFrameRate(m_settings.LoadFrameRate());
     m_stream.SetProtocol(m_settings.LoadProtocol());
     m_stream.SetPointerSink(&m_remoteTouches);
+    m_stream.SetHeadPoseSink(&m_headLook);
     StartStream();
     m_gamepadControl.Resume();
 }
@@ -194,6 +195,8 @@ void App::SetupImGui() {
 
 void App::Tick() {
     m_gamepadControl.SetGameRunning(GameRunning());
+    m_gameFocus.SetGame(RunningGamePid());
+    m_stream.SetHeadStatus(m_headTracking.OverlayStatus());
     if (m_logoDirty) {
         UpdateLogoFrame();  // here rather than in Draw: it uses the UI's device context
         m_logoDirty = false;
@@ -265,6 +268,16 @@ bool App::GameRunning() const {
         }
     }
     return false;
+}
+
+DWORD App::RunningGamePid() const {
+    for (const auto& session : m_sessions) {
+        GameSession::Stats stats = session->Snapshot();
+        if (stats.state == GameSession::State::Running && stats.pid != 0) {
+            return stats.pid;
+        }
+    }
+    return 0;
 }
 
 bool App::WantsContinuousFrames() const {
@@ -342,7 +355,7 @@ void App::Draw() {
             DrawDetails();
             break;
         case Page::Controls:
-            m_controls.Draw({m_fonts.title, m_fonts.heading});
+            m_controls.Draw({m_fonts.title, m_fonts.heading, m_fonts.caption});
             break;
         case Page::Settings:
             DrawSettings();

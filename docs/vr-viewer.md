@@ -66,4 +66,36 @@ whether 3D is working. Notes:
   attached to while already running works only if it moves its depth buffer out of the depth
   write state each frame, as deferred renderers do.
 
-There is no head tracking yet.
+## Head tracking
+
+While a game is in both eyes, turning your head turns the game's camera. The Android app reads
+the phone's rotation sensor 200 times a second (gyroscope and accelerometer, without the compass,
+which metal nearby pulls around) and sends where your head points to the PC, on the USB cable or
+over UDP port 8557 like touches. Gazeora turns each change into mouse movement for the game in
+front, the way mouse-look games (first and third person) turn their camera. Only the change
+counts, so the camera starts from wherever it looks; turn with the mouse or a stick as well, and
+both add up.
+
+Set it in **Controls → Head tracking**:
+
+- **The switch** turns it on and off (on until switched off, remembered).
+- **Sensitivity** is how far the mouse moves for each degree your head turns. Games differ, and
+  so do their own mouse sensitivity settings: turn your head a quarter turn and raise it if the
+  game turned less, lower it if more. 20 by default.
+
+The card says whether head turns are coming from the phone and reaching a game, and so does the
+stream overlay's **Head tracking** detail, from inside the headset: the head's yaw and pitch as
+the phone sends them, how many poses arrive a second (about 200), and whether they're turning
+the game. The [test app](tools.md#test-app) looks around with the mouse, for trying it without
+a game. Notes:
+
+- Only a game launched from Gazeora, and only while it's the window in front: switch to another
+  window and the desktop's mouse is left alone. The game needn't be captured: with capture off,
+  the headset shows Gazeora's window while your head still turns the game.
+- The phone sends head poses while it does the lens correction (**Lens correction done by →
+  The phone**, the default); with it done by this PC, the phone can't tell it's in a viewer.
+- Roll (tilting your head to the side) isn't passed on: a mouse can't tilt a camera.
+- The camera follows the head after the stream's delay (a game frame, encoding, the network and
+  decoding), so fast turns lag a little.
+- Windows doesn't let a program move the mouse in a game running as administrator unless it runs
+  as administrator too.
