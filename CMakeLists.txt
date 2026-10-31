@@ -35,6 +35,10 @@ else()
     set(GAZEORA_RUNTIME_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endif()
 
+# Off leaves the stream overlay out of Gazeora.exe: no settings card, nothing drawn. CI builds
+# without it.
+option(GAZEORA_STREAM_OVERLAY "Offer the stream overlay in Gazeora.exe" ON)
+
 add_subdirectory(libs)   # common, hook (gazeora_hook.dll), host, library
 add_subdirectory(apps)   # Gazeora.exe (launcher UI) and GazeoraCLI.exe
 add_subdirectory(tools)  # gazeora_testapp.exe, gazeora_stream_probe.exe

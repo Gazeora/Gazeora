@@ -16,6 +16,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include "config/build_features.h"
 #include "gazeora/common/shared.h"
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/frame_dump.h"
@@ -54,8 +55,10 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     // game is captured.
     m_vr = m_settings.LoadVrLayout();
     m_stream.SetVrLayout(m_vr);
-    m_overlay = m_settings.LoadOverlay();
-    m_stream.SetOverlay(m_overlay);
+    if (BuildFeatures::kStreamOverlay) {
+        m_overlay = m_settings.LoadOverlay();
+        m_stream.SetOverlay(m_overlay);
+    }
     m_stream.SetLogFile(StreamSettings::LogPath());
     m_stream.SetCodec(m_settings.LoadCodec());
     m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());

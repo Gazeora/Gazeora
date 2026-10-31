@@ -17,6 +17,7 @@
 #include <imgui.h>
 #include <imgui_stdlib.h>
 
+#include "config/build_features.h"
 #include "gazeora/common/shared.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
@@ -181,7 +182,9 @@ void App::DrawSettings() {
     }
     EndCard();
 
-    DrawOverlayCard(width);
+    if (BuildFeatures::kStreamOverlay) {
+        DrawOverlayCard(width);
+    }
     DrawVrCard(width);
 
     BeginCard("##about", m_scale, width);
