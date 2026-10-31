@@ -1053,6 +1053,7 @@ const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& t
     stats.encoder = EncoderName();
     GetLocalTime(&stats.time);
     stats.head = m_headMonitor.Reading();
+    stats.camera = m_cameraMonitor.Reading();
     {
         std::lock_guard<std::mutex> lock(m_overlayMutex);
         stats.headStatus = m_headStatus;

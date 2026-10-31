@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <cwchar>
 
+#include "gazeora/host/stream/camera_overlay_line.h"
+
 namespace gazeora {
 
 namespace {
@@ -37,7 +39,8 @@ bool OverlaySettings::operator==(const OverlaySettings& other) const {
            opacity == other.opacity && protocol == other.protocol && viewers == other.viewers &&
            codec == other.codec && resolution == other.resolution && frameRate == other.frameRate &&
            bitrate == other.bitrate && loss == other.loss && encoder == other.encoder &&
-           clock == other.clock && head == other.head && text == other.text;
+           clock == other.clock && head == other.head && camera == other.camera &&
+           text == other.text;
 }
 
 namespace {
@@ -99,7 +102,8 @@ std::vector<std::wstring> OverlayLines(const OverlaySettings& settings, const Ov
          {Line({settings.protocol ? Widen(stats.protocol) : L"", viewers}),
           Line({settings.codec ? Widen(stats.codec) : L"", resolution, frameRate}),
           Line({bitrate, loss}), settings.encoder ? stats.encoder : std::wstring(), clock,
-          settings.head ? HeadLine(stats) : std::wstring(), settings.text}) {
+          settings.head ? HeadLine(stats) : std::wstring(),
+          settings.camera ? CameraOverlayLine::From(stats.camera) : std::wstring(), settings.text}) {
         if (!line.empty()) {
             lines.push_back(line);
         }
