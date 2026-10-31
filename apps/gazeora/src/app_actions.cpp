@@ -113,6 +113,17 @@ void App::RemoveGame(uint32_t gameId) {
     }
 }
 
+void App::RemoveMissingGames() {
+    std::vector<Game> missing = m_libraryServices.Pruner().Prune(m_library);
+    if (missing.empty()) {
+        return;
+    }
+    SaveLibrary();
+    ShowToast(missing.size() == 1
+                  ? "Removed " + U8(missing.front().name) + ": its exe is missing"
+                  : "Removed " + std::to_string(missing.size()) + " games whose exe is missing");
+}
+
 void App::OpenDetails(uint32_t gameId) {
     m_detailsId = gameId;
     m_page = Page::Details;
