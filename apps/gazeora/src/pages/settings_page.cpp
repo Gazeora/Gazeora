@@ -195,7 +195,8 @@ void App::DrawSettings() {
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     ImGui::TextWrapped("%s", GAZEORA_COPYRIGHT
                        ". Free software under the GNU GPL version 3, "
-                       "with no warranty: see LICENSE and NOTICE.");
+                       "with no warranty: see LICENSE and NOTICE. Also available under a "
+                       "commercial license: see COMMERCIAL-LICENSE.md.");
     ImGui::PopStyleColor();
     EndCard();
     ImGui::PopStyleVar();
