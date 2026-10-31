@@ -1,184 +1,224 @@
 # Development
 
-Testing, benchmarks, the code layout and how to contribute.
+Building, testing, benchmarks, formatting and releasing. For how the code is organized, see
+[Architecture](architecture.md). For the contribution workflow, see
+[CONTRIBUTING.md](../CONTRIBUTING.md).
+
+## Building
+
+### Prerequisites
+
+- Windows. Configuring on another OS fails with *Gazeora is built for Windows only*.
+- CMake 3.20 or newer.
+- A C++17 compiler for the release you want (see [x64 and x86](#x64-and-x86)):
+  - MSVC from Visual Studio 2022 or newer, with its x64 or x86 tools, or
+  - MinGW-w64: a 64-bit toolchain for x64, a 32-bit one (such as MSYS2's
+    `mingw-w64-i686-gcc`) for x86.
+- Ninja, or a Visual Studio generator.
+- An internet connection for the first configure. CMake downloads:
+
+  | Dependency | Version | Used for |
+  |---|---|---|
+  | [MinHook](https://github.com/TsudaKageyu/minhook) | 1.3.3 | API hooking in the hook DLL |
+  | [Dear ImGui](https://github.com/ocornut/imgui) | 1.91.5 | The launcher UI |
+  | [libusb](https://github.com/libusb/libusb) | 1.0.29 | The USB protocol |
+  | [SDL](https://github.com/libsdl-org/SDL) | 3.4.18 | Game controllers |
+  | [nlohmann/json](https://github.com/nlohmann/json) | 3.11.3 | The library file |
+  | [GoogleTest](https://github.com/google/googletest) | 1.15.2 | Tests and benchmarks |
+
+- Optional: the .NET SDK (for the MSI), clang-format (for the `format` targets), and Python
+  with [pre-commit](https://pre-commit.com).
+
+### x64 and x86
+
+The compiler decides the release: a 64-bit compiler builds the x64 release, a 32-bit compiler
+the x86 release. Use a separate build folder for each. Configuring prints which release it is,
+for example `Building the x64 release of Gazeora`. See
+[Architecture](architecture.md#x64-and-x86-releases) for why.
+
+### Configure and build
+
+With MSVC, from a **Developer PowerShell for VS** (or after running `vcvarsall.bat x64` or
+`vcvarsall.bat x86`), in the repository root. These are the commands CI runs, without the
+overlay option:
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+cmake --build build
+```
+
+With MinGW-w64, with the toolchain's `bin` folder on `PATH`:
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+Visual Studio generators also work (`-G "Visual Studio 17 2022" -A x64`, or `-A Win32` for
+x86). They are multi-config, so outputs go to `build\bin\<config>\` and the build type is
+chosen with `cmake --build build --config Release`.
+
+### Build options
+
+| Option | Default | Effect |
+|---|---|---|
+| `GAZEORA_STREAM_OVERLAY` | `ON` | Includes the [stream overlay](streaming.md#stream-overlay) in `Gazeora.exe`. CI and the released MSIs use `OFF` |
+| `GAZEORA_BUILD_TESTS` | `ON` | Builds the unit tests |
+| `GAZEORA_BUILD_BENCH` | `ON` | Builds `gazeora_bench.exe` |
+| `GAZEORA_SIGN_CERT_FILE` | empty | A `.pfx` to Authenticode-sign the programs and the MSI. Its password is read from the `GAZEORA_SIGN_CERT_PASSWORD` environment variable |
+| `GAZEORA_SIGN_CERT_THUMBPRINT` | empty | Instead of a file, the SHA-1 thumbprint of a certificate in the user's store |
+
+Signing is off unless a certificate is given. See `cmake/CodeSigning.cmake`.
+
+### Outputs
+
+Everything goes into `build\bin\`. Keep the executables and `gazeora_hook.dll` in the same
+folder, because they load the hook from their own folder. With MSVC, the build also copies
+`vcomp140.dll` (the OpenMP runtime) from Visual Studio's redistributable files, so the programs
+run without the Visual C++ Redistributable. If it is not found, configuring warns.
+
+| Output | Description |
+|---|---|
+| `Gazeora.exe` | The launcher and stream server |
+| `GazeoraCLI.exe` | [Command-line](command-line.md) front end |
+| `gazeora_hook.dll` | The capture hook, injected into games |
+| `gazeora_testapp.exe` | [Test app](tools.md#test-app) |
+| `gazeora_stream_probe.exe` | [Stream probe](tools.md#stream-probe) |
+| `gazeora_*_tests.exe` | Unit tests |
+| `gazeora_bench.exe` | Benchmarks |
+
+### Installing a build
+
+`cmake --install` copies what Gazeora needs to run into `bin\` under the install prefix:
+`Gazeora.exe`, `GazeoraCLI.exe`, `gazeora_hook.dll` and, with MSVC, `vcomp140.dll`. The README and
+the license files go into `share\doc\Gazeora`, and the guides into `share\doc\Gazeora\docs`,
+so the README's links to them work in the installed copy. The test app and the
+stream probe are in the `Tools` component, installed only when asked for. Tests and benchmarks
+are never installed.
+
+```powershell
+cmake --install build                            # Program Files\Gazeora (x86: Program Files (x86)\Gazeora), as administrator
+cmake --install build --prefix D:\Apps\Gazeora   # another folder
+cmake --install build --component Tools          # also the test app and the stream probe
+```
+
+`cmake --install` does not add shortcuts, PATH entries or a firewall rule. For those, build
+the MSI: see [Installer](installer.md).
+
+```powershell
+cmake --build build --target gazeora_msi
+```
 
 ## Testing
 
+From the repository root, after building:
+
 ```powershell
-cd build
-ctest --output-on-failure
+ctest --test-dir build --output-on-failure
 ```
 
-The tests use GoogleTest and run Direct3D on WARP, so no GPU is required. They are split into
-separate executables because the hook and the host each attach to a per-process shared memory
-block:
+The tests use GoogleTest and run Direct3D on WARP, so no GPU is needed. CI runs them with
+`--repeat until-pass:3`. They are split into several executables because the hook and the host
+each attach to a per-process shared memory block:
 
 | Suite | Covers |
 |---|---|
-| `gazeora_hook_tests` | Hook core against a fake host; head turns as a controller's right stick, and the controllers' reports |
-| `gazeora_host_tests` | Capture client, injector (refusing a game of the other bitness), launcher, the test app captured end to end with the real hook (D3D9, and D3D8 in MinGW x86 builds), frame read-back, GPU scaling and the VR pass, NV12 conversion on the GPU, H.264 and H.265 encoding (software and hardware, from memory and from GPU textures), repeated frames, slicing, and RTP round trips through the system decoders, the RTSP server, the phone's touches and head poses (their angles, and what the overlay shows of them) |
+| `gazeora_hook_tests` | Hook core against a fake host; head turns as a controller's right stick; controller reports |
+| `gazeora_host_tests` | Capture client, injector, launcher, the test app captured end to end with the real hook, frame read-back, GPU scaling and the VR pass, NV12 conversion, H.264 and H.265 encoding, RTP round trips, the RTSP server, pointer and head pose input |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
-| `gazeora_library_tests` | The game library shared by both front ends |
-| `gazeora_installer_tests` | The MSI's custom action that deletes the user's data on uninstall, against a fake installer session |
-| `gazeora_input_tests` | Game controllers: steadying the sticks, the polling session, and SDL starting without a window |
-| `gazeora_app_tests` | The launcher's game controller support: ImGui navigation driven by controller states on a headless ImGui (across the sidebar and the page, pressing, the stick's hysteresis), the queue to the UI thread, and the switch in `controls.ini`; head tracking: the head's turns to the camera (late, restarted and paused phones), mouse-look's counts, and turning through the mouse or the controller, whichever the player is on |
+| `gazeora_library_tests` | The game library |
+| `gazeora_installer_tests` | The MSI's custom actions, against a fake installer session |
+| `gazeora_input_tests` | Game controllers: stick filtering, the polling session, SDL without a window |
+| `gazeora_app_tests` | The launcher's controller navigation and on-screen keyboard on a headless ImGui, `controls.ini`, and head tracking |
+
+Some tests depend on what the machine offers (for example a hardware encoder) and may skip
+themselves when it is missing.
+
+To test both releases on one PC, build both. The tests and the test app of each run as that
+release.
 
 ## Benchmarks
 
-`gazeora_bench.exe` times every stage on this PC's GPU and encoders and prints the mean, median,
-99th percentile and worst case. It lives in `bench/`, apart from the unit tests, and isn't part
-of `ctest`; run it from a Release build (as above):
+`gazeora_bench.exe` times each stage on this PC's GPU and encoders, and prints the mean,
+median, 99th percentile and worst case. It is not part of `ctest`. Run it from a Release build:
 
 ```powershell
 cd build\bin
-.\gazeora_bench.exe                                 # everything, about a minute
-.\gazeora_bench.exe --gtest_filter=Encode.*:Stream.* # some areas
+.\gazeora_bench.exe                                   # everything
+.\gazeora_bench.exe --gtest_filter=Encode.*:Stream.*  # some areas
 ```
 
 | Area | Measures |
 |---|---|
-| `Convert` | The hook's per-pixel conversion for each CPU readback layout; BGRA8 to NV12 at 720p, 1080p, 1440p |
-| `Capture` | The frame transport in one process; `TextureReader` at full size, scaled, 10-bit and VR; BMP screenshots; the real hook in `gazeora_testapp.exe` for each graphics API (opens a window per API) |
-| `Encode` | Each codec on the hardware and the software encoder: time per call, input-to-output latency, frame sizes, open time; the whole `VideoPipeline`; a 1080p game frame to packets, read back or kept on the GPU (time and CPU per frame) |
-| `Rtp`, `Rtcp`, `Rtsp`, `Bitrate` | Packetizing and depacketizing both codecs, parameter sets, RTCP reports, RTSP messages, the bitrate controller |
-| `Stream` | The `FrameMailbox` hand-off, `PacketSendQueue` pacing against its `PacingPlan`, and the whole server at 30 and 60 fps: `PushFrame` to a loopback UDP player receiving the frame |
+| `Convert` | The hook's pixel conversion, and BGRA8 to NV12 at 720p, 1080p and 1440p |
+| `Capture` | The frame transport, `TextureReader` at several sizes and modes, BMP screenshots, and the real hook in the test app for each graphics API (opens a window per API) |
+| `Encode` | Each codec on the hardware and software encoder, the whole `VideoPipeline`, and a 1080p frame to packets |
+| `Rtp`, `Rtcp`, `Rtsp`, `Bitrate` | Packetizing, RTCP reports, RTSP messages, the bitrate controller |
+| `Stream` | `FrameMailbox`, `PacketSendQueue` pacing, and the whole server at 30 and 60 fps to a loopback UDP player |
 | `Library` | Loading, saving and searching a 500-game library |
 
-## Project layout
+Results depend on the hardware and are not recorded in the repository.
 
-```
-libs/                 Libraries, in dependency order
-  common/               Shared-memory protocol between the hook and the host (header only)
-  hook/                 gazeora_hook.dll, injected into the game
-    core/                 API-agnostic: shared channel, hook helpers, pixel conversion, logging
-    d3d8/ ... opengl/     One folder per graphics API: d3d8, d3d9, d3d10, d3d11, d3d12, dxgi, opengl
-  host/                 gazeora_host_lib, shared by both front ends
-    launch/               Starting games (directly or through Steam) and injecting the hook
-    capture/              Receiving the hook's frames, GPU scaling, the VR pass and read-back
-    encode/               The VideoEncoder interface, Media Foundation behind it, BGRA to NV12
-    stream/               The stream server, its protocols and what it's made of (see below)
-  library/              The game library behind both front ends
-  input/                Game controllers
-    gamepad/              Steadying a controller's sticks
-    services/             The controller polling and its session
-    platform/             SDL controllers
-apps/
-  gazeora/              Gazeora.exe
-    src/                  App, with pages/ (one file per page), ui/ (theme, widgets),
-                          platform/ (shell dialogs, the USB driver, games opened from
-                          Explorer), gamepad/ (controllers to ImGui navigation), head/
-                          (head tracking to mouse-look) and settings/ (stream.ini,
-                          controls.ini)
-    resources/            Icon and resource script
-  cli/                  GazeoraCLI.exe
-tools/                The test app and the stream probe
-tests/                GoogleTest suites, in the same folders as the code they test
-installer/            The MSI: WiX sources and the custom-action DLL (see installer.md)
-bench/                gazeora_bench, the benchmarks
-cmake/                Compiler settings, dependency fetching, formatting targets and the install
-                      rules (InstallPrefix.cmake, Install.cmake)
+## Formatting and checks
+
+Code is formatted with clang-format using `.clang-format` at the root:
+
+```powershell
+cmake --build build --target format         # format everything
+cmake --build build --target format-check   # fail if anything is not formatted
 ```
 
-### x64 and x86 releases
+The targets are off if clang-format is not found. The [pre-commit](https://pre-commit.com)
+configuration runs clang-format, whitespace and line-ending checks (LF), YAML checks, and
+`tools/license_headers.py`, which checks that every source file has the copyright and SPDX
+license header:
 
-The hook runs inside the game, so it has the game's bitness, and so does the program that
-injects it: `CreateRemoteThread` + `LoadLibraryW` only works between processes of the same
-bitness. So Gazeora is built twice, as two releases: x64 for 64-bit games and x86 for 32-bit
-ones, each the whole of Gazeora. The compiler picks which (`GAZEORA_ARCH`, in
-`CompilerSettings.cmake`), and so does what depends on it: the default install folder. `InjectDll` refuses a game of the other bitness with a message naming
-the release that captures it.
-
-To test both on one PC, build both: the tests and the test app of each run as that release.
-With MSVC, run `vcvarsall.bat x64` or `x86` first; with MinGW, use a 64-bit or a 32-bit
-toolchain (MSYS2's `mingw-w64-i686-gcc` for x86). Code that hands Win32 a callback must give it
-the callback calling convention (`CALLBACK` / `WINAPI`, `__stdcall` on x86): a lambda only
-converts to a `__cdecl` function pointer there, so callbacks are named functions.
-
-Headers live under each library's `include/gazeora/<module>/`, sources under `src/`, with the
-same subfolders, so `libs/host/src/stream/frame_stream.cpp` implements
-`libs/host/include/gazeora/host/stream/frame_stream.h`, included as
-`"gazeora/host/stream/frame_stream.h"`.
-
-### The stream server
-
-`FrameStreamServer` coordinates; each part does one job and most can be tested alone:
-
-| Part | Job |
-|---|---|
-| `FrameMailbox` | Hands frames from the capture thread to the encoder, newest wins |
-| `VideoPipeline` | NV12 conversion, encoding, parameter sets, RTP packetization. Takes the encoder from a factory, so tests use a fake one |
-| `VideoEncoder` | Interface; `CreateVideoEncoder()` returns the Media Foundation one |
-| `RtpPayloadFormat` | Everything that differs between H.264 and H.265, one class per codec |
-| `BitrateController` | The bitrate ladder, driven by reported loss. Pure logic |
-| `RtspRequest`, `RtspResponse`, `RtspReader`, `TransportSpec` | Parsing and building RTSP messages |
-| `RtspConnection` | One player's socket and output queue (RTSP, and HTTP players) |
-| `FrameOutput` | Interface for the protocols other than RTSP: `UdpFrameOutput`, `HttpTsOutput`, `UsbAccessoryOutput` |
-| `TsMuxer` | Frames into an MPEG transport stream, for HTTP. Pure logic |
-| `FrameHeader`, `ChunkFrame`, `StreamMessage` | The GZF1 wire format of the UDP and USB protocols (`frame_packet.h`) |
-| `DiscoveryResponder` | Answers the Android app's search for the PC |
-| `PacingPlan`, `PacketSendQueue` | How to spread a frame's UDP packets (at 4x the bitrate, within half a frame interval), and the thread that sends them so, off the encode thread |
-| `rtcp`, `net`, `StreamLog` | RTCP reports, sockets, the stream log |
-
-RTSP methods are dispatched through a table in `frame_stream.cpp`; supporting another method
-is one handler and one entry.
-
-## Releasing
-
-The version lives in one place: the `VERSION` file at the root, as `MAJOR.MINOR.PATCH`
-(`1.1.0`), or `MAJOR.MINOR.PATCH-rc.N` for a release candidate (`1.1.0-rc.1`). It is always
-shown with a `v` in front: `v1.1.0`, `v1.1.0-rc.1`. From there it reaches the version info of
-`Gazeora.exe`, the About card on the Settings page and the MSI's file name. Windows Installer
-compares only the three numbers, so `v1.1.0-rc.1` and `v1.1.0` install as the same version and
-either replaces the other. To release:
-
-1. Change `VERSION`, for example to `1.1.0-rc.1`, and commit it (`chore: release v1.1.0-rc.1`).
-   The next build picks it up; there's no need to configure again.
-2. Publish a GitHub release titled `Gazeora v1.1.0-rc.1` with a new tag `v1.1.0-rc.1`. A
-   release candidate is published as a **pre-release**, a stable version as a normal release.
-3. CI (`.github/workflows/ci.yml`) builds and tests both releases and attaches
-   `Gazeora-v1.1.0-rc.1-x64.msi` and `Gazeora-v1.1.0-rc.1-x86.msi` to the release. It fails
-   if the tag doesn't match `VERSION`, or if a release candidate isn't a pre-release (or a
-   stable version is). To build the MSIs locally instead, run `--target gazeora_msi` in an x64
-   and an x86 build folder.
-4. CI then sends the release to [gazeora.github.io](https://gazeora.github.io), which lists it
-   on its download page. Editing or deleting the release later updates the site too
-   (`.github/workflows/website.yml`). Both need the `GAZEORA_SITE_TOKEN` secret: a fine-grained
-   token for the Gazeora organization with access to `Gazeora/gazeora.github.io` only and
-   **Contents: Read and write**.
-
-When a candidate is good, set `VERSION` to `1.1.0` and release `v1.1.0` the same way.
-
-### Weekly pre-release
-
-Every Monday at 00:00 UTC (or by hand: **Actions → Weekly pre-release → Run workflow**),
-`.github/workflows/weekly-release.yml` compares `master` with the highest release so far. If
-anything other than `VERSION` has changed, it releases the next patch as a candidate: after
-`v1.0.1-rc.1` comes `v1.0.2-rc.1`, and after a stable `v1.0.3`, `v1.0.4-rc.1`. If nothing has
-changed, there's no release that week. `master` only takes pull requests, so the workflow makes
-its own commit on top of `master` that sets `VERSION` (`chore: release v1.0.2-rc.1`), tags it,
-and runs CI on the tag. CI builds and tests both releases, then publishes the pre-release with
-its MSIs and notes from the pull requests merged since the last release, and sends it to the
-website. That commit stays off `master`, so `VERSION` on `master` keeps the last version set by
-hand; builds from `master` show that one. A week whose build fails publishes nothing (only its
-tag is left), and the next week tags the same version again from the newer `master`.
-
-CI also runs on every pull request and by hand from the Actions tab (`workflow_dispatch`); the
-MSIs of each run are kept as workflow artifacts for 7 days (90 for a release run). The MSIs
-attached to a release never expire.
-
-A newer MSI replaces the installed version, keeping the user's library and settings.
-
-## Contributing
-
-How to report problems, the code rules and the pull request steps are in
-[CONTRIBUTING.md](../CONTRIBUTING.md).
-
-The code is formatted with clang-format using the `.clang-format` file at the root. Run
-`cmake --build build --target format` to format everything, or `--target format-check` to
-check. The [pre-commit](https://pre-commit.com) configuration runs the same checks before each
-commit:
-
-```
+```powershell
 pip install pre-commit
 pre-commit install
 ```
+
+## Releasing
+
+The version is in the `VERSION` file at the root, as `MAJOR.MINOR.PATCH` (`1.1.0`) or
+`MAJOR.MINOR.PATCH-rc.N` for a release candidate (`1.1.0-rc.1`). It is always shown with a `v`
+prefix: `v1.1.0`, `v1.1.0-rc.1`. It reaches the version info of `Gazeora.exe`, the About card
+on the Settings page, and the MSI's file name. Windows Installer compares only the three
+numbers, so `v1.1.0-rc.1` and `v1.1.0` install as the same version and either replaces the
+other.
+
+To release:
+
+1. Set `VERSION`, for example to `1.1.0-rc.1`, and commit it (`chore: release v1.1.0-rc.1`).
+2. Publish a GitHub release titled `Gazeora v1.1.0-rc.1` with a new tag `v1.1.0-rc.1`. Publish
+   a release candidate as a **pre-release** and a stable version as a normal release.
+3. CI (`.github/workflows/ci.yml`) builds and tests both releases and attaches
+   `Gazeora-v1.1.0-rc.1-x64.msi` and `Gazeora-v1.1.0-rc.1-x86.msi` to the release. It fails if
+   the tag does not match `VERSION`, or if the pre-release flag does not match the version.
+4. CI then sends the release to [gazeora.github.io](https://gazeora.github.io), which lists it
+   on its download page. Editing or deleting the release later updates the site too
+   (`.github/workflows/website.yml`). Both need the `GAZEORA_SITE_TOKEN` repository secret: a
+   fine-grained token with **Contents: Read and write** access to `Gazeora/gazeora.github.io`
+   only.
+
+When a candidate is good, set `VERSION` to the stable version and release it the same way.
+
+### Weekly pre-release
+
+Every Monday at 00:00 UTC, or by hand from **Actions → Weekly pre-release → Run workflow**,
+`.github/workflows/weekly-release.yml` compares `master` with the highest release so far. If
+anything other than `VERSION` has changed, it releases the next patch as a candidate: after
+`v1.0.1-rc.1` comes `v1.0.2-rc.1`, and after a stable `v1.0.3` comes `v1.0.4-rc.1`. If nothing
+has changed, there is no release that week.
+
+`master` only accepts pull requests, so the workflow makes its own commit on top of `master`
+that sets `VERSION`, tags it, and runs CI on the tag. That commit stays off `master`, so
+`VERSION` on `master` keeps the last version set by hand. If the build fails, nothing is
+published (only the tag remains), and the next week tags the same version again from the newer
+`master`.
+
+### CI artifacts
+
+CI also runs on every pull request and by hand (`workflow_dispatch`). The MSIs of each run are
+kept as workflow artifacts for 7 days, or 90 days for a release run. MSIs attached to a release
+do not expire.

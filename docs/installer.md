@@ -7,8 +7,8 @@ Gazeora ships as one MSI per release: `Gazeora-v<version>-x64.msi` for 64-bit ga
 ## Building the MSI
 
 The MSI is built with [WiX](https://wixtoolset.org/) 5, which comes as a .NET tool pinned in
-`dotnet-tools.json`. Building needs the .NET SDK (6 or newer); the build fetches WiX and its
-extensions on first use.
+`dotnet-tools.json`. Building needs the .NET SDK; without it, configuring turns the `gazeora_msi` target off. The
+build fetches WiX and its extensions on first use.
 
 ```powershell
 cmake --build build --target gazeora_msi    # writes build\Gazeora-v1.0.0-x64.msi
@@ -16,7 +16,7 @@ cmake --build build --target gazeora_msi    # writes build\Gazeora-v1.0.0-x64.ms
 
 The target builds what the MSI holds, stages it with `cmake --install` (the `Runtime` and
 `Tools` components) under `build\installer\stage`, and packs that. So the MSI holds exactly
-what the install rules list (see [Installing](../README.md#installing)). The version comes
+what the install rules list (see [Installing a build](development.md#installing-a-build)). The version comes
 from the `VERSION` file (see [Releasing](development.md#releasing)). With a signing certificate
 set (see `cmake/CodeSigning.cmake`), the programs, the custom-action DLL and the MSI are all
 signed.
@@ -39,7 +39,7 @@ administrator. The wizard's feature tree has:
 | Gazeora | Always | `Uninstall.exe`, the programs and the hook in `bin\`, the guides and licenses in `share\doc\Gazeora`, and a Start menu shortcut |
 | Desktop shortcut | On | A shortcut on the desktop |
 | Add GazeoraCLI to PATH | On | Adds `bin\` to the system PATH, so `GazeoraCLI` runs from any new command prompt |
-| Open with Gazeora in Explorer | On | Right-click a game's `.exe` or shortcut and pick **Open with Gazeora** to add it to the library. On Windows 11 it's under **Show more options**. If Gazeora is already open, the game goes to that window |
+| Open with Gazeora in Explorer | On | Right-click a game's `.exe` or shortcut and pick **Open with Gazeora** (**Open with Gazeora (32-bit)** for the x86 release) to add it to the library. On Windows 11 it's under **Show more options**. If Gazeora is already open, the game goes to that window |
 | Allow the stream through the firewall | On | A Windows Firewall rule for `Gazeora.exe` on **private** networks, from the local subnet only. On a network Windows calls public, the stream stays blocked: make the network private in Windows' network settings |
 | Developer tools | Off | `gazeora_testapp.exe` and `gazeora_stream_probe.exe` ([Tools](tools.md)) |
 
@@ -75,7 +75,7 @@ keeps it. Without the property, a silent uninstall keeps the data.
 
 ## Layout
 
-```
+```text
 installer/
   CMakeLists.txt        The gazeora_msi target
   cmake/TextToRtf.cmake NOTICE and LICENSE as the license page's RTF
