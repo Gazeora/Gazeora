@@ -58,6 +58,29 @@ the same uninstall. Uninstalling removes everything the features added, and also
 
 Upgrading to a newer MSI does neither: the library, the settings and the driver stay.
 
+## Updating
+
+**Settings → Updates** in `Gazeora.exe` finds and installs newer releases.
+
+- **Checking.** At each start, Gazeora reads the list of Windows releases that
+  [gazeora.github.io](https://gazeora.github.io) publishes, over HTTPS. Turn off **Check for
+  updates when Gazeora starts** to stop that (saved in [`updates.ini`](configuration.md#updatesini))
+  and use **Check now** instead. Nothing about you or the PC is sent beyond what any web
+  request carries: the PC's IP address, and Gazeora's version in the user agent.
+- **What's offered.** A release (`v1.2.0`) is offered newer releases only. A release candidate
+  (`v1.2.0-rc.1`) is also offered newer release candidates. A release is offered only if it has an
+  MSI for the running build (x64 or x86).
+- **Installing.** **Download and install** downloads that MSI to `%TEMP%\Gazeora\updates` and
+  checks its size and SHA-256 against what the release published. If either doesn't match, the
+  file is deleted and nothing runs. Otherwise Gazeora opens the MSI's wizard and closes itself so
+  its files can be replaced. The wizard asks for administrator permission, as a first install
+  does. The button is disabled while a game launched from Gazeora runs.
+- **If it fails.** **Try again** repeats the step. **Download it yourself** opens the release's
+  page on GitHub.
+
+The wizard starts from the default install folder. If Gazeora was installed somewhere else, pick
+that folder again in the wizard.
+
 ## Silent installs
 
 Feature IDs and properties for `msiexec`:

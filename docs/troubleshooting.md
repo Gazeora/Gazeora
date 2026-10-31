@@ -8,6 +8,16 @@ release (x64 or x86) already filled in. Add the protocol and codec, and attach
 `%APPDATA%\Gazeora\stream.log` (see [Stream log](streaming.md#stream-log)). Nothing is sent
 until you submit the issue yourself.
 
+## Updates
+
+### "Couldn't reach ... (error N)"
+
+Gazeora couldn't connect to the website or to GitHub. The number is the WinHTTP error:
+`12007` means the name couldn't be looked up, `12029` the connection failed, and
+`12002` it timed out. Check the PC's internet connection and any proxy or firewall, then click
+**Try again**. **Download it yourself** opens the release page so the MSI can be downloaded in a
+browser instead. See [Updating](installer.md#updating).
+
 ## Capture
 
 ### Settings → Capture shows "Missing: reinstall Gazeora"

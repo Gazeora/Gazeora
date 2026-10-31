@@ -129,7 +129,8 @@ each attach to a per-process shared memory block:
 | `gazeora_library_tests` | The game library |
 | `gazeora_installer_tests` | The MSI's custom actions, against a fake installer session |
 | `gazeora_input_tests` | Game controllers: stick filtering, the polling session, SDL without a window |
-| `gazeora_app_tests` | The launcher's controller navigation and on-screen keyboard on a headless ImGui, `controls.ini`, and head tracking |
+| `gazeora_update_tests` | Release versions and channels, the release feed, and the MSI download's size and SHA-256 checks, against a fake web server |
+| `gazeora_app_tests` | The launcher's controller navigation and on-screen keyboard on a headless ImGui, `controls.ini`, head tracking, and the update steps |
 
 Some tests depend on what the machine offers (for example a hardware encoder) and may skip
 themselves when it is missing.

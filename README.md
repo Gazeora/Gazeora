@@ -29,6 +29,8 @@ UDP or USB.
   movement for supported controllers, in the game in front.
 - **Game controllers and touch.** A controller can drive the launcher, with an on-screen
   keyboard. Touches and the hand pointer in the Android app can also drive the launcher window.
+- **Updates.** `Gazeora.exe` finds newer releases on gazeora.github.io, then downloads, checks
+  and starts the MSI. See [Updating](docs/installer.md#updating).
 
 See [Known limitations](#known-limitations) before relying on any of these.
 
