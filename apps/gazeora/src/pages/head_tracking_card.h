@@ -9,8 +9,8 @@
 
 namespace gazeora::app {
 
-// The Controls page's head tracking card: the switch, the sensitivity, and whether the phone's
-// head turns are reaching a game.
+// The Controls page's head tracking card: the switch, the mouse's sensitivity, how the game turns
+// with its controller's stick, and whether the phone's head turns are reaching a game.
 class HeadTrackingCard {
 public:
     HeadTrackingCard(HeadTrackingControl& control, float scale)
@@ -21,6 +21,8 @@ public:
 private:
     void DrawSwitch();
     void DrawSensitivity(ImFont* caption);
+    void DrawController(ImFont* caption);
+    void DrawControllerSeen();
     void DrawStatus();
     float S(float px) const { return px * m_scale; }
 

@@ -20,6 +20,8 @@ constexpr wchar_t kGamepadSection[] = L"game_controller";
 constexpr wchar_t kHeadSection[] = L"head_tracking";
 constexpr wchar_t kEnabled[] = L"enabled";
 constexpr wchar_t kCountsPerDegree[] = L"counts_per_degree";
+constexpr wchar_t kStickDegreesPerSecond[] = L"stick_degrees_per_second";
+constexpr wchar_t kStickDeadZone[] = L"stick_dead_zone";
 constexpr wchar_t kOn[] = L"1";
 constexpr wchar_t kOff[] = L"0";
 constexpr DWORD kMaxText = 1024;
@@ -48,11 +50,27 @@ void ControlsSettings::SaveHeadCountsPerDegree(float counts) const {
     SaveHeadNumber(kCountsPerDegree, counts);
 }
 
+float ControlsSettings::LoadStickDegreesPerSecond(float fallback) const {
+    return LoadHeadNumber(kStickDegreesPerSecond, fallback);
+}
+
+void ControlsSettings::SaveStickDegreesPerSecond(float degrees) const {
+    SaveHeadNumber(kStickDegreesPerSecond, degrees);
+}
+
+float ControlsSettings::LoadStickDeadZone(float fallback) const {
+    return LoadHeadNumber(kStickDeadZone, fallback);
+}
+
+void ControlsSettings::SaveStickDeadZone(float deadZone) const {
+    SaveHeadNumber(kStickDeadZone, deadZone);
+}
+
 float ControlsSettings::LoadHeadNumber(const wchar_t* key, float fallback) const {
     const std::wstring text = ReadText(kHeadSection, key);
     wchar_t* end = nullptr;
     const float number = std::wcstof(text.c_str(), &end);
-    return text.empty() || *end != L'\0' || !(number > 0.0f) ? fallback : number;
+    return text.empty() || *end != L'\0' || !(number >= 0.0f) ? fallback : number;
 }
 
 void ControlsSettings::SaveHeadNumber(const wchar_t* key, float value) const {

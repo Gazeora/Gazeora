@@ -7,24 +7,27 @@
 
 namespace gazeora::app {
 
-HeadTrackingStatusLine::HeadTrackingStatusLine(bool enabled, bool receiving, bool gameInFront)
+HeadTrackingStatusLine::HeadTrackingStatusLine(const State& state)
     : m_text("Off"), m_color(kTextFaint) {
-    if (enabled) {
-        DescribeOn(receiving, gameInFront);
+    if (state.enabled) {
+        DescribeOn(state);
     }
 }
 
-void HeadTrackingStatusLine::DescribeOn(bool receiving, bool gameInFront) {
-    if (!receiving) {
+void HeadTrackingStatusLine::DescribeOn(const State& state) {
+    if (!state.receiving) {
         m_text = "Waiting for the phone: play in the Gazeora app, in a VR viewer";
         m_color = kTextDim;
-    } else if (!gameInFront) {
+    } else if (!state.gameInFront) {
         m_text =
             "The phone is tracking your head. Waiting for a game launched from here to "
             "be in front";
         m_color = kWarning;
+    } else if (state.onController) {
+        m_text = ICON_CHECK "  Your head is turning the game's camera with the controller";
+        m_color = kSuccess;
     } else {
-        m_text = ICON_CHECK "  Your head is turning the game's camera";
+        m_text = ICON_CHECK "  Your head is turning the game's camera with the mouse";
         m_color = kSuccess;
     }
 }

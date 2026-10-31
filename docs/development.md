@@ -15,13 +15,13 @@ block:
 
 | Suite | Covers |
 |---|---|
-| `gazeora_hook_tests` | Hook core against a fake host |
+| `gazeora_hook_tests` | Hook core against a fake host; head turns as a controller's right stick, and the controllers' reports |
 | `gazeora_host_tests` | Capture client, injector (refusing a game of the other bitness), launcher, the test app captured end to end with the real hook (D3D9, and D3D8 in MinGW x86 builds), frame read-back, GPU scaling and the VR pass, NV12 conversion on the GPU, H.264 and H.265 encoding (software and hardware, from memory and from GPU textures), repeated frames, slicing, and RTP round trips through the system decoders, the RTSP server, the phone's touches and head poses (their angles, and what the overlay shows of them) |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library shared by both front ends |
 | `gazeora_installer_tests` | The MSI's custom action that deletes the user's data on uninstall, against a fake installer session |
 | `gazeora_input_tests` | Game controllers: steadying the sticks, the polling session, and SDL starting without a window |
-| `gazeora_app_tests` | The launcher's game controller support: ImGui navigation driven by controller states on a headless ImGui (across the sidebar and the page, pressing, the stick's hysteresis), the queue to the UI thread, and the switch in `controls.ini`; head tracking: the head's turns to the camera (late, restarted and paused phones) and mouse-look's counts |
+| `gazeora_app_tests` | The launcher's game controller support: ImGui navigation driven by controller states on a headless ImGui (across the sidebar and the page, pressing, the stick's hysteresis), the queue to the UI thread, and the switch in `controls.ini`; head tracking: the head's turns to the camera (late, restarted and paused phones), mouse-look's counts, and turning through the mouse or the controller, whichever the player is on |
 
 ## Benchmarks
 

@@ -17,9 +17,13 @@ add_executable(Gazeora WIN32
     src/gamepad/gamepad_presses.cpp
     src/gamepad/imgui_gamepad_input.cpp
     src/gamepad/pane_navigation.cpp
+    src/head/controller_look_driver.cpp
+    src/head/device_switching_driver.cpp
     src/head/foreground_game_focus.cpp
     src/head/head_look.cpp
     src/head/head_tracking_control.cpp
+    src/head/keyboard_mouse_watch.cpp
+    src/head/last_used_device.cpp
     src/head/mouse_look_driver.cpp
     src/head/send_input_mouse_mover.cpp
     src/keyboard/imgui_text_sink.cpp

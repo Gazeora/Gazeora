@@ -7,17 +7,24 @@
 
 namespace gazeora::app {
 
-// The one line under the head tracking switch: whether head turns reach a game, or what
-// they're waiting for.
+// The one line under the head tracking settings: whether head turns reach a game, and through
+// which, or what they're waiting for.
 class HeadTrackingStatusLine {
 public:
-    HeadTrackingStatusLine(bool enabled, bool receiving, bool gameInFront);
+    struct State {
+        bool enabled = false;
+        bool receiving = false;
+        bool gameInFront = false;
+        bool onController = false;
+    };
+
+    explicit HeadTrackingStatusLine(const State& state);
 
     const char* Text() const { return m_text; }
     ImU32 Color() const { return m_color; }
 
 private:
-    void DescribeOn(bool receiving, bool gameInFront);
+    void DescribeOn(const State& state);
 
     const char* m_text;
     ImU32 m_color;

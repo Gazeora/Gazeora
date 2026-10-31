@@ -63,6 +63,7 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_stream.SetProtocol(m_settings.LoadProtocol());
     m_stream.SetPointerSink(&m_remoteTouches);
     m_stream.SetHeadPoseSink(&m_headLook);
+    m_keyboardMouse.Register(m_hwnd);
     StartStream();
     m_gamepadControl.Resume();
 }
@@ -195,7 +196,9 @@ void App::SetupImGui() {
 
 void App::Tick() {
     m_gamepadControl.SetGameRunning(GameRunning());
-    m_gameFocus.SetGame(RunningGamePid());
+    const DWORD game = RunningGamePid();
+    m_gameFocus.SetGame(game);
+    m_controllerChannel.Attach(game);
     m_stream.SetHeadStatus(m_headTracking.OverlayStatus());
     if (m_logoDirty) {
         UpdateLogoFrame();  // here rather than in Draw: it uses the UI's device context

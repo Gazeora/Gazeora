@@ -20,6 +20,7 @@
 #include "gazeora/hook/d3d8/d3d8_hooks.h"
 #include "gazeora/hook/d3d9/d3d9_hooks.h"
 #include "gazeora/hook/dxgi/dxgi_hooks.h"
+#include "gazeora/hook/input/controller_hooks.h"
 #include "gazeora/hook/opengl/gl_hooks.h"
 
 namespace gazeora::hook {
@@ -40,6 +41,8 @@ const HookModule kModules[] = {
     {"D3D9", d3d9::Install, false},
     {"D3D8", d3d8::Install, false},
     {"OpenGL", opengl::Install, false},
+    // Head tracking through the game's controller, whatever it draws with.
+    {"controllers", input::Install, false},
 };
 
 DWORD WINAPI InitThread(LPVOID) {

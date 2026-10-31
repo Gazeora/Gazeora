@@ -26,11 +26,17 @@ public:
     // Mouse counts per degree the head turns; `fallback` if none is saved.
     float LoadHeadCountsPerDegree(float fallback) const;
     void SaveHeadCountsPerDegree(float counts) const;
+    // How the game turns with its controller's stick: degrees a second at full tilt, and the
+    // dead zone (0..1) it ignores; `fallback` if none is saved.
+    float LoadStickDegreesPerSecond(float fallback) const;
+    void SaveStickDegreesPerSecond(float degrees) const;
+    float LoadStickDeadZone(float fallback) const;
+    void SaveStickDeadZone(float deadZone) const;
 
     const std::wstring& Path() const { return m_path; }
 
 private:
-    // A number above 0 under `key` in [head_tracking]; `fallback` if there's none.
+    // A number, 0 or more, under `key` in [head_tracking]; `fallback` if there's none.
     float LoadHeadNumber(const wchar_t* key, float fallback) const;
     void SaveHeadNumber(const wchar_t* key, float value) const;
     bool LoadSwitch(const wchar_t* section) const;

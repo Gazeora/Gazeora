@@ -30,7 +30,7 @@
 namespace gazeora {
 
 constexpr uint32_t kSharedMagic = 0x415A4147;  // "GAZA"
-constexpr uint32_t kSharedVersion = 4;
+constexpr uint32_t kSharedVersion = 5;
 constexpr uint32_t kFrameSlots = 3;
 
 enum HookState : LONG {
@@ -88,6 +88,14 @@ enum DepthEncoding : uint32_t {
     kDepthUnorm24 = 2,  // the low 24 bits, 0..0xFFFFFF for 0..1 (the stencil in the top byte)
 };
 
+// SharedHeader::controllerPaths: the ways the hook has seen the game read a controller, by bit.
+enum ControllerPath : LONG {
+    kPathSonyRead = 1,        // a DualSense or DualShock 4 on USB, through ReadFile
+    kPathSonyOverlapped = 2,  // the same, its read finished through GetOverlappedResult
+    kPathSonyGetReport = 4,   // the same, through HidD_GetInputReport
+    kPathXInput = 8,          // XInputGetState, a connected controller
+};
+
 // What one depth slot holds.
 struct DepthSlotInfo {
     volatile LONG64 frame;  // the frame whose depth it holds; 0 for none
@@ -125,6 +133,18 @@ struct SharedHeader {
     volatile LONG64 lastPresentQpc;         // QueryPerformanceCounter at capture time
     volatile LONG64 skippedFrames;          // presents not captured because a slot was busy
     DepthSlotInfo depthSlots[kFrameSlots];  // by slot, written by the hook with the frame
+
+    // Head tracking through the game's controller (the hook's input module). The host adds each
+    // head turn to the totals; as the game reads its controller, the hook turns what's new into
+    // movement of the right stick, on top of the player's.
+    volatile LONG64 headYawMicro;         // total turn, millionths of a degree, to the left (host)
+    volatile LONG64 headPitchMicro;       // up (host)
+    volatile LONG64 controllerReadQpc;    // the game last read a connected controller (hook)
+    volatile LONG64 controllerActiveQpc;  // the player last moved or pressed one (hook)
+    volatile LONG stickDegreesPerSecond;  // the game's turn at full stick (host); 0: none
+    volatile LONG stickDeadZonePermille;  // how far the game ignores the stick (host)
+    volatile LONG controllerPaths;        // ControllerPath bits seen (hook)
+    LONG reserved;
 
     char status[256];  // last human-readable status/error from the hook
 };

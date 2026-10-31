@@ -20,14 +20,19 @@
 #include "gamepad/gamepad_presses.h"
 #include "gamepad/imgui_gamepad_input.h"
 #include "gamepad/pane_navigation.h"
+#include "gazeora/host/capture/controller_turn_channel.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/input/gamepad_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "head/controller_look_driver.h"
+#include "head/device_switching_driver.h"
 #include "head/foreground_game_focus.h"
 #include "head/head_look.h"
 #include "head/head_tracking_control.h"
+#include "head/keyboard_mouse_watch.h"
+#include "head/last_used_device.h"
 #include "head/mouse_look_driver.h"
 #include "head/send_input_mouse_mover.h"
 #include "keyboard/imgui_text_sink.h"
@@ -85,6 +90,8 @@ public:
     void OnFilesDropped(const std::vector<std::wstring>& paths);
     // The window was activated: pick up changes GazeoraCLI made to the library.
     void OnActivated();
+    // A WM_INPUT message: the player using the keyboard or mouse, for head tracking.
+    void OnRawInput(HRAWINPUT input) { m_keyboardMouse.OnRawInput(input); }
 
 private:
     enum class Page { Home, Library, Details, Controls, Settings };
@@ -181,12 +188,18 @@ private:
     // whose threads deliver them; each one wakes the UI thread to draw.
     PointerEventQueue m_remoteTouches{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
     ImGuiPointerInput m_remoteInput;
-    // Head tracking: the phone's head turns, as mouse moves into the game in front. Declared
-    // before m_stream, whose threads deliver the head poses.
+    // Head tracking: the phone's head turns, into the game in front, as mouse moves or through its
+    // controller's right stick, whichever the player is on. Declared before m_stream, whose
+    // threads deliver the head poses.
     SendInputMouseMover m_mouseMover;
     MouseLookDriver m_mouseLook{m_mouseMover};
+    ControllerTurnChannel m_controllerChannel;
+    ControllerLookDriver m_controllerLook{m_controllerChannel};
+    KeyboardMouseWatch m_keyboardMouse;
+    LastUsedDevice m_lastUsedDevice{m_controllerChannel, m_keyboardMouse};
+    DeviceSwitchingDriver m_cameraDriver{m_mouseLook, m_controllerLook, m_lastUsedDevice};
     ForegroundGameFocus m_gameFocus;
-    HeadLook m_headLook{m_mouseLook, m_gameFocus};
+    HeadLook m_headLook{m_cameraDriver, m_gameFocus};
     FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
     std::wstring m_streamError;  // why it isn't running
     StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout
@@ -249,7 +262,9 @@ private:
     bool m_gamepadBusy = false;
     GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
     GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
-    HeadTrackingControl m_headTracking{m_headLook, m_mouseLook, m_controlsSettings};
+    HeadTrackingControl m_headTracking{
+        {m_headLook, m_mouseLook, m_controllerLook, m_lastUsedDevice, m_controllerChannel},
+        m_controlsSettings};
     HeadTrackingCard m_headTrackingCard{m_headTracking, m_scale};
     ControlsPage m_controls{m_gamepadCard, m_headTrackingCard, m_scale};
 };
