@@ -112,6 +112,7 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/keyboard_layout.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/on_screen_keyboard.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/report/issue_link.cpp
         ${GAZEORA_APP_SOURCE_DIR}/report/windows_description.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/controls_settings.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/settings_file.cpp
@@ -126,6 +127,7 @@ gazeora_add_test(gazeora_app_tests
         app/head/mouse_look_driver_test.cpp
         app/keyboard/keyboard_layout_test.cpp
         app/keyboard/on_screen_keyboard_test.cpp
+        app/report/issue_link_test.cpp
         app/report/windows_description_test.cpp
     LIBS gazeora_input gazeora_library gazeora_host_lib imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
