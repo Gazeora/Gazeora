@@ -25,16 +25,18 @@ struct Scene {
 Scene SceneAt(float t);
 
 // A depth-tested 3D scene for the D3D11 and D3D12 renderers, for 3D from depth: a checkered
-// floor running into the distance and cards swaying at different depths. HLSL with vs and ps;
-// its constants (b0) are SceneConstants. Drawn as a 4-vertex triangle strip, kSceneInstances
-// times.
+// floor all around and cards swaying ahead at different depths, seen through a camera the mouse
+// turns (MouseLook). HLSL with vs and ps; its constants (b0) are SceneConstants. Drawn as a
+// 4-vertex triangle strip, kSceneInstances times.
 extern const char kSceneShader[];
 constexpr UINT kSceneInstances = 5;
 struct SceneConstants {
     float time;
     float reversed;  // 1: depth 1 near, 0 far (cleared to 0, GREATER); 0: the other way
     float aspect;
-    float unused;
+    float yaw;    // the camera's, radians: positive to the left
+    float pitch;  // positive up
+    float unused[3];
 };
 
 class Clock {

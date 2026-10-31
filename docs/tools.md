@@ -27,3 +27,9 @@ as Windows has no 64-bit D3D8. In D3D11 and D3D12 it also draws a
 depth-tested 3D scene, for testing 3D from depth: D3D11 with 24-bit depth (0 near), D3D12 with
 reversed 32-bit float depth that goes to a shader-readable state after drawing, like a deferred
 renderer. `--d3d12-depth-write` keeps it in the depth write state instead.
+
+The 3D scene's camera turns with the mouse while the window is in front, as in a first-person
+game: raw input, 0.05° a count, so Gazeora's head tracking at its default sensitivity (20 counts
+a degree) turns it exactly as far as your head. The window's title shows where it looks. Add it
+to the library and play it from Gazeora with the phone in the viewer to check head tracking end
+to end.

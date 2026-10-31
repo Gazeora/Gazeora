@@ -3,7 +3,8 @@
 
 // Minimal "game" for testing the capture hook without touching a real game:
 // a 1280x720 window with a color-cycling background and a moving white square, and in D3D11
-// and D3D12 a depth-tested 3D scene, for 3D from depth.
+// and D3D12 a depth-tested 3D scene, for 3D from depth, that the mouse looks around as in a
+// first-person game (for head tracking; the window's title shows where it looks).
 //
 //   gazeora_testapp.exe            D3D11
 //   gazeora_testapp.exe --d3d8     D3D8 (MinGW builds only: the Windows SDK has no d3d8.h;
@@ -19,6 +20,7 @@
 #include <cstring>
 
 #include "testapp/app.h"
+#include "testapp/mouse_look.h"
 
 namespace {
 
@@ -60,6 +62,8 @@ int main(int argc, char** argv) {
     wchar_t title[64];
     swprintf(title, 64, L"Gazeora Test App (%hs)", renderer->name);
     HWND hwnd = testapp::CreateTestWindow(title);
+    testapp::MouseLook look;
+    look.Attach(hwnd);
     printf("Test app running (%s), PID %lu. Close the window to exit.\n", renderer->name,
            GetCurrentProcessId());
     return renderer->run(hwnd);

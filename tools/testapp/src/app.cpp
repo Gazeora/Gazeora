@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+#include "testapp/mouse_look.h"
+
 namespace testapp {
 
 namespace {
@@ -13,6 +15,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     if (msg == WM_DESTROY) {
         PostQuitMessage(0);
         return 0;
+    }
+    if (msg == WM_INPUT) {
+        if (MouseLook* look = MouseLook::Of(hwnd)) {
+            look->OnRawInput(reinterpret_cast<HRAWINPUT>(lp));
+        }
     }
     return DefWindowProcW(hwnd, msg, wp, lp);
 }
@@ -57,14 +64,16 @@ Scene SceneAt(float t) {
 }
 
 const char kSceneShader[] = R"(
-cbuffer Scene : register(b0) { float time; float reversed; float aspect; float unused; };
+cbuffer Scene : register(b0) {
+    float time; float reversed; float aspect; float yaw; float pitch; float3 unused;
+};
 struct Vertex { float4 position : SV_Position; float3 color : COLOR; float2 cell : TEXCOORD; };
 Vertex vs(uint id : SV_VertexID, uint instance : SV_InstanceID) {
     float2 corner = float2(id & 1, id >> 1);
     float3 p;
     Vertex v;
-    if (instance == 0) {  // the floor, from just ahead to far away
-        p = float3(lerp(-12, 12, corner.x), -1, lerp(1.5, 60, corner.y));
+    if (instance == 0) {  // the floor, all around, so every turn shows
+        p = float3(lerp(-60, 60, corner.x), -1, lerp(-60, 60, corner.y));
         v.color = float3(0.3, 0.7, 0.4);
         v.cell = float2(p.x, p.z);
     } else {              // a card standing on it, swaying
@@ -74,6 +83,9 @@ Vertex vs(uint id : SV_VertexID, uint instance : SV_InstanceID) {
         v.color = float3(0.9, 0.5 + 0.1 * instance, 0.2);
         v.cell = corner * 4;
     }
+    // Into the camera's view: turned back by its yaw, then by its pitch.
+    p = float3(p.x * cos(yaw) + p.z * sin(yaw), p.y, -p.x * sin(yaw) + p.z * cos(yaw));
+    p = float3(p.x, p.y * cos(pitch) - p.z * sin(pitch), p.y * sin(pitch) + p.z * cos(pitch));
     // 60 degrees up and down; near plane 0.1. Reversed depth uses an infinite far plane.
     const float f = 1.732, near = 0.1, far = 100;
     float depth = reversed > 0 ? near : (p.z - near) * far / (far - near);

@@ -5,6 +5,7 @@
 add_executable(gazeora_testapp
     src/main.cpp
     src/app.cpp
+    src/mouse_look.cpp
     src/render_d3d9.cpp
     src/render_d3d10.cpp
     src/render_d3d11.cpp
