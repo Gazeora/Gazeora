@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 #include "gazeora/common/text/utf8.h"
+#include "gazeora/host/stream/camera_status_message.h"
+#include "gazeora/host/stream/camera_status_monitor.h"
 #include "gazeora/host/stream/head_pose_message.h"
 #include "gazeora/host/stream/pointer_gate.h"
 #include "gazeora/host/stream/pointer_message.h"
@@ -189,18 +191,50 @@ TEST(HeadPoseMessageTest, RefusesShortPayloadsAndNonUnitQuaternions) {
         HeadPoseMessage::Read(Bytes(message) + kFrameHeaderSize, kHeadPosePayloadSize - 1, read));
 }
 
+CameraReport DarkCamera() {
+    CameraReport report;
+    report.state = CameraState::Dark;
+    report.brightness = 17;
+    return report;
+}
+
+TEST(CameraStatusMessageTest, RoundTripsThroughTheWire) {
+    std::string message = CameraStatusMessage::Write(DarkCamera());
+    ASSERT_EQ(message.size(), kFrameHeaderSize + CameraStatusMessage::kPayloadSize);
+
+    FrameHeader header;
+    ASSERT_TRUE(header.Read(Bytes(message), message.size()));
+    EXPECT_EQ(header.type, FrameMessage::CameraStatus);
+    EXPECT_EQ(header.tail, CameraStatusMessage::kPayloadSize);
+    CameraReport read;
+    ASSERT_TRUE(CameraStatusMessage::Read(Bytes(message) + kFrameHeaderSize,
+                                          CameraStatusMessage::kPayloadSize, read));
+    EXPECT_EQ(read.state, CameraState::Dark);
+    EXPECT_EQ(read.brightness, 17);
+}
+
+TEST(CameraStatusMessageTest, RefusesShortPayloadsAndUnknownStates) {
+    CameraReport read;
+    const uint8_t unknown[] = {kCameraStateCount, 0};
+    EXPECT_FALSE(CameraStatusMessage::Read(unknown, sizeof(unknown), read));
+    const uint8_t on[] = {uint8_t(CameraState::On), 0};
+    EXPECT_FALSE(CameraStatusMessage::Read(on, 1, read));
+    EXPECT_TRUE(CameraStatusMessage::Read(on, sizeof(on), read));
+}
+
 TEST(RemoteInputReceiverTest, HearsInputDatagramsFromAdmittedAddressesOnly) {
     net::WinsockRuntime winsock;
     std::wstring error;
     ASSERT_TRUE(winsock.Start(error));
     RecordingSink sink;
     RecordingHeadSink head;
+    CameraStatusMonitor camera;
     StreamLog log;
     in_addr loopback;
     loopback.s_addr = htonl(INADDR_LOOPBACK);
     std::atomic<bool> watching{false};
     std::atomic<uint32_t> asked{0};
-    RemoteInputReceiver receiver(sink, head, log, [&](const in_addr& address) {
+    RemoteInputReceiver receiver(sink, head, camera, log, [&](const in_addr& address) {
         asked = address.s_addr;
         return watching.load();
     });
@@ -217,14 +251,17 @@ TEST(RemoteInputReceiverTest, HearsInputDatagramsFromAdmittedAddressesOnly) {
     };
     // Not watching: dropped.
     send(PointerMessage::Write(Scroll(5, 0)));
+    send(CameraStatusMessage::Write(DarkCamera()));
     send(HeadPoseMessage::Write(QuarterTurnLeft(1)));
     EXPECT_TRUE(sink.WaitFor(1).empty());
     EXPECT_TRUE(head.WaitFor(1).empty());
+    EXPECT_FALSE(camera.Reading().heard);
     EXPECT_EQ(asked.load(), loopback.s_addr);
 
     watching = true;
     send("not a pointer");
     send(PointerMessage::Write(Scroll(7, 0)));
+    send(CameraStatusMessage::Write(DarkCamera()));  // before the pose, so heard by then
     send(HeadPoseMessage::Write(QuarterTurnLeft(2)));
     std::vector<PointerEvent> heard = sink.WaitFor(1);
     std::vector<HeadPose> poses = head.WaitFor(1);
@@ -233,6 +270,7 @@ TEST(RemoteInputReceiverTest, HearsInputDatagramsFromAdmittedAddressesOnly) {
     EXPECT_EQ(heard[0].wheelVertical, 7);
     ASSERT_EQ(poses.size(), 1u);
     EXPECT_EQ(poses[0].sample, 2u);
+    EXPECT_EQ(camera.Reading().report.state, CameraState::Dark);
 }
 
 }  // namespace

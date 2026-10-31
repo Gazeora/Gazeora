@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/host/stream/camera_status_monitor.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/head_pose_monitor.h"
 
@@ -36,6 +37,8 @@ struct OverlaySettings {
     bool clock = false;  // this PC's time, to the second
     // Where the phone says the head points, and what head tracking does with it, while it's on.
     bool head = true;
+    // How the phone's camera for hand tracking stands, once the phone says.
+    bool camera = true;
     std::wstring text;  // a line of the user's own; none if empty
 
     bool operator==(const OverlaySettings& other) const;
@@ -57,6 +60,7 @@ struct OverlayStats {
     HeadReading head;
     // What head tracking does, e.g. "turning the game"; empty while it's off.
     std::wstring headStatus;
+    CameraReading camera;
 };
 
 // The overlay's lines of text, from the details `settings` picks; empty if none.

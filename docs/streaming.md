@@ -84,8 +84,10 @@ player shows them, Gazeora's app or VLC alike: the protocol and viewers; codec, 
 frame rate; bitrate and packet loss; the encoder; this PC's clock (handy for judging delay:
 photograph the PC's clock and the phone together); while head tracking is on, where the phone
 says your head points (yaw and pitch, in degrees), how many head poses arrive a second, and
-whether they're turning a game (see [Head tracking](vr-viewer.md#head-tracking)); and a line of
-your own text. Pick the
+whether they're turning a game (see [Head tracking](vr-viewer.md#head-tracking)); once the
+Gazeora app reports it, how the phone's camera for hand tracking stands (on, with how much
+light it sees; off because it's too dark for hands; checking the light; or unavailable); and a
+line of your own text. Pick the
 details, the corner, the text size and how dark the panel behind it is; changes show in the
 stream at once. In VR mode the panel is drawn into each eye, away from the lens edges. The
 choices are saved in `stream.ini` under `[overlay]`. It's off until switched on. The overlay

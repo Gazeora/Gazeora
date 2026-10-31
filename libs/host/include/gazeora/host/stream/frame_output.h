@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "gazeora/host/stream/bitrate_controller.h"
+#include "gazeora/host/stream/camera_status_sink.h"
 #include "gazeora/host/stream/head_pose_sink.h"
 #include "gazeora/host/stream/pointer_event_sink.h"
 #include "gazeora/host/stream/stream_log.h"
@@ -62,6 +63,8 @@ public:
     virtual void SetPointerSink(PointerEventSink* sink) { (void)sink; }
     // Where head poses the players send on the output's own link go, as touches.
     virtual void SetHeadPoseSink(HeadPoseSink* sink) { (void)sink; }
+    // Where the phone's camera status reports on the output's own link go, as touches.
+    virtual void SetCameraStatusSink(CameraStatusSink* sink) { (void)sink; }
     // Whether a player at `address` is watching: the touches that come over the network
     // (RemoteInputReceiver) count only from one.
     virtual bool Watching(const in_addr& address) {

@@ -3,6 +3,7 @@
 
 #include "gazeora/host/stream/remote_input_receiver.h"
 
+#include "gazeora/host/stream/camera_status_message.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/head_pose_message.h"
 #include "gazeora/host/stream/pointer_message.h"
@@ -86,11 +87,15 @@ void RemoteInputReceiver::Dispatch(const uint8_t* datagram, size_t size) {
     const size_t payloadSize = size - kFrameHeaderSize;
     PointerEvent event;
     HeadPose pose;
+    CameraReport camera;
     if (header.type == FrameMessage::Pointer && PointerMessage::Read(payload, payloadSize, event)) {
         m_pointer.OnPointer(event);
     } else if (header.type == FrameMessage::HeadPose &&
                HeadPoseMessage::Read(payload, payloadSize, pose)) {
         m_head.OnHeadPose(pose);
+    } else if (header.type == FrameMessage::CameraStatus &&
+               CameraStatusMessage::Read(payload, payloadSize, camera)) {
+        m_camera.OnCameraStatus(camera);
     }
 }
 
