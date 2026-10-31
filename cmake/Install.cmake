@@ -35,7 +35,8 @@ install(FILES ${sdl_dir}/LICENSE.txt
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME sdl-LICENSE.txt COMPONENT Runtime)
 install(FILES ${nlohmann_json_dir}/LICENSE.MIT
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME nlohmann_json-LICENSE.txt COMPONENT Runtime)
-install(DIRECTORY docs/ DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime
+# In a docs folder beside the README, so the README's links to docs/ work installed too.
+install(DIRECTORY docs DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime
     FILES_MATCHING PATTERN "*.md")
 
 install(TARGETS gazeora_testapp gazeora_stream_probe
