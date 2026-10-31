@@ -86,8 +86,10 @@ of getting the change in, not a judgment of it.
 
 Gazeora is free software under the [GNU GPL version 3](LICENSE) with the additional terms in
 [NOTICE](NOTICE), and is also offered under a [commercial license](COMMERCIAL-LICENSE.md). So
-that every part of it can be offered both ways, by opening a pull request you confirm that you
-have the right to submit the work, and you agree that:
+that every part of it can be offered both ways, contributors sign the
+[Contributor License Agreement](CLA.md) once: on your first pull request, a bot asks you to
+post a one-line comment that signs it. In short, you confirm that you have the right to submit
+the work, and you agree that:
 
 - it is licensed under the GPL version 3 with the terms in [NOTICE](NOTICE); and
 - you also grant Nithin Aashik a perpetual, worldwide, non-exclusive, royalty-free and
