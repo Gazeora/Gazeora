@@ -11,6 +11,7 @@ add_library(gazeora_host_lib STATIC
     src/launch/remote_thread_injector.cpp
     # capture: receiving the hook's frames and reading them back from the GPU
     src/capture/capture_client.cpp
+    src/capture/controller_turn_channel.cpp
     src/capture/frame_dump.cpp
     # encode: H.264 / H.265 through Media Foundation, from memory or GPU textures
     src/encode/color_convert.cpp
@@ -26,13 +27,17 @@ add_library(gazeora_host_lib STATIC
     src/stream/frame_output.cpp
     src/stream/frame_packet.cpp
     src/stream/frame_stream.cpp
+    src/stream/head_angles.cpp
+    src/stream/head_pose_gate.cpp
+    src/stream/head_pose_message.cpp
+    src/stream/head_pose_monitor.cpp
     src/stream/http_ts_output.cpp
     src/stream/net.cpp
     src/stream/pacing_plan.cpp
     src/stream/packet_send_queue.cpp
     src/stream/pointer_gate.cpp
-    src/stream/pointer_input_receiver.cpp
     src/stream/pointer_message.cpp
+    src/stream/remote_input_receiver.cpp
     src/stream/rtcp.cpp
     src/stream/rtp_video.cpp
     src/stream/rtsp_connection.cpp

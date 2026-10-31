@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "testapp/app.h"
+#include "testapp/mouse_look.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -181,6 +182,7 @@ int RunD3D12Scene(HWND hwnd, bool depthBarriers) {
 
     D3D12_VIEWPORT viewport = {0, 0, float(kWidth), float(kHeight), 0, 1};
     D3D12_RECT scissor = {0, 0, LONG(kWidth), LONG(kHeight)};
+    MouseLook* look = MouseLook::Of(hwnd);
     Clock clock;
     while (PumpMessages()) {
         UINT i = swap->GetCurrentBackBufferIndex();
@@ -203,7 +205,12 @@ int RunD3D12Scene(HWND hwnd, bool depthBarriers) {
         Scene scene = SceneAt(t);
         list->ClearRenderTargetView(rtv, scene.background, 0, nullptr);
         list->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
-        SceneConstants values = {t, 1.0f, float(kWidth) / kHeight, 0.0f};
+        SceneConstants values = {t, 1.0f, float(kWidth) / kHeight};
+        if (look) {
+            values.yaw = look->YawRadians();
+            values.pitch = look->PitchRadians();
+            look->ShowInTitle(hwnd);
+        }
         list->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
         list->SetGraphicsRootSignature(rootSignature.Get());
         list->SetGraphicsRoot32BitConstants(0, sizeof(values) / 4, &values, 0);

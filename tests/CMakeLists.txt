@@ -34,6 +34,8 @@ gazeora_add_test(gazeora_hook_tests
         hook/core/pixel_convert_test.cpp
         hook/core/shared_channel_test.cpp
         hook/d3d11/d3d11_frame_ring_test.cpp
+        hook/input/pad_reports_test.cpp
+        hook/input/stick_turn_test.cpp
     LIBS gazeora_hook_core)
 
 gazeora_add_test(gazeora_host_tests
@@ -43,15 +45,18 @@ gazeora_add_test(gazeora_host_tests
         host/launch/launcher_test.cpp
         host/capture/capture_test_app_test.cpp
         host/capture/capture_client_test.cpp
+        host/capture/controller_turn_channel_test.cpp
         host/capture/frame_dump_test.cpp
         host/encode/gpu_nv12_converter_test.cpp
         host/encode/video_encoder_test.cpp
         host/stream/bitrate_controller_test.cpp
         host/stream/frame_mailbox_test.cpp
         host/stream/frame_stream_test.cpp
+        host/stream/head_angles_test.cpp
+        host/stream/head_pose_monitor_test.cpp
         host/stream/pacing_plan_test.cpp
         host/stream/packet_send_queue_test.cpp
-        host/stream/pointer_input_test.cpp
+        host/stream/remote_input_test.cpp
         host/stream/rtcp_test.cpp
         host/stream/rtp_video_test.cpp
         host/stream/rtsp_message_test.cpp
@@ -100,6 +105,9 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/gamepad_presses.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/imgui_gamepad_input.cpp
         ${GAZEORA_APP_SOURCE_DIR}/gamepad/pane_navigation.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/head/device_switching_driver.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/head/head_look.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/head/mouse_look_driver.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/keyboard_layout.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/on_screen_keyboard.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
@@ -111,8 +119,11 @@ gazeora_add_test(gazeora_app_tests
         app/gamepad/gamepad_presses_test.cpp
         app/gamepad/imgui_gamepad_input_test.cpp
         app/gamepad/pane_navigation_test.cpp
+        app/head/device_switching_driver_test.cpp
+        app/head/head_look_test.cpp
+        app/head/mouse_look_driver_test.cpp
         app/keyboard/keyboard_layout_test.cpp
         app/keyboard/on_screen_keyboard_test.cpp
-    LIBS gazeora_input gazeora_library imgui shell32 ole32 uuid)
+    LIBS gazeora_input gazeora_library gazeora_host_lib imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
     ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)

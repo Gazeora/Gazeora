@@ -66,4 +66,59 @@ whether 3D is working. Notes:
   attached to while already running works only if it moves its depth buffer out of the depth
   write state each frame, as deferred renderers do.
 
-There is no head tracking yet.
+## Head tracking
+
+While a game is in both eyes, turning your head turns the game's camera. The Android app reads
+the phone's rotation sensor 200 times a second (gyroscope and accelerometer, without the compass,
+which metal nearby pulls around) and sends where your head points to the PC, on the USB cable or
+over UDP port 8557 like touches. Gazeora turns each change into mouse movement for the game in
+front, the way mouse-look games (first and third person) turn their camera. Only the change
+counts, so the camera starts from wherever it looks; turn with the mouse or a stick as well, and
+both add up.
+
+Set it in **Controls → Head tracking**:
+
+- **The switch** turns it on and off (on until switched off, remembered).
+- **Mouse sensitivity** is how far the mouse moves for each degree your head turns. Games
+  differ, and so do their own mouse sensitivity settings: turn your head a quarter turn and raise
+  it if the game turned less, lower it if more. 20 by default.
+- **Controller: the game's turn at full stick** and **the game's stick dead zone**, for playing
+  with a controller (below). 180° a second and 15% by default.
+
+### With a controller
+
+Games switch their button prompts and controls to whichever you used last, so mouse movement
+from your head would keep pulling a game you play with a controller over to keyboard and mouse.
+Instead, while you're on the controller, your head turns go through it: Gazeora's hook in the
+game moves the controller's right stick as the game reads it, on top of your own thumb, and the
+game never sees a mouse. Touch the keyboard or mouse and head turns go back to the mouse; touch
+the controller and they come back to it.
+
+It works with PlayStation controllers on USB (DualSense, DualSense Edge, DualShock 4) that the
+game reads itself, and with Xbox-style controllers (XInput), including PlayStation controllers
+Steam Input passes on as one. The game has to be captured (**Capture on launch**), so the hook is
+inside it; the card says how the game reads your controller once it has.
+
+A stick sets how fast the camera turns, not where it points, so the stick is pushed just enough
+to turn the camera as far as your head by the game's next read of it. That depends on how fast
+the game turns at full stick and how much of the stick's middle it ignores, which differ by game
+and by its own sensitivity settings: if the game turns less than your head, lower the turn;
+more, raise it; if small head turns go missing, raise the dead zone; if the camera twitches,
+lower it. Games that speed the camera up the longer the stick is held follow less closely.
+
+The card says whether head turns are coming from the phone and reaching a game, and so does the
+stream overlay's **Head tracking** detail, from inside the headset: the head's yaw and pitch as
+the phone sends them, how many poses arrive a second (about 200), and whether they're turning
+the game. The [test app](tools.md#test-app) looks around with the mouse, for trying it without
+a game. Notes:
+
+- Only a game launched from Gazeora, and only while it's the window in front: switch to another
+  window and the desktop's mouse is left alone. The game needn't be captured: with capture off,
+  the headset shows Gazeora's window while your head still turns the game.
+- The phone sends head poses while it does the lens correction (**Lens correction done by →
+  The phone**, the default); with it done by this PC, the phone can't tell it's in a viewer.
+- Roll (tilting your head to the side) isn't passed on: a mouse can't tilt a camera.
+- The camera follows the head after the stream's delay (a game frame, encoding, the network and
+  decoding), so fast turns lag a little.
+- Windows doesn't let a program move the mouse in a game running as administrator unless it runs
+  as administrator too.

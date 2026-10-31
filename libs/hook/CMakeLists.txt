@@ -10,7 +10,10 @@ add_library(gazeora_hook_core STATIC
     src/core/log.cpp
     src/core/pixel_convert.cpp
     src/core/shared_channel.cpp
-    src/d3d11/d3d11_frame_ring.cpp)
+    src/d3d11/d3d11_frame_ring.cpp
+    src/input/head_turn_feed.cpp
+    src/input/pad_reports.cpp
+    src/input/stick_turn.cpp)
 target_include_directories(gazeora_hook_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(gazeora_hook_core PUBLIC gazeora_common minhook d3d11 dxgi)
 
@@ -33,6 +36,7 @@ add_library(gazeora_hook SHARED
     src/d3d12/d3d12_capture.cpp
     src/d3d12/d3d12_depth.cpp
     src/d3d12/d3d12_queue_tracker.cpp
+    src/input/controller_hooks.cpp
     src/opengl/gl_api.cpp
     src/opengl/gl_capture.cpp
     src/opengl/gl_hooks.cpp)

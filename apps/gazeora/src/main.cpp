@@ -115,6 +115,11 @@ LRESULT WINAPI WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                          SWP_NOZORDER | SWP_NOACTIVATE);
             return 0;
         }
+        case WM_INPUT:
+            if (g_app) {
+                g_app->OnRawInput(reinterpret_cast<HRAWINPUT>(lParam));
+            }
+            break;  // DefWindowProc cleans up after it
         case WM_ACTIVATEAPP:
             if (wParam && g_app) {
                 g_app->OnActivated();
@@ -252,8 +257,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
         bool idle = busyFrames == 0 && !app->WantsContinuousFrames();
         bool minimized = IsIconic(hwnd);
         bool drawing = !minimized || app->WantsFramesWhileMinimized();
+        // Raw input comes for the keyboard and mouse in the background too, while a game runs
+        // (head tracking watches it): it alone doesn't wake the launcher.
+        bool woken = true;
         if (idle || !drawing) {
-            MsgWaitForMultipleObjectsEx(0, nullptr, 500, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+            woken = MsgWaitForMultipleObjectsEx(0, nullptr, 500, QS_ALLINPUT,
+                                                MWMO_INPUTAVAILABLE) == WAIT_TIMEOUT;
         }
         MSG msg;
         while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
@@ -262,10 +271,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
             if (msg.message == WM_QUIT) {
                 running = false;
             }
-            busyFrames = 3;
+            if (msg.message != WM_INPUT) {
+                busyFrames = 3;
+                woken = true;
+            }
         }
         if (!running) {
             break;
+        }
+        if (!woken) {
+            continue;
         }
 
         app->Tick();

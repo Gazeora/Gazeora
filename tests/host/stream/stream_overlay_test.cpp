@@ -48,6 +48,30 @@ TEST(StreamOverlayTest, LinesHoldThePickedDetails) {
     EXPECT_TRUE(OverlayLines(settings, Stats()).empty());
 }
 
+TEST(StreamOverlayTest, HeadLineOnlyWhileHeadTrackingIsOn) {
+    OverlaySettings settings;
+    settings.protocol = settings.viewers = settings.bitrate = settings.loss = false;
+    settings.codec = settings.resolution = settings.frameRate = false;
+    OverlayStats stats = Stats();
+    EXPECT_TRUE(OverlayLines(settings, stats).empty());
+
+    stats.headStatus = L"turning the game";
+    std::vector<std::wstring> lines = OverlayLines(settings, stats);
+    ASSERT_EQ(lines.size(), 1u);
+    EXPECT_EQ(lines[0], L"Head: nothing from the phone");
+
+    stats.head.fresh = true;
+    stats.head.yaw = 12.4f;
+    stats.head.pitch = -4.0f;
+    stats.head.perSecond = 198;
+    lines = OverlayLines(settings, stats);
+    ASSERT_EQ(lines.size(), 1u);
+    EXPECT_EQ(lines[0], L"Head: yaw 12°, pitch -4°  ·  198/s  ·  turning the game");
+
+    settings.head = false;
+    EXPECT_TRUE(OverlayLines(settings, stats).empty());
+}
+
 Picture Grey(uint32_t width, uint32_t height) {
     Picture picture;
     picture.width = width;

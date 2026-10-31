@@ -17,6 +17,15 @@ add_executable(Gazeora WIN32
     src/gamepad/gamepad_presses.cpp
     src/gamepad/imgui_gamepad_input.cpp
     src/gamepad/pane_navigation.cpp
+    src/head/controller_look_driver.cpp
+    src/head/device_switching_driver.cpp
+    src/head/foreground_game_focus.cpp
+    src/head/head_look.cpp
+    src/head/head_tracking_control.cpp
+    src/head/keyboard_mouse_watch.cpp
+    src/head/last_used_device.cpp
+    src/head/mouse_look_driver.cpp
+    src/head/send_input_mouse_mover.cpp
     src/keyboard/imgui_text_sink.cpp
     src/keyboard/keyboard_layout.cpp
     src/keyboard/keyboard_view.cpp
@@ -25,6 +34,7 @@ add_executable(Gazeora WIN32
     src/pages/controls_page.cpp
     src/pages/details_page.cpp
     src/pages/gamepad_card.cpp
+    src/pages/head_tracking_card.cpp
     src/pages/home_page.cpp
     src/pages/library_page.cpp
     src/pages/settings_page.cpp
@@ -39,6 +49,7 @@ add_executable(Gazeora WIN32
     src/ui/focus_edge.cpp
     src/ui/gamepad_scroll.cpp
     src/ui/gamepad_status_line.cpp
+    src/ui/head_tracking_status_line.cpp
     src/ui/logo_frame.cpp
     src/ui/text_format.cpp
     src/ui/theme.cpp

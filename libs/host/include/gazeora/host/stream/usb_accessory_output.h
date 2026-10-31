@@ -60,6 +60,7 @@ public:
     bool NeedsUsbDriver() const override;
     std::vector<UsbPhone> PhonesNeedingDriver() const override;
     void SetPointerSink(PointerEventSink* sink) override { m_pointerSink = sink; }
+    void SetHeadPoseSink(HeadPoseSink* sink) override { m_headPoseSink = sink; }
 
 private:
     // NoDriver: it opens, but its driver can't send the request (a phone without USB
@@ -75,6 +76,8 @@ private:
     void Connected(std::unique_ptr<UsbAccessoryPipe> pipe, std::string name);
     void ReadFromPhone(uint64_t now);
     void Hear(const FrameHeader& header, const uint8_t* payload, uint64_t now);
+    // Pointer and head pose messages, on to their sinks.
+    void HearInput(const FrameHeader& header, const uint8_t* payload);
     void Close(const char* reason);
     void WriteLoop();
     void SetStatus(std::wstring status);
@@ -87,6 +90,7 @@ private:
     std::atomic<bool> m_watching{false};  // the app said hello lately
     std::atomic<bool> m_keyFrameWanted{false};
     std::atomic<PointerEventSink*> m_pointerSink{nullptr};
+    std::atomic<HeadPoseSink*> m_headPoseSink{nullptr};
 
     // The open accessory. The watch thread opens, reads and closes it; the writer writes.
     std::mutex m_deviceMutex;

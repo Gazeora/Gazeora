@@ -23,10 +23,12 @@
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_output.h"
 #include "gazeora/host/stream/frame_source.h"
+#include "gazeora/host/stream/head_pose_gate.h"
+#include "gazeora/host/stream/head_pose_monitor.h"
 #include "gazeora/host/stream/live_frame_sink.h"
 #include "gazeora/host/stream/net.h"
 #include "gazeora/host/stream/pointer_gate.h"
-#include "gazeora/host/stream/pointer_input_receiver.h"
+#include "gazeora/host/stream/remote_input_receiver.h"
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_overlay.h"
 #include "gazeora/host/stream/stream_protocol.h"
@@ -146,6 +148,12 @@ public:
     // the network on kPointerPort, or on the USB cable. Only while the VR layout is off; null
     // drops them. `sink` must outlive the server.
     void SetPointerSink(PointerEventSink* sink) { m_pointerGate.SetTarget(sink); }
+    // Where the phone's head poses go (head_pose_message.h), from the server's threads, the
+    // same ways as touches; null drops them. `sink` must outlive the server.
+    void SetHeadPoseSink(HeadPoseSink* sink) { m_headPoseGate.SetTarget(sink); }
+    // What head tracking does with the poses, for the overlay: e.g. "turning the game"; empty
+    // while it's off, which leaves the head out of the overlay.
+    void SetHeadStatus(const std::wstring& status);
 
     // The streaming details drawn into every frame streamed, live or idle (stream_overlay.h).
     void SetOverlay(const OverlaySettings& overlay);
@@ -303,11 +311,15 @@ private:
     VrLayout m_vr;
 
     PointerGate m_pointerGate;
-    PointerInputReceiver m_pointerReceiver{
-        m_pointerGate, m_log, [this](const in_addr& address) { return Watching(address); }};
+    HeadPoseGate m_headPoseGate;
+    HeadPoseMonitor m_headMonitor{m_headPoseGate};
+    RemoteInputReceiver m_inputReceiver{
+        m_pointerGate, m_headMonitor, m_log,
+        [this](const in_addr& address) { return Watching(address); }};
 
     std::mutex m_overlayMutex;
     OverlaySettings m_overlay;
+    std::wstring m_headStatus;  // with m_overlayMutex
 
     std::mutex m_urlsMutex;
     std::vector<std::wstring> m_urls;

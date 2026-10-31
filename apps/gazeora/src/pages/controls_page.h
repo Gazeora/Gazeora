@@ -6,19 +6,22 @@
 #include <imgui.h>
 
 #include "pages/gamepad_card.h"
+#include "pages/head_tracking_card.h"
 
 namespace gazeora::app {
 
 // The Controls page: ways to control Gazeora besides the PC's own mouse and keyboard, which
-// always keep working. Game controllers.
+// always keep working. Game controllers and head tracking.
 class ControlsPage {
 public:
     struct Fonts {
         ImFont* title;
         ImFont* heading;
+        ImFont* caption;
     };
 
-    ControlsPage(GamepadCard& gamepad, float scale) : m_gamepad(gamepad), m_scale(scale) {}
+    ControlsPage(GamepadCard& gamepad, HeadTrackingCard& head, float scale)
+        : m_gamepad(gamepad), m_head(head), m_scale(scale) {}
 
     void Draw(const Fonts& fonts);
 
@@ -26,6 +29,7 @@ private:
     float S(float px) const { return px * m_scale; }
 
     GamepadCard& m_gamepad;
+    HeadTrackingCard& m_head;
     float m_scale;
 };
 

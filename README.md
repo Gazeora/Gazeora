@@ -65,6 +65,10 @@ over UDP or a USB cable. The Android app finds the PC on the network by itself.
   they come back when it closes. Touches arrive on the USB cable, or over UDP port 8557 for
   the network protocols. In a VR viewer, the Android app's hand pointer drives the window the
   same way: pointing moves its pointer, and a pinch clicks or scrolls.
+- **Head tracking.** With the phone in a VR viewer, turning your head turns the game's camera:
+  the Android app sends the phone's rotation sensor to the PC, and Gazeora moves the mouse for
+  the game in front, as mouse-look games take it. Set the sensitivity per game in
+  **Controls → Head tracking**. See [VR viewer mode](docs/vr-viewer.md#head-tracking).
 - **Command line.** `GazeoraCLI` manages the same library and can attach to a running game.
 
 ## How it works

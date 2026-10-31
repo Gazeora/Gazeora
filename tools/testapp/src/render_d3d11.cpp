@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "testapp/app.h"
+#include "testapp/mouse_look.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -99,13 +100,19 @@ int RunD3D11(HWND hwnd) {
     }
     D3D11_VIEWPORT viewport = {0, 0, float(kWidth), float(kHeight), 0, 1};
 
+    MouseLook* look = MouseLook::Of(hwnd);
     Clock clock;
     while (PumpMessages()) {
         float t = clock.Seconds();
         Scene scene = SceneAt(t);
         context->ClearRenderTargetView(rtv.Get(), scene.background);
         context->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-        SceneConstants values = {t, 0.0f, float(kWidth) / kHeight, 0.0f};
+        SceneConstants values = {t, 0.0f, float(kWidth) / kHeight};
+        if (look) {
+            values.yaw = look->YawRadians();
+            values.pitch = look->PitchRadians();
+            look->ShowInTitle(hwnd);
+        }
         context->UpdateSubresource(constants.Get(), 0, nullptr, &values, 0, 0);
         context->OMSetRenderTargets(1, rtv.GetAddressOf(), dsv.Get());
         context->OMSetDepthStencilState(depthState.Get(), 0);

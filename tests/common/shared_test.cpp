@@ -45,6 +45,11 @@ TEST(SharedProtocol, InterlockedFieldsAreAligned) {
     EXPECT_EQ(offsetof(SharedHeader, hostReadingFrame) % 8, 0u);
     EXPECT_EQ(offsetof(SharedHeader, lastPresentQpc) % 8, 0u);
     EXPECT_EQ(offsetof(SharedHeader, skippedFrames) % 8, 0u);
+    EXPECT_EQ(offsetof(SharedHeader, headYawMicro) % 8, 0u);
+    EXPECT_EQ(offsetof(SharedHeader, headPitchMicro) % 8, 0u);
+    EXPECT_EQ(offsetof(SharedHeader, controllerReadQpc) % 8, 0u);
+    EXPECT_EQ(offsetof(SharedHeader, controllerActiveQpc) % 8, 0u);
+    EXPECT_EQ(offsetof(SharedHeader, controllerPaths) % sizeof(LONG), 0u);
 }
 
 TEST(SharedProtocol, StatusIsLastField) {
