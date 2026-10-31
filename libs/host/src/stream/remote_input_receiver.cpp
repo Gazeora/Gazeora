@@ -1,9 +1,10 @@
 // Copyright (C) 2026 Nithin Aashik
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
-#include "gazeora/host/stream/pointer_input_receiver.h"
+#include "gazeora/host/stream/remote_input_receiver.h"
 
 #include "gazeora/host/stream/frame_packet.h"
+#include "gazeora/host/stream/head_pose_message.h"
 #include "gazeora/host/stream/pointer_message.h"
 
 namespace gazeora {
@@ -11,12 +12,12 @@ namespace gazeora {
 namespace {
 
 constexpr long kPollUs = 250 * 1000;
-// Pointer messages are a header and a few bytes; anything longer is not one.
+// Input messages are a header and a few bytes; anything longer is not one.
 constexpr size_t kMaxDatagram = 256;
 
 }  // namespace
 
-bool PointerInputReceiver::Start(in_addr address, uint16_t port, std::wstring& error) {
+bool RemoteInputReceiver::Start(in_addr address, uint16_t port, std::wstring& error) {
     m_socket.Reset(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
     sockaddr_in bound = {};
     bound.sin_family = AF_INET;
@@ -27,19 +28,20 @@ bool PointerInputReceiver::Start(in_addr address, uint16_t port, std::wstring& e
     if (!m_socket ||
         bind(m_socket.Get(), reinterpret_cast<sockaddr*>(&bound), sizeof(bound)) != 0 ||
         getsockname(m_socket.Get(), reinterpret_cast<sockaddr*>(&bound), &length) != 0) {
-        error = L"UDP port " + std::to_wstring(port) + L" for touch input is taken (error " +
-                std::to_wstring(WSAGetLastError()) + L")";
+        error = L"UDP port " + std::to_wstring(port) +
+                L" for touch and head input is taken (error " + std::to_wstring(WSAGetLastError()) +
+                L")";
         m_socket.Reset();
         return false;
     }
     m_stopping = false;
     m_port = ntohs(bound.sin_port);
-    m_log.Write("touch input on UDP port %u", unsigned(m_port));
+    m_log.Write("touch and head input on UDP port %u", unsigned(m_port));
     m_thread = std::thread([this] { Loop(); });
     return true;
 }
 
-void PointerInputReceiver::Stop() {
+void RemoteInputReceiver::Stop() {
     m_stopping = true;
     if (m_thread.joinable()) {
         m_thread.join();
@@ -48,7 +50,7 @@ void PointerInputReceiver::Stop() {
     m_port = 0;
 }
 
-void PointerInputReceiver::Loop() {
+void RemoteInputReceiver::Loop() {
     uint8_t datagram[kMaxDatagram];
     while (!m_stopping) {
         // Poll, so Stop doesn't have to close the socket out from under recvfrom.
@@ -69,13 +71,26 @@ void PointerInputReceiver::Loop() {
     }
 }
 
-void PointerInputReceiver::Hear(const sockaddr_in& from, const uint8_t* datagram, size_t size) {
+void RemoteInputReceiver::Hear(const sockaddr_in& from, const uint8_t* datagram, size_t size) {
+    if (m_admits(from.sin_addr)) {
+        Dispatch(datagram, size);
+    }
+}
+
+void RemoteInputReceiver::Dispatch(const uint8_t* datagram, size_t size) {
     FrameHeader header;
+    if (!header.Read(datagram, size)) {
+        return;
+    }
+    const uint8_t* payload = datagram + kFrameHeaderSize;
+    const size_t payloadSize = size - kFrameHeaderSize;
     PointerEvent event;
-    if (m_admits(from.sin_addr) && header.Read(datagram, size) &&
-        header.type == FrameMessage::Pointer &&
-        PointerMessage::Read(datagram + kFrameHeaderSize, size - kFrameHeaderSize, event)) {
-        m_sink.OnPointer(event);
+    HeadPose pose;
+    if (header.type == FrameMessage::Pointer && PointerMessage::Read(payload, payloadSize, event)) {
+        m_pointer.OnPointer(event);
+    } else if (header.type == FrameMessage::HeadPose &&
+               HeadPoseMessage::Read(payload, payloadSize, pose)) {
+        m_head.OnHeadPose(pose);
     }
 }
 

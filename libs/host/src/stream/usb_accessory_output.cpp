@@ -12,6 +12,7 @@
 #include <cstring>
 #include <vector>
 
+#include "gazeora/host/stream/head_pose_message.h"
 #include "gazeora/host/stream/pointer_message.h"
 
 namespace gazeora {
@@ -641,8 +642,6 @@ void UsbAccessoryOutput::Connected(std::unique_ptr<UsbAccessoryPipe> pipe, std::
 }
 
 void UsbAccessoryOutput::Hear(const FrameHeader& header, const uint8_t* payload, uint64_t now) {
-    PointerEventSink* pointer = m_pointerSink;
-    PointerEvent event;
     switch (header.type) {
         case FrameMessage::Hello:
             if (!m_watching) {
@@ -660,13 +659,23 @@ void UsbAccessoryOutput::Hear(const FrameHeader& header, const uint8_t* payload,
         case FrameMessage::Bye:
             m_watching = false;
             break;
-        case FrameMessage::Pointer:
-            if (pointer && PointerMessage::Read(payload, header.tail, event)) {
-                pointer->OnPointer(event);
-            }
-            break;
         default:
+            HearInput(header, payload);
             break;
+    }
+}
+
+void UsbAccessoryOutput::HearInput(const FrameHeader& header, const uint8_t* payload) {
+    PointerEventSink* pointer = m_pointerSink;
+    HeadPoseSink* head = m_headPoseSink;
+    PointerEvent event;
+    HeadPose pose;
+    if (header.type == FrameMessage::Pointer && pointer &&
+        PointerMessage::Read(payload, header.tail, event)) {
+        pointer->OnPointer(event);
+    } else if (header.type == FrameMessage::HeadPose && head &&
+               HeadPoseMessage::Read(payload, header.tail, pose)) {
+        head->OnHeadPose(pose);
     }
 }
 

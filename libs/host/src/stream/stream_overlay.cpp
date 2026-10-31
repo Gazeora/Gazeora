@@ -37,8 +37,28 @@ bool OverlaySettings::operator==(const OverlaySettings& other) const {
            opacity == other.opacity && protocol == other.protocol && viewers == other.viewers &&
            codec == other.codec && resolution == other.resolution && frameRate == other.frameRate &&
            bitrate == other.bitrate && loss == other.loss && encoder == other.encoder &&
-           clock == other.clock && text == other.text;
+           clock == other.clock && head == other.head && text == other.text;
 }
+
+namespace {
+
+// The head's line, while head tracking is on.
+std::wstring HeadLine(const OverlayStats& stats) {
+    if (stats.headStatus.empty()) {
+        return {};
+    }
+    if (!stats.head.fresh) {
+        return L"Head: nothing from the phone";
+    }
+    wchar_t buffer[64];
+    swprintf(buffer, 64, L"Head: yaw %.0f°, pitch %.0f°", double(stats.head.yaw),
+             double(stats.head.pitch));
+    wchar_t rate[32];
+    swprintf(rate, 32, L"%d/s", stats.head.perSecond);
+    return Line({buffer, rate, stats.headStatus});
+}
+
+}  // namespace
 
 std::vector<std::wstring> OverlayLines(const OverlaySettings& settings, const OverlayStats& stats) {
     wchar_t buffer[64];
@@ -79,7 +99,7 @@ std::vector<std::wstring> OverlayLines(const OverlaySettings& settings, const Ov
          {Line({settings.protocol ? Widen(stats.protocol) : L"", viewers}),
           Line({settings.codec ? Widen(stats.codec) : L"", resolution, frameRate}),
           Line({bitrate, loss}), settings.encoder ? stats.encoder : std::wstring(), clock,
-          settings.text}) {
+          settings.head ? HeadLine(stats) : std::wstring(), settings.text}) {
         if (!line.empty()) {
             lines.push_back(line);
         }

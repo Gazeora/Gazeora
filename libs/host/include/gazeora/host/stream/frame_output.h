@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "gazeora/host/stream/bitrate_controller.h"
+#include "gazeora/host/stream/head_pose_sink.h"
 #include "gazeora/host/stream/pointer_event_sink.h"
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_protocol.h"
@@ -57,10 +58,12 @@ public:
     // The phones it can't switch without that driver on them (USB only).
     virtual std::vector<UsbPhone> PhonesNeedingDriver() const { return {}; }
     // Where touches the players send on the output's own link go (USB only: the network's go
-    // to PointerInputReceiver). Set before Start.
+    // to RemoteInputReceiver). Set before Start.
     virtual void SetPointerSink(PointerEventSink* sink) { (void)sink; }
+    // Where head poses the players send on the output's own link go, as touches.
+    virtual void SetHeadPoseSink(HeadPoseSink* sink) { (void)sink; }
     // Whether a player at `address` is watching: the touches that come over the network
-    // (PointerInputReceiver) count only from one.
+    // (RemoteInputReceiver) count only from one.
     virtual bool Watching(const in_addr& address) {
         (void)address;
         return false;

@@ -149,6 +149,7 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     m_output = CreateFrameOutput(protocol, m_log);
     if (m_output) {
         m_output->SetPointerSink(&m_pointerGate);
+        m_output->SetHeadPoseSink(&m_headMonitor);
         if (!m_output->Start(bindAddress, port, error)) {
             Stop();
             return false;
@@ -167,9 +168,10 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
             bindAddress, m_discoveryPort, [this] { return Describe(); }, discoveryError)) {
         m_log.Write("the Android app can't search for this PC: %ls", discoveryError.c_str());
     }
-    std::wstring pointerError;
-    if (!m_pointerReceiver.Start(bindAddress, kPointerPort, pointerError)) {
-        m_log.Write("touches from the Android app won't reach this PC: %ls", pointerError.c_str());
+    std::wstring inputError;
+    if (!m_inputReceiver.Start(bindAddress, kPointerPort, inputError)) {
+        m_log.Write("touches and head turns from the Android app won't reach this PC: %ls",
+                    inputError.c_str());
     }
     m_log.Write("streaming over %s", ProtocolName(protocol));
     m_running = true;
@@ -245,7 +247,7 @@ void FrameStreamServer::Stop() {
     }
     ReapConnections(true);
     m_discovery.Stop();
-    m_pointerReceiver.Stop();
+    m_inputReceiver.Stop();
     if (m_output) {
         m_output->Stop();
         m_output.reset();
@@ -332,6 +334,11 @@ void FrameStreamServer::SetOverlay(const OverlaySettings& overlay) {
 OverlaySettings FrameStreamServer::GetOverlay() {
     std::lock_guard<std::mutex> lock(m_overlayMutex);
     return m_overlay;
+}
+
+void FrameStreamServer::SetHeadStatus(const std::wstring& status) {
+    std::lock_guard<std::mutex> lock(m_overlayMutex);
+    m_headStatus = status;
 }
 
 void FrameStreamServer::SetFrameRate(uint32_t fps) {
@@ -1044,6 +1051,11 @@ const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& t
     stats.loss = PacketLoss();
     stats.encoder = EncoderName();
     GetLocalTime(&stats.time);
+    stats.head = m_headMonitor.Reading();
+    {
+        std::lock_guard<std::mutex> lock(m_overlayMutex);
+        stats.headStatus = m_headStatus;
+    }
     std::vector<std::wstring> lines = OverlayLines(settings, stats);
     if (lines.empty()) {
         return &picture;

@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 #include "gazeora/common/text/utf8.h"
+#include "gazeora/host/stream/head_pose_message.h"
 #include "gazeora/host/stream/pointer_gate.h"
-#include "gazeora/host/stream/pointer_input_receiver.h"
 #include "gazeora/host/stream/pointer_message.h"
+#include "gazeora/host/stream/remote_input_receiver.h"
 
 #include <gtest/gtest.h>
 
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <mutex>
 #include <string>
@@ -38,6 +40,35 @@ private:
     std::condition_variable m_heard;
     std::vector<PointerEvent> m_events;
 };
+
+class RecordingHeadSink final : public HeadPoseSink {
+public:
+    void OnHeadPose(const HeadPose& pose) override {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_poses.push_back(pose);
+        m_heard.notify_all();
+    }
+
+    std::vector<HeadPose> WaitFor(size_t count) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_heard.wait_for(lock, std::chrono::seconds(2), [&] { return m_poses.size() >= count; });
+        return m_poses;
+    }
+
+private:
+    std::mutex m_mutex;
+    std::condition_variable m_heard;
+    std::vector<HeadPose> m_poses;
+};
+
+// A quarter turn to the left, about Y.
+HeadPose QuarterTurnLeft(uint32_t sample) {
+    HeadPose pose;
+    pose.sample = sample;
+    pose.y = std::sqrt(0.5f);
+    pose.w = std::sqrt(0.5f);
+    return pose;
+}
 
 PointerEvent Scroll(int vertical, int horizontal) {
     PointerEvent event;
@@ -112,17 +143,64 @@ TEST(PointerGateTest, PassesEventsOnOnceItHasATarget) {
     EXPECT_EQ(heard[0].wheelVertical, 2);
 }
 
-TEST(PointerInputReceiverTest, HearsPointerDatagramsFromAdmittedAddressesOnly) {
+TEST(HeadPoseMessageTest, RoundTripsThroughTheWire) {
+    std::string message = HeadPoseMessage::Write(QuarterTurnLeft(0x01020304));
+    ASSERT_EQ(message.size(), kFrameHeaderSize + kHeadPosePayloadSize);
+
+    FrameHeader header;
+    ASSERT_TRUE(header.Read(Bytes(message), message.size()));
+    EXPECT_EQ(header.type, FrameMessage::HeadPose);
+    EXPECT_EQ(header.tail, kHeadPosePayloadSize);
+    HeadPose read;
+    ASSERT_TRUE(
+        HeadPoseMessage::Read(Bytes(message) + kFrameHeaderSize, kHeadPosePayloadSize, read));
+    EXPECT_EQ(read.sample, 0x01020304u);
+    EXPECT_FLOAT_EQ(read.x, 0.0f);
+    EXPECT_NEAR(read.y, std::sqrt(0.5f), 1e-4f);
+    EXPECT_FLOAT_EQ(read.z, 0.0f);
+    EXPECT_NEAR(read.w, std::sqrt(0.5f), 1e-4f);
+}
+
+TEST(HeadPoseMessageTest, KeepsTheSigns) {
+    HeadPose sent;
+    sent.x = -0.5f;
+    sent.y = 0.5f;
+    sent.z = -0.5f;
+    sent.w = -0.5f;
+    std::string message = HeadPoseMessage::Write(sent);
+    HeadPose read;
+    ASSERT_TRUE(
+        HeadPoseMessage::Read(Bytes(message) + kFrameHeaderSize, kHeadPosePayloadSize, read));
+    EXPECT_NEAR(read.x, -0.5f, 1e-4f);
+    EXPECT_NEAR(read.y, 0.5f, 1e-4f);
+    EXPECT_NEAR(read.z, -0.5f, 1e-4f);
+    EXPECT_NEAR(read.w, -0.5f, 1e-4f);
+}
+
+TEST(HeadPoseMessageTest, RefusesShortPayloadsAndNonUnitQuaternions) {
+    HeadPose zero;
+    zero.w = 0.0f;
+    std::string message = HeadPoseMessage::Write(zero);
+    HeadPose read;
+    EXPECT_FALSE(
+        HeadPoseMessage::Read(Bytes(message) + kFrameHeaderSize, kHeadPosePayloadSize, read));
+    message = HeadPoseMessage::Write(QuarterTurnLeft(1));
+    EXPECT_FALSE(
+        HeadPoseMessage::Read(Bytes(message) + kFrameHeaderSize, kHeadPosePayloadSize - 1, read));
+}
+
+TEST(RemoteInputReceiverTest, HearsInputDatagramsFromAdmittedAddressesOnly) {
     net::WinsockRuntime winsock;
     std::wstring error;
     ASSERT_TRUE(winsock.Start(error));
     RecordingSink sink;
+    RecordingHeadSink head;
     StreamLog log;
     in_addr loopback;
     loopback.s_addr = htonl(INADDR_LOOPBACK);
     std::atomic<bool> watching{false};
     std::atomic<uint32_t> asked{0};
-    PointerInputReceiver receiver(sink, log, [&](const in_addr& address) {
+    RemoteInputReceiver receiver(sink, head, log, [&](const in_addr& address) {
         asked = address.s_addr;
         return watching.load();
     });
@@ -139,16 +217,22 @@ TEST(PointerInputReceiverTest, HearsPointerDatagramsFromAdmittedAddressesOnly) {
     };
     // Not watching: dropped.
     send(PointerMessage::Write(Scroll(5, 0)));
+    send(HeadPoseMessage::Write(QuarterTurnLeft(1)));
     EXPECT_TRUE(sink.WaitFor(1).empty());
+    EXPECT_TRUE(head.WaitFor(1).empty());
     EXPECT_EQ(asked.load(), loopback.s_addr);
 
     watching = true;
     send("not a pointer");
     send(PointerMessage::Write(Scroll(7, 0)));
+    send(HeadPoseMessage::Write(QuarterTurnLeft(2)));
     std::vector<PointerEvent> heard = sink.WaitFor(1);
+    std::vector<HeadPose> poses = head.WaitFor(1);
     receiver.Stop();
     ASSERT_EQ(heard.size(), 1u);
     EXPECT_EQ(heard[0].wheelVertical, 7);
+    ASSERT_EQ(poses.size(), 1u);
+    EXPECT_EQ(poses[0].sample, 2u);
 }
 
 }  // namespace

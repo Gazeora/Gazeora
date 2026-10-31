@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "gazeora/host/stream/frame_mailbox.h"
+#include "gazeora/host/stream/head_pose_monitor.h"
 
 namespace gazeora {
 
@@ -33,7 +34,9 @@ struct OverlaySettings {
     bool loss = true;
     bool encoder = false;
     bool clock = false;  // this PC's time, to the second
-    std::wstring text;   // a line of the user's own; none if empty
+    // Where the phone says the head points, and what head tracking does with it, while it's on.
+    bool head = true;
+    std::wstring text;  // a line of the user's own; none if empty
 
     bool operator==(const OverlaySettings& other) const;
     bool operator!=(const OverlaySettings& other) const { return !(*this == other); }
@@ -51,6 +54,9 @@ struct OverlayStats {
     float loss = 0;        // 0..1
     std::wstring encoder;
     SYSTEMTIME time = {};
+    HeadReading head;
+    // What head tracking does, e.g. "turning the game"; empty while it's off.
+    std::wstring headStatus;
 };
 
 // The overlay's lines of text, from the details `settings` picks; empty if none.

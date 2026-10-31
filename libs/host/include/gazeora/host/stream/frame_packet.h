@@ -39,7 +39,9 @@ namespace gazeora {
 // whatever address it named; the cookie only reaches the real one.
 //
 // While the picture is shown flat (not VR), the app sends its touches as Pointer messages
-// (pointer_message.h): over USB on the same cable, over the network to kPointerPort.
+// (pointer_message.h); while a game is shown for a VR viewer, where the head points as
+// HeadPose messages (head_pose_message.h). Both over USB on the same cable, over the network
+// to kPointerPort.
 enum class FrameMessage : uint8_t {
     Frame = 1,            // PC to player
     Hello = 2,            // player to PC
@@ -47,6 +49,7 @@ enum class FrameMessage : uint8_t {
     Bye = 4,              // player to PC
     Pointer = 5,          // player to PC
     Challenge = 6,        // PC to player, over UDP
+    HeadPose = 7,         // player to PC
 };
 
 constexpr size_t kFrameHeaderSize = 24;
