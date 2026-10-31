@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The custom actions Gazeora's MSI calls (setup_actions.def exports them).
 
 #include <windows.h>

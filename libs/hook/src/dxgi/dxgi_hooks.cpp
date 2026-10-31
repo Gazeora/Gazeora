@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include "gazeora/hook/dxgi/dxgi_hooks.h"
 
 // d3d10_1.h, which includes d3d10.h: the Windows SDK refuses d3d10_1.h after d3d10.h, and

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The stream server: the hand-off from the capture thread to the encode thread, the pacing of
 // UDP packets on the send thread, and the whole server end to end at 30 and 60 fps, from PushFrame
 // to a player on loopback receiving the frame's packets.

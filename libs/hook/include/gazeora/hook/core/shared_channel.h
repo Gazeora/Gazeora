@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Hook side of the frame transport described in common/shared.h. API backends
 // (D3D11, D3D12, or the D3D11 bridge used by the others) create their own shared
 // textures and fences, then use these functions to publish them and to hand frames

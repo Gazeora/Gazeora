@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Gazeora capture hook. Injected into the game process by Gazeora.exe.
 //
 // Each graphics API lives in its own folder and exposes an Install() function that

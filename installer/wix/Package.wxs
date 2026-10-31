@@ -1,3 +1,6 @@
+<!-- Copyright (C) 2026 Nithin Aashik -->
+<!-- SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial -->
+
 <!-- Gazeora's MSI: built by the gazeora_msi target (installer/CMakeLists.txt), which passes
      ProductName, ProductVersion, UpgradeCode and Publisher, and bind paths to the staged files
      (Runtime, Tools), the custom actions and Uninstall.exe (Actions), the icon (Resources), the

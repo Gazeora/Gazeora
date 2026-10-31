@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include "gazeora/hook/d3d9/d3d9_capture.h"
 
 #include "gazeora/hook/core/log.h"

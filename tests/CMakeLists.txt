@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # GoogleTest unit tests. Every test process uses its own PID as the "game", and the hook
 # and host each attach to that PID's shared block (common/shared.h), so each side gets
 # its own executable:

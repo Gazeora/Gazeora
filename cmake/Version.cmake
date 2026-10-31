@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Gazeora's version, from the VERSION file at the root: the one place to change it for a
 # release. It reaches the exe's version info, the About card and the MSI through
 # PROJECT_VERSION and GAZEORA_VERSION_LABEL. Included before project(), which takes it.

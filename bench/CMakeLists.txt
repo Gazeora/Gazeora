@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # gazeora_bench.exe: how long each stage takes, from the hook's capture to RTP packets. Kept
 # apart from the unit tests and not registered with ctest: it takes about a minute, uses the
 # real GPU and encoders, and only prints. Run it from a Release build; --gtest_filter picks

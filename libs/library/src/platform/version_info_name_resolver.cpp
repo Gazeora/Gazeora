@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include "gazeora/library/platform/version_info_name_resolver.h"
 
 #include <windows.h>

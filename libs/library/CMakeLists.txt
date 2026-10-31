@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # The user's games, stored as JSON in %APPDATA%\Gazeora\library.json.
 include(NlohmannJson)
 

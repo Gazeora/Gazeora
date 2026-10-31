@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Timing helpers shared by the benchmarks (gazeora_bench). Each benchmark prints one line per
 // measurement: mean, median, 99th percentile and worst, in units picked to fit.
 #pragma once

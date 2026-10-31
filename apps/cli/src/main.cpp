@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // GazeoraCLI: command-line front end. Manages the same game library as Gazeora.exe,
 // launches games, and injects the capture hook into a game to receive its frames.
 //

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include "gazeora/hook/core/capture_target.h"
 
 #include "gazeora/hook/core/hook_util.h"

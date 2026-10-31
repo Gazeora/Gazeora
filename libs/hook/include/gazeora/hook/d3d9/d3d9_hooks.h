@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // IDirect3DDevice9::Present / PresentEx and IDirect3DSwapChain9::Present hooks, plus
 // Reset / ResetEx so capture resources are released before the game resets its device.
 #pragma once

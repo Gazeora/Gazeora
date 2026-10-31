@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The launcher's look: colors taken from the app icon (navy surfaces, and a violet accent
 // that fades to cyan on primary actions) and the icon glyphs merged into every text font.
 #pragma once

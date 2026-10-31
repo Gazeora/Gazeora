@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Video encoding: each codec on the GPU's encoder and on the software one, the whole
 // VideoPipeline (NV12 conversion, encoding, packetization) the stream server runs per frame,
 // and a game frame on the GPU to packets both ways: read back, or kept on the GPU.

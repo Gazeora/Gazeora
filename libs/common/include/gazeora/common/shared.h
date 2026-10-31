@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Layout of the shared-memory block used by the host (Gazeora.exe) and the hook DLL
 // running inside the game. The host creates it before injecting; the hook opens it.
 //

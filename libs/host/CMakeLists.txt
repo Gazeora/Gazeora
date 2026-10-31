@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Launches games, injects the hook into them, receives their frames and streams them to
 # the local network over RTSP/RTP. A static library shared by Gazeora.exe, GazeoraCLI.exe
 # (apps/) and the unit tests.

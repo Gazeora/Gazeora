@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Gazeora: game launcher UI. Keeps a library of games, launches them, and can inject
 // the capture hook as they start. GazeoraCLI.exe is the command-line equivalent.
 

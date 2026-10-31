@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Games to add, from Explorer's "Open with Gazeora": on the command line of a new Gazeora, which
 // passes them on to the one already running.
 #pragma once

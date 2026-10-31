@@ -19,3 +19,12 @@ repos:
     hooks:
       - id: clang-format
         types_or: [c, c++]
+
+  # Every source file names its copyright holder and licenses (COMMERCIAL-LICENSE.md).
+  - repo: local
+    hooks:
+      - id: license-headers
+        name: license headers
+        entry: python tools/license_headers.py
+        language: python
+        files: (\.(c|cpp|h|rc|py|sh|cmake|wxs|wxi)|CMakeLists\.txt)$

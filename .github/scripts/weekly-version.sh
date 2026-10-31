@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # Reads release tags (one a line) on stdin and prints the highest release and the weekly
 # pre-release that comes after it: the next patch, as rc.1. For example v1.0.1-rc.1 gives
 # "v1.0.1-rc.1 v1.0.2-rc.1", and a stable v1.0.3 gives "v1.0.3 v1.0.4-rc.1". Tags that

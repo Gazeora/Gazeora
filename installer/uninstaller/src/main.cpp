@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Uninstall.exe, in Gazeora's install folder: starts the MSI's uninstall, as Settings > Apps does.
 
 #include <windows.h>

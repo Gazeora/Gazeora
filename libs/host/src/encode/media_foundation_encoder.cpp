@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // VideoEncoder through Media Foundation: the GPU's hardware encoder when the driver offers
 // one, a software encoder otherwise (Microsoft's for H.264; for H.265 only if one is
 // installed, such as the HEVC Video Extensions). Opened with a device, only a GPU encoder that

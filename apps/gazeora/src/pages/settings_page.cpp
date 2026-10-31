@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // App: the settings page: capture, frame stream and VR headset.
 #include "app.h"
 
@@ -192,7 +195,8 @@ void App::DrawSettings() {
     ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
     ImGui::TextWrapped("%s", GAZEORA_COPYRIGHT
                        ". Free software under the GNU GPL version 3, "
-                       "with no warranty: see LICENSE and NOTICE.");
+                       "with no warranty: see LICENSE and NOTICE. Also available under a "
+                       "commercial license: see COMMERCIAL-LICENSE.md.");
     ImGui::PopStyleColor();
     EndCard();
     ImGui::PopStyleVar();

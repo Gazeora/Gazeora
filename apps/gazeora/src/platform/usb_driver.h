@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // The Windows driver the USB protocol needs: WinUSB, so libusb and Gazeora can reach the phone.
 // On the accessory interface of a phone in USB accessory mode, which Windows has no driver for
 // by itself; and, for phones without USB debugging, on the phone in its normal mode, so

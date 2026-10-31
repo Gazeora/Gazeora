@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <dxgi1_4.h>

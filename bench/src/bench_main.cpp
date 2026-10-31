@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // gazeora_bench: how long each part of Gazeora takes, from the hook's capture in the game to
 // RTP packets on the network. One gtest case per area; pick some with --gtest_filter, e.g.
 // --gtest_filter=Rtp.*:Rtsp.*. Prints its numbers; it only fails when something it measures

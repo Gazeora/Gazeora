@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Stands in for Gazeora.exe in the hook tests: creates the shared block and frame
 // event for this process, then opens the hook side of the channel on them.
 #pragma once

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # The default install folder: Program Files for the x64 release, Program Files (x86) for the
 # x86 one. CMake's own default depends on the toolchain (MinGW and some MSVC setups pick
 # Program Files (x86) for both). Only when no prefix was given, which CMake says on the first

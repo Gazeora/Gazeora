@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Capture: the frame transport from the hook to the host, reading frames back from the GPU
 // (at full size, scaled down, for VR), screenshots, and the real hook in a real process for
 // every graphics API, using gazeora_testapp.exe as the game. The last one opens a window per

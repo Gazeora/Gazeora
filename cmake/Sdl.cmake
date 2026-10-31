@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # SDL 3.4.18: reads game controllers of every kind (XInput, DirectInput, Windows.Gaming.Input
 # and HID ones such as the DualSense) as one standard layout. Only its joystick and gamepad
 # parts are used; it's linked statically, so nothing ships beside the exe. Video stays in the

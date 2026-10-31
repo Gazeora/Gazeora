@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # The MSI installer (WiX 5, from the dotnet tool manifest at the repository root). Build the
 # gazeora_msi target: it stages `cmake --install` (the Runtime and Tools components) and packs
 # that into Gazeora-v<version>-<arch>.msi in the build folder. Never part of the default build.

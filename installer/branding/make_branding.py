@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 """Draws the MSI wizard's pictures in Gazeora's colors (apps/gazeora/src/ui/theme.h).
 
 Run after changing the logo or the colors, and commit the .bmp files:

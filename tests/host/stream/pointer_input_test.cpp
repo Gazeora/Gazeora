@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/pointer_gate.h"
 #include "gazeora/host/stream/pointer_input_receiver.h"

@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Nithin Aashik
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 # GoogleTest, fetched once for the unit tests (tests/) and the benchmarks (bench/). Named so it
 # doesn't hide CMake's own GoogleTest module (gtest_discover_tests).
 

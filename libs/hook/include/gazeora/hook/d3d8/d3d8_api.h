@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // Minimal Direct3D 8 declarations. The Windows SDK no longer ships d3d8.h, so this
 // declares just what the hook calls, by vtable slot. Types D3D8 shares with D3D9
 // (D3DFORMAT, D3DLOCKED_RECT, ...) kept their values and come from d3d9types.h.

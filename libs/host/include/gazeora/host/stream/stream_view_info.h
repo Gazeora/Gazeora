@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Nithin Aashik
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
 // How the Gazeora app should show the stream, sent with every frame as an SEI message (user
 // data unregistered, payload type 5) so it reaches the phone over any protocol and applies
 // from the frame it comes with. Other players skip SEI they don't know.

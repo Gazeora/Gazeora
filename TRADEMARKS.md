@@ -21,3 +21,10 @@ they identify the original project by Nithin Aashik.
 
 If you share a modified version, give it a different name and icon. The attribution
 "Gazeora by Nithin Aashik" must still appear as [NOTICE](NOTICE) describes.
+
+## Asking for permission
+
+To use the name or logo in a way this page doesn't allow, write to Nithin Aashik at
+<nithinaashikps@gmail.com>, with "Gazeora name and logo" in the subject. Permission is given in
+writing, and can be part of a [commercial license](COMMERCIAL-LICENSE.md): a product built on
+Gazeora under one may carry its name or logo only if the agreement says so.
