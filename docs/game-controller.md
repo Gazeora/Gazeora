@@ -1,77 +1,74 @@
 # Game controller
 
-**Controls → Game controller** lets a game controller move around Gazeora, alongside the mouse
-and keyboard, which keep working as always. It's on unless you switch it off, and the switch
-is remembered.
+A game controller can drive Gazeora's window, alongside the mouse and keyboard. It is set in
+**Controls → Game controller** with **Move around Gazeora with a game controller**. It is on by
+default and the setting is saved as `[game_controller] enabled` in
+[`controls.ini`](configuration.md#game_controller).
 
-Any controller works: Xbox (One, Series, 360), PlayStation (DualSense, DualShock 4), Nintendo
-Switch Pro and most other USB or Bluetooth gamepads. Gazeora reads them through
-[SDL](https://libsdl.org), which knows the layouts of nearly every make, and gives every
-controller the same standard layout. So a button does the same thing wherever it sits on the
-controller, not by what it's called. Several controllers can be connected at once; any of
-them drives.
+Gazeora reads controllers through [SDL](https://libsdl.org), which maps most controllers
+(Xbox, PlayStation, Nintendo Switch Pro and others, wired or Bluetooth) to one standard layout.
+Buttons are identified by position, not by label: the "bottom face button" is A on Xbox, Cross
+on PlayStation, and B on Nintendo. Several controllers can be connected at once, and any of
+them can drive. The card lists the connected controllers by name.
 
-It works the way Steam's Big Picture does: the control the controller is on has a thin edge
-in the violet-to-cyan of the Play button, just inside its own border, and the sidebar and the
-page are two regions side by side.
+## Navigation
 
-| Button | Does |
+The focused control has a colored edge. The sidebar and the page are two regions side by side.
+
+| Button | Action |
 |---|---|
-| D-pad or left stick | Moves the focus. Right from the sidebar goes into the page (where you were, or its top once the page has changed); left from the page's edge goes back to the sidebar, onto the open page |
-| Bottom face button (A on Xbox, Cross on PlayStation, B on Nintendo) | Presses the focused control. In the sidebar, opens the page and stays in the sidebar; on a game, opens its page; on a text box, starts typing |
-| Right face button (B, Circle, A) | Backs out, a step at a time: first it closes what's open (a list, a menu, the keyboard, a slider being changed); then from a game's page back to the library, onto that game; from any other page to its entry in the sidebar. In the sidebar it stays put |
-| Menu / Options / + button | On a game: its menu (Play, Details, Open file location, Remove), as a right-click gives |
-| Left and right shoulder buttons (LB / RB, L1 / R1, L / R) | The previous and next page. In the sidebar, the focus follows to the new page's entry; in a page, it goes to the new page's first control |
-| Right stick | Scrolls the page, faster the further it's pushed |
+| D-pad or left stick | Moves the focus. Right from the sidebar enters the page; left from the page's edge returns to the sidebar |
+| Bottom face button | Presses the focused control. In the sidebar, opens the page and stays in the sidebar. On a game, opens its page. On a text box, opens the [on-screen keyboard](#typing) |
+| Right face button | Goes back one step: closes an open list, menu, keyboard or slider edit; then from a game's page to the library; from any other page to its sidebar entry |
+| Menu / Options / + | On a game: its menu (Play, Details, Open file location, Remove), as a right-click would |
+| Shoulder buttons | Previous and next page |
+| Right stick | Scrolls the page, faster the further it is pushed |
 
-Held, the d-pad and the left stick repeat. To change a slider, press the bottom button on it,
-move it with left and right, and press the bottom button again. Focusing an ⓘ shows its
-explanation. Sticks have a dead zone, so one that rests slightly off center (most do) doesn't
-move anything.
+Holding the d-pad or left stick repeats. To change a slider, press the bottom face button on
+it, move it with left and right, and press the bottom face button again. Sticks have a dead
+zone, so a stick resting slightly off center does not move the focus.
 
 ## Typing
 
-Selecting a text box with the controller (the library's search, a game's name, launch
-arguments, folders, the stream overlay's text) brings up a keyboard on screen, in the window
-itself, so it's in the stream and the headset too. It types into the box as a keyboard would,
-and the box saves as it always does.
+Selecting a text box with the controller opens a keyboard inside the window, so it also shows
+in the stream. It types into the box as a physical keyboard would.
 
-| Button | Does |
+| Button | Action |
 |---|---|
-| D-pad or left stick | Picks a key (held, it keeps going) |
+| D-pad or left stick | Picks a key (repeats when held) |
 | Bottom face button | Types the key |
-| Left face button (X, Square, Y) | Deletes the character before the caret (held, it keeps deleting) |
-| Top face button (Y, Triangle, X) | Types a space |
-| Left shoulder | Shift: the next letter in capitals, or the digits' symbols |
-| Right shoulder | Switches between letters and symbols (`\ / : . _ -` and the rest for paths and arguments) |
-| Right face button, or Menu / Options | Done: keeps the text and puts the keyboard away |
+| Left face button | Deletes the character before the caret (repeats when held) |
+| Top face button | Types a space |
+| Left shoulder | Shift: the next letter in capitals, or the symbols on digit keys |
+| Right shoulder | Switches between letters and symbols |
+| Right face button, or Menu / Options | Done: keeps the text and closes the keyboard |
 
-The keys **Shift**, **&123** / **ABC**, **Space**, **Delete** and **Done** do the same.
+The on-screen keys **Shift**, **&123** / **ABC**, **Space**, **Delete** and **Done** do the
+same.
 
-The card lists the controllers it sees, by name.
+## When the controller drives Gazeora
 
-## When it drives Gazeora
-
-- **Gazeora in front, or on the stream.** The controller drives Gazeora while its window is
-  the one in front, or while the stream shows the window (**Settings → Frame stream**, with the
-  window as the picture and someone watching). That includes the phone in the headset, with
-  Gazeora minimized. With another program in front and nobody watching, Gazeora leaves the
-  controller alone.
+- **While Gazeora is in front, or on the stream.** The controller drives Gazeora while its
+  window is the foreground window, or while the stream is showing the window to at least one
+  viewer, including with Gazeora minimized. Otherwise Gazeora ignores the controller.
 - **Never while a game runs.** While a game launched from Gazeora is starting or running,
-  Gazeora stops reading controllers and lets go of them entirely, so the game has them to
-  itself. They're picked up again when it closes.
-- **Controllers are left as games expect them.** Gazeora doesn't switch a DualSense or
-  DualShock 4 into its extended report mode, and doesn't change player lights. Over Bluetooth
-  that mode would otherwise last until the controller reconnects, and some games don't
-  read it.
+  Gazeora stops reading controllers and releases them, so the game has them to itself. The card
+  shows *Paused while a game runs*. They are picked up again when the game closes.
+- **Controller state is left unchanged.** Gazeora does not switch PlayStation controllers to
+  their enhanced report mode and does not change player LEDs.
+
+## Limitations
+
+- The guide button (Xbox, PS) is not used.
+- The left and top face buttons are used only by the on-screen keyboard.
+- **Add game**, **Browse** and **Choose image...** open Windows file dialogs, which need a mouse
+  and keyboard.
+- With Steam running, Steam Input may present a controller as an Xbox controller. Behavior with
+  Steam Input has not been separately verified.
 
 ## Troubleshooting
 
-- **"No controller connected".** Plug the controller in, or pair it in Windows' Bluetooth
-  settings first. It shows up within a moment, with no need to restart Gazeora.
-- **A button does nothing.** The guide button (Xbox, PS) is left to Windows and Steam. The
-  left and top face buttons are used only by the on-screen keyboard.
-- **Adding games and choosing pictures.** **Add game**, **Browse** and **Choose image...**
-  open Windows' own file dialogs, which need the mouse and keyboard.
-- **Steam Input.** Steam can stand in for a controller while Steam is open, and it may then
-  show up as an Xbox controller. Either way, it works.
+- **"No controller connected: plug one in or pair it over Bluetooth".** Plug the controller in,
+  or pair it in Windows' Bluetooth settings. It is detected without restarting Gazeora.
+- **An error instead of the controller list.** The controller system failed to start. Click
+  **Try again** on the card.
