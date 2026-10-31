@@ -206,4 +206,3 @@ The desktop-specific guidance at the end of this section supplements it and does
 - [ ] Codec, streaming, and performance claims are measured or clearly qualified.
 - [ ] Desktop/Android protocol details agree with the canonical protocol documentation.
 - [ ] Build commands and dependencies are verified against the current repository.
-
