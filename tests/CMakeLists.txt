@@ -50,6 +50,7 @@ gazeora_add_test(gazeora_host_tests
         host/encode/gpu_nv12_converter_test.cpp
         host/encode/video_encoder_test.cpp
         host/stream/bitrate_controller_test.cpp
+        host/stream/camera_status_monitor_test.cpp
         host/stream/frame_mailbox_test.cpp
         host/stream/frame_stream_test.cpp
         host/stream/head_angles_test.cpp

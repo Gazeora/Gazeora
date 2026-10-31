@@ -12,6 +12,7 @@
 #include <cstring>
 #include <vector>
 
+#include "gazeora/host/stream/camera_status_message.h"
 #include "gazeora/host/stream/head_pose_message.h"
 #include "gazeora/host/stream/pointer_message.h"
 
@@ -668,14 +669,19 @@ void UsbAccessoryOutput::Hear(const FrameHeader& header, const uint8_t* payload,
 void UsbAccessoryOutput::HearInput(const FrameHeader& header, const uint8_t* payload) {
     PointerEventSink* pointer = m_pointerSink;
     HeadPoseSink* head = m_headPoseSink;
+    CameraStatusSink* camera = m_cameraStatusSink;
     PointerEvent event;
     HeadPose pose;
+    CameraReport report;
     if (header.type == FrameMessage::Pointer && pointer &&
         PointerMessage::Read(payload, header.tail, event)) {
         pointer->OnPointer(event);
     } else if (header.type == FrameMessage::HeadPose && head &&
                HeadPoseMessage::Read(payload, header.tail, pose)) {
         head->OnHeadPose(pose);
+    } else if (header.type == FrameMessage::CameraStatus && camera &&
+               CameraStatusMessage::Read(payload, header.tail, report)) {
+        camera->OnCameraStatus(report);
     }
 }
 

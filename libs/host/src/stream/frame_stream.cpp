@@ -150,6 +150,7 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     if (m_output) {
         m_output->SetPointerSink(&m_pointerGate);
         m_output->SetHeadPoseSink(&m_headMonitor);
+        m_output->SetCameraStatusSink(&m_cameraMonitor);
         if (!m_output->Start(bindAddress, port, error)) {
             Stop();
             return false;

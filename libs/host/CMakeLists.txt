@@ -22,6 +22,8 @@ add_library(gazeora_host_lib STATIC
     src/encode/nv12_texture_pool.cpp
     # stream: the stream server and its protocols (RTSP/RTP, UDP, HTTP, USB), discovery
     src/stream/bitrate_controller.cpp
+    src/stream/camera_status_message.cpp
+    src/stream/camera_status_monitor.cpp
     src/stream/discovery.cpp
     src/stream/frame_mailbox.cpp
     src/stream/frame_output.cpp
