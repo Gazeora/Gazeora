@@ -102,9 +102,7 @@ void HeadTrackingCard::DrawController(ImFont* caption) {
 
 void HeadTrackingCard::DrawControllerSeen() {
     const LONG paths = m_control.ControllerPaths();
-    const char* seen =
-        "The game hasn't read a controller yet (it needs capture on, so Gazeora "
-        "is inside it)";
+    const char* seen = "The game hasn't read a controller yet";
     if (paths & (kPathSonyRead | kPathSonyOverlapped | kPathSonyGetReport)) {
         seen = "The game reads a PlayStation controller on USB";
     } else if (paths & kPathXInput) {
