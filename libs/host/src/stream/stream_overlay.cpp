@@ -103,7 +103,8 @@ std::vector<std::wstring> OverlayLines(const OverlaySettings& settings, const Ov
           Line({settings.codec ? Widen(stats.codec) : L"", resolution, frameRate}),
           Line({bitrate, loss}), settings.encoder ? stats.encoder : std::wstring(), clock,
           settings.head ? HeadLine(stats) : std::wstring(),
-          settings.camera ? CameraOverlayLine::From(stats.camera) : std::wstring(), settings.text}) {
+          settings.camera ? CameraOverlayLine::From(stats.camera) : std::wstring(),
+          settings.text}) {
         if (!line.empty()) {
             lines.push_back(line);
         }
