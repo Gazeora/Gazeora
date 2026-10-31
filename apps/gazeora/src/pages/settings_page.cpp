@@ -23,6 +23,8 @@
 #include "gazeora/host/launch/injector.h"
 #include "platform/shell.h"
 #include "platform/usb_driver.h"
+#include "report/issue_link.h"
+#include "report/windows_description.h"
 #include "settings/stream_settings.h"
 #include "ui/logo_frame.h"
 #include "ui/text_format.h"
@@ -201,6 +203,13 @@ void App::DrawSettings() {
                        "with no warranty: see LICENSE and NOTICE. Also available under a "
                        "commercial license: see COMMERCIAL-LICENSE.md.");
     ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, S(kGroupGap)));
+    // Opens a new GitHub bug report with the version and PC already filled in.
+    if (FilledButton(ICON_WARNING "   Report a problem##report", ImVec2(S(180), S(34)), kSecondary,
+                     kSecondaryHover, kText, m_fonts.bold, S(6))) {
+        OpenUrl(IssueLink(kGazeoraNewIssue, kBugReportTemplate)
+                    .For(ProblemReport(GAZEORA_VERSION_STRING, DescribeWindows())));
+    }
     EndCard();
     ImGui::PopStyleVar();
 }
