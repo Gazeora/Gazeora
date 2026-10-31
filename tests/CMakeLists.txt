@@ -9,8 +9,8 @@
 #  - gazeora_transport_tests: real hook and host talking to each other in one process
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
 #  - gazeora_input_tests:     game controllers
-#  - gazeora_app_tests:       the launcher's game controller support and on-screen keyboard,
-#                             on a headless ImGui
+#  - gazeora_app_tests:       the launcher's game controller support, on-screen keyboard and
+#                             problem reports, on a headless ImGui
 #  - gazeora_installer_tests: the MSI's custom actions, on a fake installer session
 # D3D11 tests run on WARP, so no GPU is needed.
 
@@ -112,6 +112,7 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/keyboard_layout.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/on_screen_keyboard.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/report/windows_description.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/controls_settings.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/settings_file.cpp
         app/gamepad/button_repeat_test.cpp
@@ -125,6 +126,7 @@ gazeora_add_test(gazeora_app_tests
         app/head/mouse_look_driver_test.cpp
         app/keyboard/keyboard_layout_test.cpp
         app/keyboard/on_screen_keyboard_test.cpp
+        app/report/windows_description_test.cpp
     LIBS gazeora_input gazeora_library gazeora_host_lib imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
     ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)

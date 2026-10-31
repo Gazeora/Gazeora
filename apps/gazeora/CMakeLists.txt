@@ -43,6 +43,7 @@ add_executable(Gazeora WIN32
     src/platform/usb_driver.cpp
     src/remote/imgui_pointer_input.cpp
     src/remote/pointer_event_queue.cpp
+    src/report/windows_description.cpp
     src/settings/controls_settings.cpp
     src/settings/settings_file.cpp
     src/settings/stream_settings.cpp
