@@ -1,8 +1,12 @@
 # Troubleshooting
 
-Common problems, what causes them, and how to fix them. When reporting a problem, include your
-Gazeora version (**Settings → About**), the protocol and codec, and
-`%APPDATA%\Gazeora\stream.log` (see [Stream log](streaming.md#stream-log)).
+Common problems, what causes them, and how to fix them.
+
+To report a problem, click **Report a problem** in **Settings → About**. It opens a new bug
+report on GitHub in your browser, with the Gazeora version, Windows version, processor and
+release (x64 or x86) already filled in. Add the protocol and codec, and attach
+`%APPDATA%\Gazeora\stream.log` (see [Stream log](streaming.md#stream-log)). Nothing is sent
+until you submit the issue yourself.
 
 ## Capture
 

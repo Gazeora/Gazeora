@@ -8,7 +8,8 @@ don't need to write code to help.
 - **Report a problem.** [Open an issue](https://github.com/Gazeora/Gazeora/issues/new/choose)
   and pick the form that fits: bug report, crash or freeze, performance problem, or feature
   request. Each form asks for what's needed to look into it, such as the version, the stream
-  settings and `stream.log`.
+  settings and `stream.log`. **Report a problem** in Gazeora's **Settings → About** opens the
+  bug report with the version and PC already filled in.
 - **Tell us how a game works.** The **Game compatibility** form records whether a game captures,
   with which graphics API and launcher. Reports that a game works are as useful as ones that
   don't: they build the list of tested games.
