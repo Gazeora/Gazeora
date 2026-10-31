@@ -7,6 +7,8 @@
 #include <shobjidl.h>
 #include <wrl/client.h>
 
+#include "gazeora/common/text/utf8.h"
+
 using Microsoft::WRL::ComPtr;
 
 namespace gazeora::app {
@@ -23,6 +25,10 @@ void ShowInExplorer(const std::wstring& path) {
         std::wstring args = L"/select,\"" + path + L"\"";
         ShellExecuteW(nullptr, L"open", L"explorer.exe", args.c_str(), nullptr, SW_SHOWNORMAL);
     }
+}
+
+void OpenUrl(const std::string& url) {
+    ShellExecuteW(nullptr, L"open", Utf8::ToWide(url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
 std::vector<std::wstring> PickFiles(HWND owner, PickKind kind) {
