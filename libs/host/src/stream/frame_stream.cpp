@@ -13,8 +13,10 @@
 #include <cstdlib>
 #include <deque>
 #include <random>
+#include <stdexcept>
 #include <utility>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/packet_send_queue.h"
 #include "gazeora/host/stream/player_identity.h"
 #include "gazeora/host/stream/pointer_message.h"
@@ -35,7 +37,8 @@ namespace {
 
 // H.265 gets about the same picture from 70% of the bits. The rest is saved rather than
 // spent on detail: fewer packets per frame means fewer frames hit by a loss on Wi-Fi.
-constexpr uint32_t kH265BitratePercent = 70;
+constexpr uint32_t kFullBitratePercent = 100;
+constexpr char kDefaultDiscoveryPath[] = "/";
 // A key frame every second (the frame rate's worth of frames): what a lost packet smears is
 // repaired by then, and a player that joins without one still starts within a second. More
 // often costs too much picture quality at these bitrates.
@@ -123,10 +126,39 @@ private:
     std::deque<uint64_t> m_times;
 };
 
+template <typename Registry>
+std::shared_ptr<const Registry> Required(std::shared_ptr<const Registry> registry) {
+    if (!registry) {
+        throw std::invalid_argument("FrameStreamServer: null registry");
+    }
+    return registry;
+}
+
 }  // namespace
 
-FrameStreamServer::FrameStreamServer(VideoPipeline::EncoderFactory encoderFactory)
-    : m_encoderFactory(std::move(encoderFactory)) {}
+FrameStreamServer::FrameStreamServer(std::shared_ptr<const VideoEncoderRegistry> encoders,
+                                     std::shared_ptr<const FrameOutputRegistry> outputs,
+                                     std::shared_ptr<const StreamProtocolCatalog> protocols,
+                                     std::shared_ptr<const VideoCodecCatalog> codecs)
+    : m_encoders(Required(std::move(encoders))),
+      m_outputs(Required(std::move(outputs))),
+      m_protocols(Required(std::move(protocols))),
+      m_codecs(Required(std::move(codecs))) {}
+
+void FrameStreamServer::SetProtocol(const StreamProtocol& protocol) {
+    std::lock_guard<std::mutex> lock(m_choiceMutex);
+    m_protocol = protocol;
+}
+
+StreamProtocol FrameStreamServer::Protocol() const {
+    std::lock_guard<std::mutex> lock(m_choiceMutex);
+    return m_protocol;
+}
+
+StreamProtocol FrameStreamServer::RunningProtocol() const {
+    std::lock_guard<std::mutex> lock(m_choiceMutex);
+    return m_runningProtocol;
+}
 
 FrameStreamServer::~FrameStreamServer() {
     Stop();
@@ -144,25 +176,24 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     in_addr bindAddress;
     bindAddress.s_addr = htonl(lan ? INADDR_ANY : INADDR_LOOPBACK);
 
-    const StreamProtocol protocol = m_protocol;
-    m_runningProtocol = protocol;
-    m_output = CreateFrameOutput(protocol, m_log);
-    if (m_output) {
-        m_output->SetPointerSink(&m_pointerGate);
-        m_output->SetHeadPoseSink(&m_headMonitor);
-        m_output->SetCameraStatusSink(&m_cameraMonitor);
-        if (!m_output->Start(bindAddress, port, error)) {
-            Stop();
-            return false;
+    const StreamProtocol protocol = Protocol();
+    {
+        std::lock_guard<std::mutex> lock(m_choiceMutex);
+        m_runningProtocol = protocol;
+        m_encodable.clear();
+        for (const VideoCodecInfo& codec : m_codecs->All()) {
+            if (codec.id != VideoCodec::H264 && m_encoders->Available(codec.id)) {
+                m_encodable.insert(codec.id);
+            }
         }
-        m_port = m_output->Port();
-    } else if (!StartRtsp(bindAddress, port, error)) {
+    }
+    if (!(protocol.IsRtsp() ? StartRtsp(bindAddress, port, error)
+                            : StartOutput(protocol, bindAddress, port, error))) {
         Stop();
         return false;
     }
 
     m_ssrc = std::random_device()();
-    m_h265Available = VideoEncoder::Available(VideoCodec::H265);
     m_stopping = false;
     std::wstring discoveryError;
     if (!m_discovery.Start(
@@ -174,7 +205,7 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
         m_log.Write("touches and head turns from the Android app won't reach this PC: %ls",
                     inputError.c_str());
     }
-    m_log.Write("streaming over %s", ProtocolName(protocol));
+    m_log.Write("streaming over %s", m_protocols->NameOf(protocol).c_str());
     m_running = true;
     // The idle frame set before a restart (a protocol change) still stands.
     m_mailbox.RepostIdle();
@@ -182,6 +213,23 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     if (!m_output) {
         m_acceptThread = std::thread([this] { AcceptLoop(); });
     }
+    return true;
+}
+
+bool FrameStreamServer::StartOutput(const StreamProtocol& protocol, in_addr address, uint16_t port,
+                                    std::wstring& error) {
+    m_output = m_outputs->Create(protocol, m_log);
+    if (!m_output) {
+        error = L"this build has no output for " + Utf8::ToWide(m_protocols->NameOf(protocol));
+        return false;
+    }
+    m_output->SetPointerSink(&m_pointerGate);
+    m_output->SetHeadPoseSink(&m_headMonitor);
+    m_output->SetCameraStatusSink(&m_cameraMonitor);
+    if (!m_output->Start(address, port, error)) {
+        return false;
+    }
+    m_port = m_output->Port();
     return true;
 }
 
@@ -320,11 +368,12 @@ std::string FrameStreamServer::Describe() {
             name.assign(utf8, size_t(length));
         }
     }
-    const StreamProtocol protocol = m_runningProtocol;
+    const StreamProtocol protocol = RunningProtocol();
+    const StreamProtocolInfo* info = m_protocols->Find(protocol);
+    const std::string path = info ? info->discoveryPath : kDefaultDiscoveryPath;
     return std::string("{\"service\":\"gazeora\",\"version\":1,\"name\":") + JsonString(name) +
-           ",\"protocol\":\"" + ProtocolId(protocol) + "\",\"port\":" + std::to_string(m_port) +
-           ",\"path\":\"" + (protocol == StreamProtocol::Http ? "/stream.ts" : "/") +
-           "\",\"codec\":\"" + (Codec() == VideoCodec::H265 ? "h265" : "h264") + "\"}";
+           ",\"protocol\":" + JsonString(protocol.Id()) + ",\"port\":" + std::to_string(m_port) +
+           ",\"path\":" + JsonString(path) + ",\"codec\":" + JsonString(Codec().Id()) + "}";
 }
 
 void FrameStreamServer::SetOverlay(const OverlaySettings& overlay) {
@@ -609,21 +658,19 @@ bool FrameStreamServer::OnDescribe(RequestContext& context) {
     std::string fmtp;
     {
         std::unique_lock<std::mutex> lock(m_statusMutex);
-        auto hasParameterSets = [&] {
-            return m_fmtp[int(codec)].find("sprop-") != std::string::npos;
-        };
+        auto hasParameterSets = [&] { return FmtpOf(codec).find("sprop-") != std::string::npos; };
         if (!hasParameterSets()) {
             m_parameterSetsWanted = true;
             m_fmtpChanged.wait_for(lock, kParameterSetsWait, hasParameterSets);
             m_parameterSetsWanted = false;
         }
-        fmtp = m_fmtp[int(codec)];
+        fmtp = FmtpOf(codec);
     }
     std::string sdp = "v=0\r\no=- " + std::to_string(m_ssrc) + " 1 IN IP4 " + ip +
                       "\r\ns=Gazeora\r\nc=IN IP4 0.0.0.0\r\nt=0 0\r\na=control:*\r\n"
                       "m=video 0 RTP/AVP " +
-                      payloadType + "\r\na=rtpmap:" + payloadType + " " +
-                      RtpPayloadFormat::For(codec).EncodingName() + "/90000\r\n" +
+                      payloadType + "\r\na=rtpmap:" + payloadType + " " + EncodingNameOf(codec) +
+                      "/90000\r\n" +
                       (fmtp.empty() ? "" : "a=fmtp:" + payloadType + " " + fmtp + "\r\n") +
                       "a=control:track1\r\n";
     const std::string& url = context.request.url;
@@ -644,9 +691,10 @@ bool FrameStreamServer::OnSetup(RequestContext& context) {
             RtspResponse("461 Unsupported Transport", context.request).Serialize());
     }
     // Only the transport the protocol names. Players such as VLC try the other on a 461.
-    if (transport.interleaved != (m_runningProtocol == StreamProtocol::RtspTcp)) {
+    const StreamProtocol running = RunningProtocol();
+    if (transport.interleaved != (running == StreamProtocol::RtspTcp)) {
         m_log.Write("%s asked for RTP over %s; the stream is %s", connection.Peer().c_str(),
-                    transport.interleaved ? "TCP" : "UDP", ProtocolName(m_runningProtocol));
+                    transport.interleaved ? "TCP" : "UDP", m_protocols->NameOf(running).c_str());
         return connection.Send(
             RtspResponse("461 Unsupported Transport", context.request).Serialize());
     }
@@ -853,7 +901,9 @@ void FrameStreamServer::HeardFrom(const sockaddr_in& from, uint64_t now) {
 }
 
 uint32_t FrameStreamServer::BitrateAt(int step) const {
-    uint32_t top = m_maxBitrate / 100 * (Codec() == VideoCodec::H265 ? kH265BitratePercent : 100);
+    const VideoCodecInfo* codec = m_codecs->Find(Codec());
+    uint32_t top =
+        m_maxBitrate / kFullBitratePercent * (codec ? codec->bitratePercent : kFullBitratePercent);
     return BitrateController::BitrateAt(step, top);
 }
 
@@ -861,22 +911,36 @@ uint32_t FrameStreamServer::Bitrate() const { return BitrateAt(m_bitrate.Step())
 
 uint32_t FrameStreamServer::FullBitrate() const { return BitrateAt(0); }
 
-void FrameStreamServer::SetCodec(VideoCodec codec) {
+void FrameStreamServer::SetCodec(const VideoCodec& codec) {
     VideoCodec before = Codec();
-    m_requestedCodec = codec;
+    {
+        std::lock_guard<std::mutex> lock(m_choiceMutex);
+        m_requestedCodec = codec;
+    }
     if (Codec() != before) {
         ++m_codecGeneration;
-        m_log.Write("codec now %s; players were disconnected", CodecName(Codec()));
+        m_log.Write("codec now %s; players were disconnected", m_codecs->NameOf(Codec()).c_str());
     }
 }
 
 VideoCodec FrameStreamServer::Codec() const {
-    return m_requestedCodec == VideoCodec::H265 && m_h265Available ? VideoCodec::H265
-                                                                   : VideoCodec::H264;
+    std::lock_guard<std::mutex> lock(m_choiceMutex);
+    return m_encodable.count(m_requestedCodec) ? m_requestedCodec : VideoCodec::H264;
 }
 
-bool FrameStreamServer::CodecAvailable(VideoCodec codec) const {
-    return codec == VideoCodec::H264 || m_h265Available;
+bool FrameStreamServer::CodecAvailable(const VideoCodec& codec) const {
+    std::lock_guard<std::mutex> lock(m_choiceMutex);
+    return codec == VideoCodec::H264 || m_encodable.count(codec) > 0;
+}
+
+std::string FrameStreamServer::EncodingNameOf(const VideoCodec& codec) const {
+    const VideoCodecInfo* info = m_codecs->Find(codec);
+    return info && info->format ? info->format->Rtp().EncodingName() : codec.Id();
+}
+
+std::string FrameStreamServer::FmtpOf(const VideoCodec& codec) const {
+    auto found = m_fmtp.find(codec);
+    return found == m_fmtp.end() ? std::string() : found->second;
 }
 
 void FrameStreamServer::AdaptQuality(uint64_t now) {
@@ -905,13 +969,16 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     std::wstring error;
     bool reopened = false;
     if (!pipeline.Prepare(config, width, height, reopened, error, device.Get())) {
-        m_log.Write("cannot open an %s encoder for %ux%u: %ls", CodecName(config.codec), width,
-                    height, error.c_str());
-        if (config.codec == VideoCodec::H265) {
+        m_log.Write("cannot open an %s encoder for %ux%u: %ls",
+                    m_codecs->NameOf(config.codec).c_str(), width, height, error.c_str());
+        if (config.codec != VideoCodec::H264) {
             // Listed but not working (a size it doesn't take, a driver problem): fall back to
             // H.264, which always has the software encoder.
             VideoCodec before = Codec();
-            m_h265Available = false;
+            {
+                std::lock_guard<std::mutex> lock(m_choiceMutex);
+                m_encodable.erase(config.codec);
+            }
             if (Codec() != before) ++m_codecGeneration;
         }
         SetLastError(error);
@@ -919,8 +986,9 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     }
     if (reopened) {
         std::wstring name = pipeline.EncoderName();
-        m_log.Write("encoding %s %ux%u with %ls at %.1f Mbit/s", CodecName(config.codec), width,
-                    height, name.c_str(), config.bitrate / 1e6);
+        m_log.Write("encoding %s %ux%u with %ls at %.1f Mbit/s",
+                    m_codecs->NameOf(config.codec).c_str(), width, height, name.c_str(),
+                    config.bitrate / 1e6);
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_encoderName = std::move(name);
     }
@@ -945,7 +1013,7 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
         fmtpChanged, error);
     if (fmtpChanged) {
         std::lock_guard<std::mutex> lock(m_statusMutex);
-        m_fmtp[int(pipeline.Codec())] = pipeline.Fmtp();
+        m_fmtp[pipeline.Codec()] = pipeline.Fmtp();
         m_fmtpChanged.notify_all();
     }
     SetLastError(ok ? std::wstring() : error);
@@ -962,7 +1030,8 @@ void FrameStreamServer::EncodeLoop() {
             L"Media Foundation is unavailable (Windows N without the Media Feature Pack?)");
         return;
     }
-    VideoPipeline pipeline(m_encoderFactory);
+    std::shared_ptr<const VideoEncoderRegistry> encoders = m_encoders;
+    VideoPipeline pipeline([encoders] { return encoders->Create(); }, m_codecs);
     Picture live, idle;
     Picture overlaid;  // the picture streamed with the overlay drawn on
     OverlayRenderer overlay;
@@ -1042,9 +1111,9 @@ const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& t
         return &picture;
     }
     OverlayStats stats;
-    stats.protocol = ProtocolName(m_runningProtocol);
+    stats.protocol = m_protocols->NameOf(RunningProtocol());
     stats.viewers = m_viewers;
-    stats.codec = CodecName(Codec());
+    stats.codec = m_codecs->NameOf(Codec());
     stats.width = picture.width & ~1u;  // as encoded
     stats.height = picture.height & ~1u;
     stats.frameRate = frameRate;

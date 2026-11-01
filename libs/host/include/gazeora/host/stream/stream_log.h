@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cstdio>
+#include <functional>
 #include <mutex>
 #include <string>
 
@@ -11,15 +12,21 @@ namespace gazeora {
 
 // A timestamped text log of what players did, for working out why a stream stalled on one
 // device. Thread-safe; stops writing past a few megabytes so a long session can't fill the
-// disk. Writing without a file is a no-op.
+// disk. Writing without a file is a no-op. A forwarding log hands its lines on instead: a
+// bundled plugin's, whose lines go to Gazeora's log.
 class StreamLog {
 public:
+    // Takes one line, without a timestamp; from any thread.
+    using Forward = std::function<void(const char* line)>;
+
     StreamLog() = default;
+    explicit StreamLog(Forward forward) : m_forward(std::move(forward)) {}
     StreamLog(const StreamLog&) = delete;
     StreamLog& operator=(const StreamLog&) = delete;
     ~StreamLog() { Open({}); }
 
-    // Starts a new log at `path`, replacing what was there. Empty closes the log.
+    // Starts a new log at `path`, replacing what was there. Empty closes the log. Not for a
+    // forwarding log.
     void Open(const std::wstring& path);
     // One line, printf style.
     void Write(const char* format, ...)
@@ -29,6 +36,11 @@ public:
         ;
 
 private:
+    // Whether a line would be written to the file now.
+    bool Writing();
+    void Append(const char* text);
+
+    const Forward m_forward;
     std::mutex m_mutex;
     FILE* m_file = nullptr;
     long m_bytes = 0;

@@ -30,7 +30,8 @@ class PointerMessage {
 public:
     // False if the payload is short or its action or button is unknown.
     static bool Read(const uint8_t* payload, size_t size, PointerEvent& out);
-    // A whole message, header and payload, as the app sends it (for tests).
+    // A whole message, header and payload, as the app sends it (for tests, and for bundled plugins
+    // handing input on).
     static std::string Write(const PointerEvent& event);
 
 private:

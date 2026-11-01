@@ -26,6 +26,8 @@ namespace gazeora {
 class HttpTsOutput : public FrameOutput {
 public:
     explicit HttpTsOutput(StreamLog& log) : m_log(log) {}
+    // The protocol it is, for the catalog.
+    static StreamProtocolInfo Info();
     ~HttpTsOutput() override { Stop(); }
 
     bool Start(in_addr address, uint16_t port, std::wstring& error) override;
@@ -34,7 +36,7 @@ public:
     int Viewers() const override { return m_viewers; }
     int AppViewers() const override { return m_appViewers; }
     bool TakeKeyFrameRequest() override { return m_keyFrameWanted.exchange(false); }
-    void Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+    void Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
               uint64_t now) override;
     std::wstring Url(const std::wstring& host) const override;
     bool Watching(const in_addr& address) override;

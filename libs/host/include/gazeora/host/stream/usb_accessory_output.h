@@ -46,6 +46,8 @@ public:
     static constexpr const char* kModel = "Gazeora Stream";
 
     explicit UsbAccessoryOutput(StreamLog& log);
+    // The protocol it is, for the catalog.
+    static StreamProtocolInfo Info();
     ~UsbAccessoryOutput() override;
 
     bool Start(in_addr address, uint16_t port, std::wstring& error) override;
@@ -53,7 +55,7 @@ public:
     uint16_t Port() const override { return 0; }
     int Viewers() const override { return m_watching ? 1 : 0; }
     bool TakeKeyFrameRequest() override { return m_keyFrameWanted.exchange(false); }
-    void Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+    void Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
               uint64_t now) override;
     std::wstring Url(const std::wstring&) const override { return {}; }
     std::wstring Status() const override;

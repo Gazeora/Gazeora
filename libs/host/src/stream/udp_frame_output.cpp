@@ -26,6 +26,13 @@ uint64_t Key(const sockaddr_in& address) {
 
 }  // namespace
 
+StreamProtocolInfo UdpFrameOutput::Info() {
+    return {StreamProtocol::Udp, "UDP",
+            "UDP: for the Gazeora app. Frames go straight to the phone with the least overhead, "
+            "and a lost packet drops its frame.",
+            "/", false};
+}
+
 bool UdpFrameOutput::Start(in_addr address, uint16_t port, std::wstring& error) {
     uint16_t bound = 0;
     m_socket = net::BindUdp(address, port, bound);
@@ -191,7 +198,7 @@ void UdpFrameOutput::Hear(const sockaddr_in& from, const FrameHeader& header, ui
     m_viewers = int(m_players.size());
 }
 
-void UdpFrameOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+void UdpFrameOutput::Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
                           uint64_t now) {
     std::vector<sockaddr_in> targets;
     {
@@ -200,14 +207,13 @@ void UdpFrameOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateContr
             Player& player = entry.second;
             targets.push_back(player.address);
             if (!player.lossReported) {
-                bitrate.Report(entry.first, player.loss, now);
+                loss.Report(entry.first, player.loss, now);
                 player.lossReported = true;
             }
         }
     }
     FrameHeader header;
-    header.flags = uint8_t((frame.keyFrame ? kFrameFlagKey : 0) |
-                           (frame.codec == VideoCodec::H265 ? kFrameFlagH265 : 0));
+    header.flags = uint8_t((frame.keyFrame ? kFrameFlagKey : 0) | frame.format.FrameFlags());
     header.width = uint16_t(frame.width);
     header.height = uint16_t(frame.height);
     header.frameNumber = m_frameNumber++;

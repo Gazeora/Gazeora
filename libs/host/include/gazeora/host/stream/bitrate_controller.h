@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <map>
 
+#include "gazeora/host/stream/loss_report_sink.h"
+
 namespace gazeora {
 
 // Picks the stream's bitrate from the loss players report. While any player reports
@@ -15,7 +17,7 @@ namespace gazeora {
 // kRecoverEveryMs. Fewer bits mean fewer packets per frame, so fewer frames hit by a loss.
 // Pure logic, no clock or network of its own: time comes in as milliseconds, so it can be
 // tested directly. Reports and Update come from one thread; the readers from any.
-class BitrateController {
+class BitrateController final : public LossReportSink {
 public:
     static constexpr float kLossToBackOff = 0.02f;
     // VLC reports about every 5 s, so a report has to count for longer than that.
@@ -32,7 +34,7 @@ public:
 
     // `source` identifies a player (its address, or its connection); a newer report from the
     // same one replaces the older.
-    void Report(uint64_t source, float fractionLost, uint64_t nowMs);
+    void Report(uint64_t source, float fractionLost, uint64_t nowMs) override;
     // Drops stale reports and moves along the ladder. Without viewers it goes back to the
     // top, so the next player starts at full quality. True if the step changed.
     bool Update(uint64_t nowMs, int viewers);

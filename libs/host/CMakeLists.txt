@@ -6,28 +6,40 @@
 # (apps/) and the unit tests.
 add_library(gazeora_host_lib STATIC
     # launch: starting games and injecting the hook into them
+    src/launch/built_in_game_stores.cpp
+    src/launch/game_store_registry.cpp
     src/launch/injector.cpp
     src/launch/launcher.cpp
     src/launch/remote_thread_injector.cpp
+    src/launch/steam_game_store.cpp
     # capture: receiving the hook's frames and reading them back from the GPU
     src/capture/capture_client.cpp
     src/capture/controller_turn_channel.cpp
     src/capture/frame_dump.cpp
     # encode: H.264 / H.265 through Media Foundation, from memory or GPU textures
+    src/encode/built_in_video_codecs.cpp
+    src/encode/built_in_video_encoders.cpp
+    src/encode/bundled_video_codecs.cpp
     src/encode/color_convert.cpp
     src/encode/dxgi_device_manager.cpp
+    src/encode/fallback_video_encoder.cpp
     src/encode/gpu_nv12_converter.cpp
     src/encode/media_foundation_encoder.cpp
     src/encode/nv12_readback.cpp
     src/encode/nv12_texture_pool.cpp
+    src/encode/video_encoder_registry.cpp
     # stream: the stream server and its protocols (RTSP/RTP, UDP, HTTP, USB), discovery
     src/stream/bitrate_controller.cpp
+    src/stream/built_in_stream_protocols.cpp
+    src/stream/bundled_protocols.cpp
     src/stream/camera_overlay_line.cpp
+    src/stream/codecs/h264_format.cpp
+    src/stream/codecs/h265_format.cpp
     src/stream/camera_status_message.cpp
     src/stream/camera_status_monitor.cpp
     src/stream/discovery.cpp
     src/stream/frame_mailbox.cpp
-    src/stream/frame_output.cpp
+    src/stream/frame_output_registry.cpp
     src/stream/frame_packet.cpp
     src/stream/frame_stream.cpp
     src/stream/head_angles.cpp
@@ -48,7 +60,6 @@ add_library(gazeora_host_lib STATIC
     src/stream/stream_log.cpp
     src/stream/stream_overlay.cpp
     src/stream/stream_frame_sender.cpp
-    src/stream/stream_protocol.cpp
     src/stream/stream_view_info.cpp
     src/stream/ts_muxer.cpp
     src/stream/udp_frame_output.cpp

@@ -23,7 +23,8 @@ class HeadPoseMessage {
 public:
     // False if the payload is short or its quaternion is far from unit length.
     static bool Read(const uint8_t* payload, size_t size, HeadPose& out);
-    // A whole message, header and payload, as the app sends it (for tests).
+    // A whole message, header and payload, as the app sends it (for tests, and for bundled plugins
+    // handing input on).
     static std::string Write(const HeadPose& pose);
 
 private:
