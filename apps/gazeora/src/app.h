@@ -158,6 +158,8 @@ private:
     void AddGamePaths(const std::vector<std::wstring>& paths);
     void Launch(uint32_t gameId);
     void RemoveGame(uint32_t gameId);
+    // Drops games whose exe is gone, e.g. uninstalled since the last run.
+    void RemoveMissingGames();
     void OpenDetails(uint32_t gameId);
     void SaveLibrary();
     void ShowToast(const std::string& text, bool error = false);

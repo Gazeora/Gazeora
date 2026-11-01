@@ -77,6 +77,7 @@ endif()
 
 gazeora_add_test(gazeora_library_tests
     SOURCES library/game_library_test.cpp
+            library/missing_game_pruner_test.cpp
     LIBS gazeora_library)
 
 gazeora_add_test(gazeora_installer_tests

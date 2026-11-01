@@ -49,7 +49,9 @@ constexpr int kLogoFrameHeight = 720;
 App::App(HWND hwnd, ID3D11Device* device, float scale)
     : m_hwnd(hwnd), m_scale(scale), m_device(device), m_textures(device) {
     std::wstring error;
-    if (!m_library.Load(error)) {
+    if (m_library.Load(error)) {
+        RemoveMissingGames();
+    } else {
         ShowToast(U8(error), true);
     }
     // The stream is always on and open to the whole network. It shows this window until a

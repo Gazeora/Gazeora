@@ -26,6 +26,9 @@ GazeoraCLI list
 The library format is internal to Gazeora and may change between versions. Edit it through
 `Gazeora.exe` or `GazeoraCLI` rather than by hand.
 
+At startup, `Gazeora.exe` removes games whose exe file no longer exists and saves the library.
+`GazeoraCLI` does not.
+
 ## stream.ini
 
 ### `[stream]`

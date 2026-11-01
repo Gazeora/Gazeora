@@ -10,9 +10,11 @@ add_library(gazeora_library STATIC
     src/platform/library_location.cpp
     src/platform/shell_link_resolver.cpp
     src/platform/version_info_name_resolver.cpp
+    src/platform/win32_file_checker.cpp
     src/repositories/json_game_repository.cpp
     src/services/game_library.cpp
-    src/services/launch_spec_factory.cpp)
+    src/services/launch_spec_factory.cpp
+    src/services/missing_game_pruner.cpp)
 target_include_directories(gazeora_library
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
