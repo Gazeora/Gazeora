@@ -11,13 +11,18 @@ A plugin is a DLL that adds to Gazeora without rebuilding it. Plugins can add:
   in the settings. It needs an encoder for it too, from the same plugin or another one.
 - **Protocols** (plugin API version 2): another way frames leave the PC, listed under the
   stream's protocol in the settings.
+- **Game controller drivers** (plugin API version 3): what reads game controllers, so they can
+  drive Gazeora's window. Gazeora has none of its own.
+- **Cards** (plugin API version 3): cards on Gazeora's pages, described in XML, which Gazeora
+  draws with its own controls. See [Plugin UI](plugin-ui.md).
 
-Capture and the UI can't be extended by plugins.
+Capture can't be extended by plugins, and the UI only through cards. The controller navigation
+is Gazeora's own: a driver only reports the buttons and sticks.
 
 ## Bundled plugins
 
-Some of Gazeora's own protocols and codecs are plugins. They come with Gazeora but aren't
-installed: the **Plugins** page lists them under **Available**, marked *Comes with Gazeora*, and
+Some of Gazeora's own protocols and codecs, and its game controller support, are plugins. They
+come with Gazeora but aren't installed: the **Plugins** page lists them under **Available**, marked *Comes with Gazeora*, and
 **Install** copies Gazeora's own copy into the plugins folder, with no download.
 
 | File | Name | Adds |
@@ -26,6 +31,7 @@ installed: the **Plugins** page lists them under **Available**, marked *Comes wi
 | `gazeora-http.dll` | HTTP Live | The HTTP protocol |
 | `gazeora-usb.dll` | USB Cable | The USB protocol |
 | `gazeora-h265.dll` | H.265 (HEVC) | The H.265 codec, encoded by Gazeora's own Media Foundation encoder |
+| `gazeora-controller.dll` | Game Controller | A game controller driver, through SDL, and the **Game controller** card on the **Controls** page. See [Game controller](game-controller.md) |
 
 RTSP over TCP and over UDP and the H.264 codec are part of `Gazeora.exe`, because every player
 can use them: they can't be removed.
@@ -37,7 +43,8 @@ plugins from there. Once installed, a bundled plugin uninstalls like any other, 
 appears for it when a newer Gazeora brings a newer version.
 
 If the stream's protocol came from a plugin that isn't installed, the stream uses RTSP over TCP;
-if its codec did, H.264.
+if its codec did, H.264. Without the Game Controller plugin, Gazeora reads no game controllers
+and the **Controls** page has no **Game controller** card.
 
 ## Managing plugins
 
@@ -50,7 +57,8 @@ The **Plugins** page in the sidebar shows the installed plugins and the plugin l
 - **Available**: the plugins that aren't installed, with **Install**: the bundled plugins, then
   the plugin list's. Plugins can be installed and uninstalled while the list loads.
 - **Search** filters both by name, description, author and id.
-- The category chips (**Protocols**, **Codecs**, **Encoders**, **Game stores**, **Other**) show
+- The category chips (**Protocols**, **Codecs**, **Encoders**, **Game stores**, **Controllers**,
+  **Other**) show
   only the plugins of one kind, with how many there are. Each tile shows its category too.
 - **Refresh list** loads the plugin list again. Gazeora loads it from
   `https://gazeora.github.io/data/plugins/windows/index.json` the first time the page is opened
@@ -106,7 +114,7 @@ A plugin exports two functions, with the `__cdecl` calling convention (`GAZEORA_
 | Export | Does |
 |---|---|
 | `GazeoraPluginInfo` | Returns a `GazeoraPluginInfoV1`: the plugin's name, version and the plugin API version it was built with |
-| `GazeoraPluginRegister` | Registers what the plugin offers through the `GazeoraPluginHostV1` it's given. For codecs and protocols, `GazeoraPluginHostV2Of(host)` gives the version 2 host, or `NULL` from a Gazeora that has only version 1. Returning `GAZEORA_FALSE` drops everything it registered |
+| `GazeoraPluginRegister` | Registers what the plugin offers through the `GazeoraPluginHostV1` it's given. For codecs and protocols, `GazeoraPluginHostV2Of(host)` gives the version 2 host, or `NULL` from a Gazeora that has only version 1; for game controller drivers, `GazeoraPluginHostV3Of(host)` gives the version 3 host. Returning `GAZEORA_FALSE` drops everything it registered |
 
 A minimal plugin with one game store:
 
@@ -144,7 +152,8 @@ GAZEORA_PLUGIN_EXPORT int32_t GAZEORA_CALL GazeoraPluginRegister(const GazeoraPl
 ```
 
 [`tests/plugins/sample_plugin/sample_plugin.cpp`](../tests/plugins/sample_plugin/sample_plugin.cpp)
-is a complete plugin with a game store and an encoder, which the tests load.
+is a complete plugin with a game store, an encoder, a codec, a protocol and a game controller
+driver, which the tests load.
 
 ### Rules
 
@@ -229,13 +238,46 @@ A protocol plugin registers a `GazeoraProtocolV2`, whose `create_output` makes t
 - `status`, `app_viewers`, `watching`, `needs_usb_driver` and `usb_devices_needing_driver` may
   be `NULL`.
 
+### Game controller drivers
+
+A game controller driver registers a `GazeoraGamepadDriverProviderV3` through
+`register_gamepad_driver_provider` of the version 3 host. Its `create` makes the
+`GazeoraGamepadDriverV3` that reads the controllers.
+
+- Gazeora uses the first driver registered, in plugin load order, and ignores the others. With
+  none, it reads no controllers.
+- `enabled`, if the provider has it, is the plugin's own switch: Gazeora reads controllers only
+  while it returns `GAZEORA_TRUE`. It's asked on the UI thread, every frame. Without it,
+  controllers are always read. A plugin with a switch shows it on a [card](plugin-ui.md) and
+  keeps it in its [settings](plugin-ui.md#settings), as the Game Controller plugin does.
+- `create` is called on the thread that then uses the driver, and only that thread calls the
+  driver's functions: `update` about 125 times a second, each followed by `connected` and
+  `state`. The driver is created when Gazeora starts reading controllers and destroyed when it
+  stops: when `enabled` turns false, and while a game launched from Gazeora runs, so the game
+  has the controllers to itself. `destroy` must let go of them.
+- `create` returning `GAZEORA_FALSE` makes its `error` text `gazeora.gamepad.status`, which a
+  card can show with **Try again** ([Gazeora's values](plugin-ui.md#gazeoras-values)).
+- `connected` hands each connected controller's name to the sink, for the card.
+- `state` merges every connected controller: a button is held if any controller holds it, and
+  each stick takes the value furthest from the center. Buttons are bits
+  `1u << GAZEORA_GAMEPAD_BUTTON_*`, named by where they sit, as on the
+  [Game controller](game-controller.md) page. Sticks are `axes[GAZEORA_GAMEPAD_AXIS_*]`, from -1
+  to 1, X positive to the right and Y positive down. Gazeora applies its own dead zone, ignores
+  unknown button bits, and clamps stick values to -1 to 1.
+
+### Cards and settings
+
+A plugin can add cards to Gazeora's pages, described in XML, and keep its own settings in
+Gazeora's settings folder, which the version 3 host gives it as `settings_folder`. See
+[Plugin UI](plugin-ui.md).
+
 ### Versions
 
-This is plugin API version 2 (`GAZEORA_PLUGIN_API_VERSION`). Gazeora loads plugins built for
-version 1 or 2 (`GAZEORA_PLUGIN_API_OLDEST_VERSION` to `GAZEORA_PLUGIN_API_VERSION`), and says so
-on the **Plugins** page for any other. A struct version 2 extends is a new struct whose first
-member is the version 1 one, so a version 1 plugin works unchanged. Gazeora reads a plugin's
-version 2 fields only when its `struct_size` covers them.
+This is plugin API version 3 (`GAZEORA_PLUGIN_API_VERSION`). Gazeora loads plugins built for
+versions 1 to 3 (`GAZEORA_PLUGIN_API_OLDEST_VERSION` to `GAZEORA_PLUGIN_API_VERSION`), and says
+so on the **Plugins** page for any other. A struct a version extends is a new struct whose first
+member is the older one, so a plugin for an older version works unchanged. Gazeora reads a
+plugin's newer fields only when its `struct_size` covers them.
 
 ## Publishing to the plugin list
 
@@ -276,7 +318,7 @@ hand. Each entry:
 | `id` | Required. `a`–`z`, `0`–`9`, `-` and `_`, at most 64 characters. The plugin installs as `<id>.dll`, whatever its download is called |
 | `name`, `version` | Required. `version` is `MAJOR.MINOR.PATCH`, the same as `GazeoraPluginInfo` reports, so **Update** can compare them |
 | `summary`, `author`, `license` | Shown on the page and searched |
-| `category` | What kind of plugin it is, for the page's label and filter: `protocol`, `codec`, `encoder`, `game-store` or `other`. Without it, or with another word, an installed plugin's category comes from what it registered most of, and one that isn't installed shows as *Other* |
+| `category` | What kind of plugin it is, for the page's label and filter: `protocol`, `codec`, `encoder`, `game-store`, `controller` or `other`. Without it, or with another word, an installed plugin's category comes from what it registered most of, and one that isn't installed shows as *Other* |
 | `homepage` | Shown as **Website**. Only `https://` addresses are kept |
 | `api_version` | The plugin API version the build is for. Builds for a version this Gazeora doesn't load are listed but can't be installed |
 | `assets` | One build per architecture, `x64` and `x86`. A download must be `https://` and have a `sha256:` digest, or it's left out. A `size` of 0 skips the size check |
@@ -294,3 +336,5 @@ Entries that break these rules are left out of the page.
 | `the plugin stopped while registering` | Its `GazeoraPluginRegister` returned `GAZEORA_FALSE` |
 | `refused a game store with an invalid id` | Its store id breaks the rules above. The plugin's other parts still load |
 | `refused a codec ...` or `refused a protocol ...` | The codec or protocol is missing something, or its id breaks the rules above. The plugin's other parts still load |
+| `refused a panel with missing fields` or `refused a panel whose layout is wrong (...)` | A card is missing a function, or its XML isn't a valid layout: the text says what and on which line. See [Plugin UI](plugin-ui.md). The plugin's other parts still load |
+| `refused a game controller driver with missing fields` | Its `GazeoraGamepadDriverProviderV3` has no `name` or `create`, or its `struct_size` is too small. The plugin's other parts still load |

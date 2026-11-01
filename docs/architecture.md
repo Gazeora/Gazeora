@@ -12,21 +12,23 @@ layout. For building and testing, see [Development](development.md).
 | `libs/host` | `gazeora_host_lib` | Launching and injecting, receiving frames, GPU processing, encoding, and the stream server |
 | `libs/library` | `gazeora_library` | The game library (`library.json`), shared by both front ends |
 | `libs/plugin_api` | header only | The C interface plugin DLLs are built against (MIT). See [Plugins](plugins.md) |
-| `libs/plugin_kit` | `gazeora_plugin_kit` | Between the plugin interface and Gazeora's C++ codecs and outputs, both ways |
-| `libs/plugins` | `gazeora_plugins` | Loads plugin DLLs and adds their game stores, encoders, codecs and protocols to the registries |
+| `libs/plugin_ui` | `gazeora_plugin_ui` | Plugins' cards: their XML layouts read with pugixml, and the keys they bind to. Drawn by `Gazeora.exe` (`apps/gazeora/src/plugin_ui`) |
+| `libs/plugin_kit` | `gazeora_plugin_kit` | Between the plugin interface and Gazeora's C++ codecs, outputs and game controller drivers, both ways |
+| `libs/plugins` | `gazeora_plugins` | Loads plugin DLLs and adds their game stores, encoders, codecs, protocols, game controller drivers and cards to the registries |
 | `libs/plugin_manager` | `gazeora_plugin_manager` | The Plugins page's work: the plugin list on gazeora.github.io, and installing and removing plugin DLLs |
-| `libs/input` | `gazeora_input` | Game controllers through SDL |
+| `libs/input` | `gazeora_input`, `gazeora_sdl_input` | Game controllers: the controller models and the polling session (`gazeora_input`), and the SDL driver, linked only into the Game Controller plugin (`gazeora_sdl_input`) |
 | `libs/update` | `gazeora_update` | [Updates](installer.md#updating): the website's release feed, the MSI download and its SHA-256 check, and starting the installer |
 | `apps/gazeora` | `Gazeora.exe` | The launcher UI (Dear ImGui on Direct3D 11), settings, head tracking, and the stream |
 | `apps/cli` | `GazeoraCLI.exe` | Command-line front end for the library and capture |
-| `plugins/` | `bundled-plugins\gazeora-*.dll` | The [bundled plugins](plugins.md#bundled-plugins): the UDP, HTTP and USB protocols and the H.265 codec |
+| `plugins/` | `bundled-plugins\gazeora-*.dll` | The [bundled plugins](plugins.md#bundled-plugins): the UDP, HTTP and USB protocols, the H.265 codec and game controllers |
 | `tools/` | `gazeora_testapp.exe`, `gazeora_stream_probe.exe` | [Developer tools](tools.md) |
 | `installer/` | MSI | [Installer](installer.md) |
 
 Dependencies point downward: the apps use `host`, `library`, `plugins` and `input`, and
-`Gazeora.exe` also `update`; `plugins` uses `host`, `plugin_api` and `plugin_kit`; the bundled
-plugins use `plugin_kit`, which uses `host` and `plugin_api`; `host`, `hook` and `update` use
-`common`; `hook` does not depend on `host`.
+`Gazeora.exe` also `update` and `plugin_ui`; `plugins` uses `host`, `input`, `plugin_ui`,
+`plugin_api` and `plugin_kit`; the bundled plugins use `plugin_kit`, which uses `host`, `input`,
+`plugin_ui` and `plugin_api`, and the Game Controller plugin also `gazeora_sdl_input`; `host`, `hook` and `update` use `common`; `hook` does
+not depend on `host`.
 
 ## Capture to stream
 
@@ -144,8 +146,8 @@ classes fill the default registries.
   store id such as `"steam"`. A store id that this build doesn't know is kept, and the game
   starts from its exe.
 
-Plugin DLLs can add game stores, encoders, codecs and protocols at run time
-([Plugins](plugins.md)).
+Plugin DLLs can add game stores, encoders, codecs, protocols, game controller drivers and cards
+at run time ([Plugins](plugins.md)).
 `PluginServices` loads the DLLs in the `plugins` folder beside the exe's `bin` folder
 (`PluginFolder::Installed`) and builds the
 registries: built-in stores first, then plugin stores; plugin encoders first, then Media
@@ -153,12 +155,26 @@ Foundation. Each plugin's C structs are wrapped in adapters (`PluginGameStore`,
 `PluginEncoderProvider`, `PluginVideoEncoder`) that keep the DLL loaded while they exist.
 Plugin codecs and protocols come after the built-in ones in their catalogs, with
 `PluginCodecFormat` (and `PluginRtpPayloadFormat`) and `PluginOutputFactory` (making
-`PluginFrameOutput`s) behind them.
+`PluginFrameOutput`s) behind them. The first game controller driver is
+`PluginServices::GamepadDrivers()`, a `PluginGamepadDriverFactory` making `PluginGamepadDriver`s,
+which `Gazeora.exe` hands its `GamepadSession`; with none, the session never starts and reports
+*Unavailable*. The driver's switch is `PluginServices::GamepadSwitch()`, which `GamepadControl`
+polls every frame.
+
+A plugin's cards (`PluginServices::UiPanels()`) are each a `UiLayout`, read from the plugin's XML
+by `UiXmlParser` when it registers (`UiElementFactory` makes each element), and its values
+behind `PluginUiValues`. In `Gazeora.exe`, `PluginPanelsView` draws the cards for a page where
+the page asks for them, under its title and after its own content. `ImGuiUiRenderer` visits each
+element and draws it with Gazeora's own widgets, binding through `UiBindings`: keys starting
+with `gazeora.` go to `GazeoraUiValues`, Gazeora's own values and actions (filled in by
+`GamepadUiValues` and the `App`), and the rest to the plugin. See [Plugin UI](plugin-ui.md).
 
 The bundled plugins are Gazeora's own C++ classes behind the plugin interface:
 `ExportedProtocol` and `ExportedOutput` make a `FrameOutputFactory` and its outputs a
-`GazeoraProtocolV2`, and `ExportedCodec` makes a `VideoCodecInfo` a `GazeoraCodecV2`
-(`libs/plugin_kit`). The frames `PluginFrameOutput` hands a plugin carry their codec as an
+`GazeoraProtocolV2`, `ExportedCodec` makes a `VideoCodecInfo` a `GazeoraCodecV2`, and
+`ExportedGamepadDriverProvider` and `ExportedGamepadDriver` make the SDL driver a
+`GazeoraGamepadDriverProviderV3`, and `ExportedUiPanel` makes a layout and its `IUiValues` a
+`GazeoraUiPanelV3` (`libs/plugin_kit`). The frames `PluginFrameOutput` hands a plugin carry their codec as an
 `ExportedCodec` too, which the bundled outputs read through `PluginCodecFormat`. Input that comes
 over an output's own link (the USB cable) goes back through the host's `input` to
 `PluginInputRouter`.
@@ -204,18 +220,19 @@ libs/                 Libraries, in dependency order
     stream/               The stream server and its protocols
   library/              The game library
   plugin_api/           The C header plugins build against (MIT)
-  plugin_kit/           The plugin interface and Gazeora's C++ codecs and outputs, both ways
+  plugin_ui/            Plugins' cards: XML layouts, their elements, and bindings
+  plugin_kit/           The plugin interface and Gazeora's C++ codecs, outputs, drivers and cards
   plugins/              gazeora_plugins: loading plugin DLLs, adapters to the registries
   plugin_manager/       The plugin list, downloads, and changes to the plugins folder
-  input/                Game controllers (SDL)
+  input/                Game controllers: models, the polling session, and the SDL driver
   update/               Finding, downloading and starting updates (WinHTTP, CNG, msiexec)
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/, ui/, platform/, gamepad/, keyboard/, head/,
-                          plugins/, remote/, settings/, update/ and config/
+                          plugins/, plugin_ui/, remote/, settings/, update/ and config/
     resources/            Icon and resource script
   cli/                  GazeoraCLI.exe
-plugins/              The bundled plugins: udp/, http/, usb/, h265/, and common/
+plugins/              The bundled plugins: udp/, http/, usb/, h265/, controller/, and common/
 tools/                The test app, the stream probe, and license_headers.py
 tests/                GoogleTest suites, mirroring the code they test
 bench/                gazeora_bench, the benchmarks
