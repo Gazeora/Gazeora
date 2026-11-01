@@ -43,6 +43,27 @@ come from the author, but not these terms, which the author has added under sect
 7(c) and 7(e).
 
 
+ADDITIONAL PERMISSION FOR PLUGINS (GNU GPL version 3, section 7)
+
+A "Plugin" is a dynamic-link library that Gazeora loads at run time from its plugins folder
+and that:
+  a. works with Gazeora only through the functions and types declared in the plugin interface
+     header, libs/plugin_api/include/gazeora/plugin_api/gazeora_plugin.h (the "Plugin
+     Interface"), which is itself under the MIT license (libs/plugin_api/LICENSE); and
+  b. contains no part of Gazeora, and no work based on Gazeora, other than the Plugin
+     Interface.
+
+As an additional permission under section 7, Nithin Aashik permits you to make, use and
+convey a Plugin under terms of your choice, including closed-source terms, and to convey it
+together with Gazeora, without the Plugin becoming subject to the GNU GPL version 3. Gazeora
+itself, and any work based on it, stays under the GNU GPL version 3 and the terms above.
+
+This permission covers only Plugins as defined here. It does not cover changing Gazeora so
+that a Plugin can do more than the Plugin Interface allows, and it does not change the
+attribution and marking terms above for Gazeora or its modified versions. If you modify
+Gazeora, you may extend this permission to your version, but you don't have to.
+
+
 COMMERCIAL LICENSE
 
 The copyright holder also offers this program under a separate commercial license, for uses
