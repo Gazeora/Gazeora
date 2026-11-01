@@ -4,6 +4,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -35,6 +36,9 @@ public:
     bool Running() const { return m_thread.joinable(); }
     bool Available() const { return m_drivers != nullptr; }
     GamepadSnapshot Snapshot() const;
+    // Goes up each time Snapshot() would say something new, so a caller can keep what it made
+    // of the last one instead of copying it again.
+    uint64_t Version() const { return m_version.load(std::memory_order_acquire); }
 
 private:
     void Run();
@@ -57,6 +61,7 @@ private:
     GamepadState m_reported;  // the session's thread only
     mutable std::mutex m_mutex;
     GamepadSnapshot m_snapshot;  // guarded by m_mutex
+    std::atomic<uint64_t> m_version{0};
 };
 
 }  // namespace gazeora::input

@@ -4,8 +4,9 @@
 #pragma once
 
 #include <functional>
-#include <map>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "gazeora/plugin_ui/interfaces/ui_values.h"
 
@@ -13,7 +14,8 @@ namespace gazeora::app {
 
 // Gazeora's own values and actions that plugin panels bind to, under "gazeora." keys
 // (docs/plugin-ui.md). Read-only: a panel can't set them. Command pattern: each action is a
-// function, run when a panel's button asks for it.
+// function, run when a panel's button asks for it. A handful of each, looked up every frame:
+// kept side by side and searched in order, which beats a tree's scattered nodes at this size.
 class GazeoraUiValues final : public ui::IUiValues {
 public:
     using Getter = std::function<std::string()>;
@@ -31,8 +33,16 @@ public:
     static std::string Flag(bool value);
 
 private:
-    std::map<std::string, Getter> m_values;
-    std::map<std::string, Command> m_actions;
+    template <typename Function>
+    using Table = std::vector<std::pair<std::string, Function>>;
+
+    template <typename Function>
+    static void Put(Table<Function>& table, const std::string& key, Function function);
+    template <typename Function>
+    static const Function* Find(const Table<Function>& table, const std::string& key);
+
+    Table<Getter> m_values;
+    Table<Command> m_actions;
 };
 
 }  // namespace gazeora::app

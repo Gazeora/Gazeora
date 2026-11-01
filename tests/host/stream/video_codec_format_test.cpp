@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 #include "gazeora/host/stream/video_codec_format.h"
+#include "gazeora/bundled/h265/h265_payload_format.h"
 
 #include <gtest/gtest.h>
 
@@ -9,11 +10,11 @@
 #include <stdexcept>
 #include <string>
 
+#include "gazeora/bundled/http/ts_muxer.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/host/encode/built_in_video_codecs.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/media_foundation_encoder_provider.h"
 #include "gazeora/host/stream/frame_packet.h"
-#include "gazeora/host/stream/ts_muxer.h"
 #include "gazeora/host/stream/video_pipeline.h"
 
 namespace gazeora {
@@ -37,7 +38,7 @@ TEST(VideoCodecFormatTest, BuiltInFormatsDescribeTheirCodec) {
     EXPECT_EQ(H264().SeiHeader(), "\x06");
 
     EXPECT_EQ(H265().Codec(), VideoCodec::H265);
-    EXPECT_EQ(&H265().Rtp(), &RtpPayloadFormat::H265());
+    EXPECT_EQ(&H265().Rtp(), &H265PayloadFormat::Shared());
     EXPECT_EQ(H265().TsStreamType(), 0x24);
     EXPECT_EQ(H265().FrameFlags(), kFrameFlagH265);
     EXPECT_EQ(H265().SeiHeader(), std::string("\x4E\x01", 2));

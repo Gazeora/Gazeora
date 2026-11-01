@@ -27,54 +27,6 @@ void PutRtpHeader(std::string& packet, bool marker, uint16_t seq, uint32_t times
     for (int shift = 24; shift >= 0; shift -= 8) packet += char(ssrc >> shift);
 }
 
-std::string Base64(const std::string& data) {
-    static const char kDigits[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::string text;
-    for (size_t i = 0; i < data.size(); i += 3) {
-        uint32_t chunk = uint32_t(uint8_t(data[i])) << 16;
-        if (i + 1 < data.size()) chunk |= uint32_t(uint8_t(data[i + 1])) << 8;
-        if (i + 2 < data.size()) chunk |= uint8_t(data[i + 2]);
-        text += kDigits[chunk >> 18 & 63];
-        text += kDigits[chunk >> 12 & 63];
-        text += i + 1 < data.size() ? kDigits[chunk >> 6 & 63] : '=';
-        text += i + 2 < data.size() ? kDigits[chunk & 63] : '=';
-    }
-    return text;
-}
-
-// Aggregation packets (H.264 STAP-A, H.265 AP): after the payload header, NAL units each
-// with a 16-bit size.
-bool UnpackAggregate(const uint8_t* payload, size_t size, size_t headerSize, std::string& annexB) {
-    for (size_t at = headerSize; at + 2 <= size;) {
-        size_t length = size_t(payload[at]) << 8 | payload[at + 1];
-        at += 2;
-        if (at + length > size) return false;
-        annexB.append(kStartCode, 4);
-        annexB.append(reinterpret_cast<const char*>(payload) + at, length);
-        at += length;
-    }
-    return true;
-}
-
-// Fragmentation units: the start fragment rebuilds the NAL header from `header` (its
-// `headerSize` bytes), every fragment adds its data after `dataAt`.
-bool AddFragment(const uint8_t* payload, size_t size, size_t dataAt, uint8_t fragmentHeader,
-                 const char* header, size_t headerSize, bool& inFragment, std::string& annexB) {
-    bool start = fragmentHeader & 0x80;
-    bool end = fragmentHeader & 0x40;
-    if (start) {
-        annexB.append(kStartCode, 4);
-        annexB.append(header, headerSize);
-        inFragment = true;
-    } else if (!inFragment) {
-        return false;
-    }
-    annexB.append(reinterpret_cast<const char*>(payload) + dataAt, size - dataAt);
-    if (end) inFragment = false;
-    return true;
-}
-
 class H264PayloadFormat final : public RtpPayloadFormat {
 public:
     VideoCodec Codec() const override { return VideoCodec::H264; }
@@ -113,8 +65,7 @@ public:
         uint8_t type = payload[0] & 0x1F;
         if (type >= 1 && type <= 23) {
             inFragment = false;
-            annexB.append(kStartCode, 4);
-            annexB.append(reinterpret_cast<const char*>(payload), size);
+            AppendNal(payload, size, annexB);
             return true;
         }
         if (type == kNalStapA) {
@@ -136,83 +87,78 @@ protected:
     }
 };
 
-class H265PayloadFormat final : public RtpPayloadFormat {
-public:
-    VideoCodec Codec() const override { return VideoCodec::H265; }
-    const char* EncodingName() const override { return "H265"; }
-    uint8_t NalType(const std::string& nal) const override {
-        return nal.empty() ? 0 : uint8_t(nal[0]) >> 1 & 0x3F;
+}  // namespace
+
+std::string RtpPayloadFormat::Base64(const std::string& data) {
+    static const char kDigits[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string text;
+    for (size_t i = 0; i < data.size(); i += 3) {
+        uint32_t chunk = uint32_t(uint8_t(data[i])) << 16;
+        if (i + 1 < data.size()) chunk |= uint32_t(uint8_t(data[i + 1])) << 8;
+        if (i + 2 < data.size()) chunk |= uint8_t(data[i + 2]);
+        text += kDigits[chunk >> 18 & 63];
+        text += kDigits[chunk >> 12 & 63];
+        text += i + 1 < data.size() ? kDigits[chunk >> 6 & 63] : '=';
+        text += i + 2 < data.size() ? kDigits[chunk & 63] : '=';
     }
-    bool IsKeyFrame(const std::string& nal) const override {
-        uint8_t type = NalType(nal);
-        return type >= kHevcIrapFirst && type <= kHevcIrapLast;
+    return text;
+}
+
+bool RtpPayloadFormat::UnpackAggregate(const uint8_t* payload, size_t size, size_t headerSize,
+                                       std::string& annexB) {
+    for (size_t at = headerSize; at + 2 <= size;) {
+        size_t length = size_t(payload[at]) << 8 | payload[at + 1];
+        at += 2;
+        if (at + length > size) return false;
+        annexB.append(kStartCode, 4);
+        annexB.append(reinterpret_cast<const char*>(payload) + at, length);
+        at += length;
     }
-    ParameterSet ParameterSetOf(const std::string& nal) const override {
-        uint8_t type = NalType(nal);
-        return type == kHevcVps   ? ParameterSet::Vps
-               : type == kHevcSps ? ParameterSet::Sps
-               : type == kHevcPps ? ParameterSet::Pps
-                                  : ParameterSet::None;
-    }
-    std::vector<ParameterSet> RequiredParameterSets() const override {
-        return {ParameterSet::Vps, ParameterSet::Sps, ParameterSet::Pps};
-    }
-    std::string Fmtp(const std::string sets[4]) const override {
-        const std::string& vps = sets[int(ParameterSet::Vps)];
-        const std::string& sps = sets[int(ParameterSet::Sps)];
-        const std::string& pps = sets[int(ParameterSet::Pps)];
-        if (vps.empty() || sps.empty() || pps.empty()) {
-            return {};
-        }
-        return "sprop-vps=" + Base64(vps) + ";sprop-sps=" + Base64(sps) +
-               ";sprop-pps=" + Base64(pps);
-    }
-    bool Depacketize(const uint8_t* payload, size_t size, bool& inFragment,
-                     std::string& annexB) const override {
-        if (size < 2) return false;
-        uint8_t type = payload[0] >> 1 & 0x3F;
-        if (type < kHevcAp) {
-            inFragment = false;
-            annexB.append(kStartCode, 4);
-            annexB.append(reinterpret_cast<const char*>(payload), size);
-            return true;
-        }
-        if (type == kHevcAp) {  // without DONL fields: the SDP sets no sprop-max-don-diff
-            inFragment = false;
-            return UnpackAggregate(payload, size, 2, annexB);
-        }
-        if (type == kHevcFu && size >= 3) {
-            char header[2] = {char((payload[0] & 0x81) | (payload[2] & 0x3F) << 1),
-                              char(payload[1])};
-            return AddFragment(payload, size, 3, payload[2], header, 2, inFragment, annexB);
-        }
+    return true;
+}
+
+bool RtpPayloadFormat::AddFragment(const uint8_t* payload, size_t size, size_t dataAt,
+                                   uint8_t fragmentHeader, const char* header, size_t headerSize,
+                                   bool& inFragment, std::string& annexB) {
+    bool start = fragmentHeader & 0x80;
+    bool end = fragmentHeader & 0x40;
+    if (start) {
+        annexB.append(kStartCode, 4);
+        annexB.append(header, headerSize);
+        inFragment = true;
+    } else if (!inFragment) {
         return false;
     }
+    annexB.append(reinterpret_cast<const char*>(payload) + dataAt, size - dataAt);
+    if (end) inFragment = false;
+    return true;
+}
 
-protected:
-    size_t NalHeaderSize() const override { return 2; }
-    // FU: the two-byte NAL header with type 49, keeping the layer and temporal id.
-    std::string FragmentPayloadHeader(const std::string& nal) const override {
-        return {char((nal[0] & 0x81) | kHevcFu << 1), nal[1]};
-    }
-};
-
-}  // namespace
+void RtpPayloadFormat::AppendNal(const uint8_t* payload, size_t size, std::string& annexB) {
+    annexB.append(kStartCode, 4);
+    annexB.append(reinterpret_cast<const char*>(payload), size);
+}
 
 const RtpPayloadFormat& RtpPayloadFormat::H264() {
     static const H264PayloadFormat format;
     return format;
 }
 
-const RtpPayloadFormat& RtpPayloadFormat::H265() {
-    static const H265PayloadFormat format;
-    return format;
-}
-
 void RtpPayloadFormat::Packetize(const std::vector<std::string>& nalUnits, uint32_t timestamp,
                                  uint32_t ssrc, size_t maxPacketSize, uint16_t& seq,
                                  std::vector<std::string>& packets) const {
-    packets.clear();
+    // The packets' strings are kept from the last frame and written over, so a stream doesn't
+    // allocate a packet's buffer once it has had one that size.
+    size_t used = 0;
+    auto next = [&]() -> std::string& {
+        if (used == packets.size()) {
+            packets.emplace_back().reserve(maxPacketSize);
+        }
+        std::string& packet = packets[used++];
+        packet.clear();
+        return packet;
+    };
     const size_t headerSize = NalHeaderSize();
     const size_t maxPayload = maxPacketSize - kRtpHeaderSize;
     for (size_t n = 0; n < nalUnits.size(); ++n) {
@@ -220,10 +166,9 @@ void RtpPayloadFormat::Packetize(const std::vector<std::string>& nalUnits, uint3
         if (nal.size() < headerSize) continue;
         bool lastNal = n + 1 == nalUnits.size();
         if (nal.size() <= maxPayload) {
-            std::string packet;
-            packet.reserve(kRtpHeaderSize + nal.size());
+            std::string& packet = next();
             PutRtpHeader(packet, lastNal, seq++, timestamp, ssrc);
-            packets.push_back(packet + nal);
+            packet += nal;
             continue;
         }
         // The NAL header moves into the payload header, plus a fragment header with the
@@ -235,15 +180,14 @@ void RtpPayloadFormat::Packetize(const std::vector<std::string>& nalUnits, uint3
         for (size_t offset = headerSize; offset < nal.size(); offset += chunkSize) {
             bool first = offset == headerSize;
             bool last = offset + chunkSize >= nal.size();
-            std::string packet;
-            packet.reserve(maxPacketSize);
+            std::string& packet = next();
             PutRtpHeader(packet, lastNal && last, seq++, timestamp, ssrc);
             packet += payloadHeader;
             packet += char((first ? 0x80 : 0) | (last ? 0x40 : 0) | type);
             packet.append(nal, offset, chunkSize);
-            packets.push_back(std::move(packet));
         }
     }
+    packets.resize(used);
 }
 
 namespace {

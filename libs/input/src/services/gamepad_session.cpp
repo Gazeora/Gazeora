@@ -84,12 +84,14 @@ void GamepadSession::PublishConnected(std::vector<GamepadInfo> connected) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_snapshot.connected != connected) {
         m_snapshot.connected = std::move(connected);
+        m_version.fetch_add(1, std::memory_order_release);
     }
 }
 
 void GamepadSession::Publish(GamepadSnapshot snapshot) {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_snapshot = std::move(snapshot);
+    m_version.fetch_add(1, std::memory_order_release);
 }
 
 void GamepadSession::Fail(std::wstring message) {

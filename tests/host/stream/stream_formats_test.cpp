@@ -1,13 +1,13 @@
 // Copyright (C) 2026 Nithin Aashik
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
-#include "gazeora/host/encode/bundled_video_codecs.h"
+#include "gazeora/bundled/http/ts_muxer.h"
+#include "gazeora/bundled_parts/bundled_protocols.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/host/stream/built_in_stream_protocols.h"
-#include "gazeora/host/stream/bundled_protocols.h"
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/stream_protocol.h"
-#include "gazeora/host/stream/ts_muxer.h"
 
 #include <gtest/gtest.h>
 

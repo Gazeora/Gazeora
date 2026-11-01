@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "gazeora/plugin_manager/exceptions/plugin_manager_error.h"
-#include "gazeora/plugin_manager/interfaces/plugin_index.h"
 #include "gazeora/update/interfaces/http_client.h"
+#include "plugin_manager/exceptions/plugin_manager_error.h"
+#include "plugin_manager/interfaces/plugin_index.h"
 #include "plugins/plugin_installer.h"
 
 namespace gazeora::app {

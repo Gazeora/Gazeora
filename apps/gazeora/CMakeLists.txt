@@ -3,7 +3,26 @@
 
 # Gazeora.exe: the launcher UI (Dear ImGui on Direct3D 11).
 include(ImGui)
+include(NlohmannJson)
 enable_language(RC)
+
+# The Plugins page's work, apart from its UI: the plugin list on gazeora.github.io and the
+# bundled one, downloads, and changing the plugins folder (as an administrator). A library of
+# its own so its tests can link it; it's only Gazeora.exe's.
+add_library(gazeora_plugin_manager STATIC
+    src/plugin_manager/mappers/plugin_listing_json_mapper.cpp
+    src/plugin_manager/models/plugin_category.cpp
+    src/plugin_manager/models/plugin_entry.cpp
+    src/plugin_manager/models/plugin_id.cpp
+    src/plugin_manager/platform/plugin_download_location.cpp
+    src/plugin_manager/repositories/bundled_plugin_index.cpp
+    src/plugin_manager/repositories/web_plugin_index.cpp
+    src/plugin_manager/services/plugin_directory.cpp
+    src/plugin_manager/services/plugin_folder_editor.cpp)
+target_include_directories(gazeora_plugin_manager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(gazeora_plugin_manager
+    PUBLIC gazeora_plugins gazeora_update
+    PRIVATE gazeora_plugin_api nlohmann_json::nlohmann_json)
 
 add_executable(Gazeora WIN32
     src/main.cpp
@@ -49,6 +68,7 @@ add_executable(Gazeora WIN32
     src/platform/game_open_request.cpp
     src/platform/shell.cpp
     src/platform/usb_driver.cpp
+    src/plugin_ui/gamepad_status_cache.cpp
     src/plugin_ui/gamepad_ui_values.cpp
     src/plugin_ui/gazeora_ui_values.cpp
     src/plugin_ui/imgui_ui_renderer.cpp

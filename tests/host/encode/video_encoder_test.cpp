@@ -19,8 +19,9 @@
 #include <tuple>
 #include <vector>
 
+#include "gazeora/bundled/h265/h265_payload_format.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/common/text/utf8.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/gpu_nv12_converter.h"
 #include "gazeora/host/encode/media_foundation_encoder_provider.h"
@@ -273,7 +274,7 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     bool vps = !hevc, sps = false, pps = false, idr = false;
     for (const std::string& nal : nals) {
         uint8_t type =
-            hevc ? RtpPayloadFormat::H265().NalType(nal) : RtpPayloadFormat::H264().NalType(nal);
+            hevc ? H265PayloadFormat::Shared().NalType(nal) : RtpPayloadFormat::H264().NalType(nal);
         vps |= hevc && type == kHevcVps;
         sps |= type == (hevc ? uint8_t(kHevcSps) : uint8_t(kNalSps));
         pps |= type == (hevc ? uint8_t(kHevcPps) : uint8_t(kNalPps));
@@ -285,7 +286,7 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     if (encoder.Name().find(L"NVIDIA") != std::wstring::npos) {
         int slices = 0;
         for (const std::string& nal : nals) {
-            slices += hevc ? RtpPayloadFormat::H265().NalType(nal) < kHevcVps
+            slices += hevc ? H265PayloadFormat::Shared().NalType(nal) < kHevcVps
                            : (RtpPayloadFormat::H264().NalType(nal) == kNalSlice ||
                               RtpPayloadFormat::H264().NalType(nal) == kNalIdrSlice);
         }

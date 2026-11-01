@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "bench_util.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/host/stream/bitrate_controller.h"
 #include "gazeora/host/stream/rtcp.h"
 #include "gazeora/host/stream/rtp_video.h"

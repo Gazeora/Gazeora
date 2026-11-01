@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "bench_util.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/host/capture/frame_dump.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/gpu_nv12_converter.h"
 #include "gazeora/host/encode/media_foundation_encoder_provider.h"

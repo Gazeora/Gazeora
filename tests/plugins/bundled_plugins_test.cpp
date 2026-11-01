@@ -10,10 +10,10 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/bundled/http/http_ts_output.h"
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/frame_stream.h"
-#include "gazeora/host/stream/http_ts_output.h"
 #include "gazeora/plugins/plugin_services.h"
 #include "plugins/udp_player.h"
 

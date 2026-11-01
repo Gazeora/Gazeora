@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 #include "gazeora/host/stream/stream_view_info.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 
 #include <gtest/gtest.h>
 

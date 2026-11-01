@@ -17,6 +17,8 @@ namespace {
 
 constexpr LONGLONG kHundredNsPerSecond = 10000000;
 constexpr LONGLONG kMicrosecondsPerSecond = 1000000;
+// A frame and its RTCP report, with one more being filled: kept, more are let go.
+constexpr size_t kMaxSpareJobs = 4;
 
 }  // namespace
 
@@ -36,17 +38,40 @@ PacketSendQueue::~PacketSendQueue() {
     }
 }
 
-void PacketSendQueue::Enqueue(SOCKET socket, std::vector<sockaddr_in> targets,
+void PacketSendQueue::Enqueue(SOCKET socket, const std::vector<sockaddr_in>& targets,
                               const std::vector<std::string>& packets, const PacingPlan& plan) {
     if (targets.empty() || packets.empty()) {
         return;
     }
+    // Filled outside the lock, so the send thread isn't held up by the copy.
+    Job job = TakeSpare();
+    job.socket = socket;
+    job.targets.assign(targets.begin(), targets.end());
+    job.packets.Assign(packets);
+    job.plan = plan;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        m_jobs.push_back(Job{socket, std::move(targets), packets, plan});
+        m_jobs.push_back(std::move(job));
         m_pacedWaiting += plan.Bursts() > 1;
     }
     m_wake.notify_one();
+}
+
+PacketSendQueue::Job PacketSendQueue::TakeSpare() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_spares.empty()) {
+        return Job();
+    }
+    Job job = std::move(m_spares.back());
+    m_spares.pop_back();
+    return job;
+}
+
+void PacketSendQueue::Recycle(Job job) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (m_spares.size() < kMaxSpareJobs) {
+        m_spares.push_back(std::move(job));
+    }
 }
 
 void PacketSendQueue::Flush() {
@@ -59,6 +84,7 @@ void PacketSendQueue::Stop() {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_stopping = true;
         m_jobs.clear();
+        m_spares.clear();
         m_pacedWaiting = 0;
     }
     m_wake.notify_all();
@@ -70,7 +96,7 @@ void PacketSendQueue::Stop() {
 
 void PacketSendQueue::Run() {
     while (true) {
-        Job job{INVALID_SOCKET, {}, {}, PacingPlan::AtOnce(0)};
+        Job job;
         {
             std::unique_lock<std::mutex> lock(m_mutex);
             m_sending = false;
@@ -85,6 +111,7 @@ void PacketSendQueue::Run() {
             m_sending = true;
         }
         Send(job);
+        Recycle(std::move(job));
     }
 }
 
@@ -95,16 +122,18 @@ void PacketSendQueue::Send(const Job& job) {
         PacingPlan::kBurstIntervalUs * m_qpcFrequency / kMicrosecondsPerSecond;
     const size_t perBurst = job.plan.PacketsPerBurst();
     size_t burst = 0;
-    for (size_t first = 0; first < job.packets.size(); first += perBurst, ++burst) {
+    const size_t count = job.packets.Count();
+    for (size_t first = 0; first < count; first += perBurst, ++burst) {
         // Behind with another frame waiting: no more waits for this one.
         if (burst > 0 && !Backlogged()) {
             WaitUntil(start.QuadPart + LONGLONG(burst) * interval);
         }
-        size_t end = std::min(first + perBurst, job.packets.size());
+        size_t end = std::min(first + perBurst, count);
         for (const sockaddr_in& target : job.targets) {
             for (size_t i = first; i < end; ++i) {
                 // A lost or refused packet only costs that frame.
-                sendto(job.socket, job.packets[i].data(), int(job.packets[i].size()), 0,
+                const std::string_view packet = job.packets.Packet(i);
+                sendto(job.socket, packet.data(), int(packet.size()), 0,
                        reinterpret_cast<const sockaddr*>(&target), sizeof(target));
             }
         }

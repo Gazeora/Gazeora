@@ -14,10 +14,3 @@ target_include_directories(gazeora_input
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(gazeora_input PUBLIC gazeora_common)
-
-# The SDL driver, for the Game Controller plugin (plugins/controller) and its tests only.
-include(Sdl)
-add_library(gazeora_sdl_input STATIC src/platform/sdl_gamepad_driver.cpp)
-target_link_libraries(gazeora_sdl_input
-    PUBLIC gazeora_input
-    PRIVATE SDL3::SDL3-static)

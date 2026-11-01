@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "gazeora/common/text/utf8.h"
-#include "gazeora/plugin_manager/services/plugin_directory.h"
 #include "platform/shell.h"
+#include "plugin_manager/services/plugin_directory.h"
 #include "ui/text_format.h"
 #include "ui/theme.h"
 #include "ui/widgets.h"

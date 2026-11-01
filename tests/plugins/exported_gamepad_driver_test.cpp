@@ -52,6 +52,23 @@ int32_t GAZEORA_CALL RegisterIncomplete(const GazeoraPluginHostV1* host) {
     return GAZEORA_TRUE;
 }
 
+// A provider whose drivers lack `state`: Gazeora refuses each, and must destroy it.
+int g_incompleteDestroyed = 0;
+
+void GAZEORA_CALL DestroyIncomplete(void*) { ++g_incompleteDestroyed; }
+
+int32_t GAZEORA_CALL CreateIncomplete(void*, GazeoraGamepadDriverV3* driver, char*, size_t) {
+    *driver = {
+        sizeof(GazeoraGamepadDriverV3), nullptr, nullptr, nullptr, nullptr, DestroyIncomplete};
+    return GAZEORA_TRUE;
+}
+
+int32_t GAZEORA_CALL RegisterIncompleteDrivers(const GazeoraPluginHostV1* host) {
+    static const GazeoraGamepadDriverProviderV3 provider = {
+        sizeof(GazeoraGamepadDriverProviderV3), nullptr, "Incomplete", CreateIncomplete, nullptr};
+    return GazeoraPluginHostV3Of(host)->register_gamepad_driver_provider(host->context, &provider);
+}
+
 PluginCatalog LoadWith(void* registerPlugin) {
     FakeModuleLoader modules(std::make_shared<FakeModule>(
         std::map<std::string, void*>{{GAZEORA_PLUGIN_INFO_SYMBOL, reinterpret_cast<void*>(&Info)},
@@ -118,6 +135,14 @@ TEST(PluginRegistrarGamepadTest, RefusesADriverWithMissingFields) {
     EXPECT_TRUE(catalog.plugins[0].loaded);
     EXPECT_NE(catalog.plugins[0].error.find(L"game controller driver"), std::wstring::npos)
         << catalog.plugins[0].error;
+}
+
+TEST(PluginGamepadDriverFactoryTest, DestroysADriverItRefuses) {
+    PluginCatalog catalog = LoadWith(reinterpret_cast<void*>(&RegisterIncompleteDrivers));
+    ASSERT_EQ(catalog.gamepadDrivers.size(), 1u);
+    g_incompleteDestroyed = 0;
+    EXPECT_THROW(catalog.gamepadDrivers[0]->Create(), input::InputError);
+    EXPECT_EQ(g_incompleteDestroyed, 1);
 }
 
 TEST(PluginGamepadStateTest, IgnoresUnknownButtonsAndBadSticks) {

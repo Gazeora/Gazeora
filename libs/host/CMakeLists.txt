@@ -19,7 +19,6 @@ add_library(gazeora_host_lib STATIC
     # encode: H.264 / H.265 through Media Foundation, from memory or GPU textures
     src/encode/built_in_video_codecs.cpp
     src/encode/built_in_video_encoders.cpp
-    src/encode/bundled_video_codecs.cpp
     src/encode/color_convert.cpp
     src/encode/dxgi_device_manager.cpp
     src/encode/fallback_video_encoder.cpp
@@ -31,10 +30,8 @@ add_library(gazeora_host_lib STATIC
     # stream: the stream server and its protocols (RTSP/RTP, UDP, HTTP, USB), discovery
     src/stream/bitrate_controller.cpp
     src/stream/built_in_stream_protocols.cpp
-    src/stream/bundled_protocols.cpp
     src/stream/camera_overlay_line.cpp
     src/stream/codecs/h264_format.cpp
-    src/stream/codecs/h265_format.cpp
     src/stream/camera_status_message.cpp
     src/stream/camera_status_monitor.cpp
     src/stream/discovery.cpp
@@ -46,9 +43,9 @@ add_library(gazeora_host_lib STATIC
     src/stream/head_pose_gate.cpp
     src/stream/head_pose_message.cpp
     src/stream/head_pose_monitor.cpp
-    src/stream/http_ts_output.cpp
     src/stream/net.cpp
     src/stream/pacing_plan.cpp
+    src/stream/packet_batch.cpp
     src/stream/packet_send_queue.cpp
     src/stream/pointer_gate.cpp
     src/stream/pointer_message.cpp
@@ -61,14 +58,10 @@ add_library(gazeora_host_lib STATIC
     src/stream/stream_overlay.cpp
     src/stream/stream_frame_sender.cpp
     src/stream/stream_view_info.cpp
-    src/stream/ts_muxer.cpp
-    src/stream/udp_frame_output.cpp
-    src/stream/usb_accessory_output.cpp
     src/stream/video_pipeline.cpp)
 target_include_directories(gazeora_host_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(gazeora_host_lib PUBLIC gazeora_common d3d11 d3dcompiler dxgi
-    ws2_32 iphlpapi mfplat mfuuid winmm ole32 uuid gdi32
-    PRIVATE libusb setupapi winusb bcrypt)
+    ws2_32 iphlpapi mfplat mfuuid winmm ole32 uuid gdi32)
 if(MSVC)
     # The Windows SDK declares the Media Foundation codecs' CLSIDs (wmcodecdsp.h) and defines
     # them here; MinGW has no such library, so with it they're instantiated in the sources

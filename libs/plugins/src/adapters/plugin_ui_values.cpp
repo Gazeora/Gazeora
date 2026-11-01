@@ -10,7 +10,7 @@ namespace gazeora {
 std::string PluginUiValues::Get(const std::string& key) const {
     PluginText value;
     m_panel.get(m_panel.self, key.c_str(), value.Data(), value.Capacity());
-    return Utf8::FromWide(value.Wide());
+    return value.Utf8Text();
 }
 
 void PluginUiValues::Set(const std::string& key, const std::string& value) {

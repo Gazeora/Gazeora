@@ -32,6 +32,8 @@ public:
     // A controller is connected and being read.
     bool Connected() const;
     input::GamepadSnapshot Snapshot() const { return m_session.Snapshot(); }
+    // Goes up whenever Snapshot() changes.
+    uint64_t Version() const { return m_session.Version(); }
 
 private:
     bool Reading() const { return Enabled() && !m_gameRunning; }

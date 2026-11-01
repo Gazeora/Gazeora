@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "gazeora/host/stream/pacing_plan.h"
+#include "gazeora/host/stream/packet_batch.h"
 
 namespace gazeora {
 
@@ -22,6 +23,8 @@ namespace gazeora {
 // that wakes late doesn't add up over the frame; with another paced frame waiting, the rest of
 // the current one goes out without waits (packets sent at once, such as an RTCP report, don't
 // count). Packets go out in the order they were queued.
+// Object Pool pattern: a sent frame's job, with its buffers, is kept for the next frame, so
+// streaming doesn't allocate once the buffers have grown to the largest frame.
 // Destroy it (or Stop) before closing the sockets it sends on.
 class PacketSendQueue {
 public:
@@ -30,8 +33,8 @@ public:
     PacketSendQueue& operator=(const PacketSendQueue&) = delete;
     ~PacketSendQueue();
 
-    // Queues `packets` to every one of `targets`, on `socket`. Returns at once.
-    void Enqueue(SOCKET socket, std::vector<sockaddr_in> targets,
+    // Queues a copy of `packets` to every one of `targets`, on `socket`. Returns at once.
+    void Enqueue(SOCKET socket, const std::vector<sockaddr_in>& targets,
                  const std::vector<std::string>& packets, const PacingPlan& plan);
     // Waits until everything queued has gone out.
     void Flush();
@@ -40,12 +43,15 @@ public:
 
 private:
     struct Job {
-        SOCKET socket;
+        SOCKET socket = INVALID_SOCKET;
         std::vector<sockaddr_in> targets;
-        std::vector<std::string> packets;
-        PacingPlan plan;
+        PacketBatch packets;
+        PacingPlan plan = PacingPlan::AtOnce(0);
     };
 
+    // A job to fill: a sent one's, or a new one.
+    Job TakeSpare();
+    void Recycle(Job job);
     void Run();
     void Send(const Job& job);
     bool Backlogged();
@@ -58,6 +64,7 @@ private:
     std::condition_variable m_wake;
     std::condition_variable m_idle;
     std::deque<Job> m_jobs;
+    std::vector<Job> m_spares;  // sent jobs, for their buffers
     size_t m_pacedWaiting = 0;  // of m_jobs, those in more than one burst
     bool m_sending = false;
     bool m_stopping = false;
