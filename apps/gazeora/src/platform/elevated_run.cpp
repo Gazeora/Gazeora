@@ -53,6 +53,7 @@ bool ElevatedRun::Run(HWND owner, const wchar_t* command,
         return false;
     }
     WaitForSingleObject(info.hProcess, INFINITE);
+    BringBack(owner);
     DWORD code = 1;
     GetExitCodeProcess(info.hProcess, &code);
     CloseHandle(info.hProcess);
@@ -102,6 +103,19 @@ DWORD ElevatedRun::ParentProcessId() {
     }
     CloseHandle(snapshot);
     return parent;
+}
+
+void ElevatedRun::HandForegroundToParent() {
+    const DWORD parent = ParentProcessId();
+    if (parent != 0) {
+        AllowSetForegroundWindow(parent);
+    }
+}
+
+void ElevatedRun::BringBack(HWND owner) {
+    if (owner && IsWindow(owner) && !IsIconic(owner)) {
+        SetForegroundWindow(owner);
+    }
 }
 
 void ElevatedRun::ReportToParent(const std::wstring& pipe, const std::wstring& text) {

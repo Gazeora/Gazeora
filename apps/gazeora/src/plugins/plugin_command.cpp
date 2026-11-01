@@ -66,6 +66,7 @@ int PluginCommand::Run() {
     if (!install && !uninstall) {
         return -1;
     }
+    ElevatedRun::HandForegroundToParent();
     try {
         Apply(words);
         return 0;

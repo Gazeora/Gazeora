@@ -26,8 +26,14 @@ public:
     // process that started this one. Only a pipe, and only out of that process: the number
     // comes from the command line, which anything could have written.
     static void ReportToParent(const std::wstring& pipe, const std::wstring& text);
+    // In the elevated run, first: lets the process that started it come back to the front.
+    // Windows hands the foreground to the elevated run once the user agrees, and it has no
+    // window, so without this the foreground goes to whichever window is next when it exits.
+    static void HandForegroundToParent();
 
 private:
+    // In the process that asked: brings `owner` back to the front once the run is done.
+    static void BringBack(HWND owner);
     static std::wstring Quoted(const std::vector<std::wstring>& arguments);
     static std::wstring ReadPipe(HANDLE pipe);
     static DWORD ParentProcessId();
