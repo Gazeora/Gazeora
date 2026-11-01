@@ -1,10 +1,10 @@
 # Copyright (C) 2026 Nithin Aashik
 # SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
-# The bundled plugins: Gazeora's UDP, HTTP and USB protocols and its H.265 codec, each a plugin
-# DLL. They come with Gazeora in bundled-plugins\, with bundled.json saying what they are, and
-# load only once installed from the Plugins page into plugins\. Each wraps gazeora_host_lib's
-# classes in the plugin interface through gazeora_plugin_kit.
+# The bundled plugins: Gazeora's UDP, HTTP and USB protocols, its H.265 codec and its game
+# controller support, each a plugin DLL. They come with Gazeora in bundled-plugins\, with
+# bundled.json saying what they are, and load only once installed from the Plugins page into
+# plugins\. Each wraps Gazeora's own classes in the plugin interface through gazeora_plugin_kit.
 add_library(gazeora_bundled_plugin STATIC common/src/bundled_plugin.cpp)
 target_include_directories(gazeora_bundled_plugin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common/include)
 target_link_libraries(gazeora_bundled_plugin PUBLIC gazeora_plugin_kit)
@@ -16,6 +16,24 @@ set(GAZEORA_BUNDLED_PLUGIN_DIR ${GAZEORA_RUNTIME_DIR}/../bundled-plugins)
 set(GAZEORA_BUNDLED_PLUGIN_DIR ${GAZEORA_BUNDLED_PLUGIN_DIR} PARENT_SCOPE)
 set(GAZEORA_BUNDLED_PLUGINS "")
 set(GAZEORA_BUNDLED_MANIFEST_ENTRIES "")
+
+# The plugin API version they're built with, for bundled.json: GAZEORA_PLUGIN_API_VERSION.
+file(STRINGS ${PROJECT_SOURCE_DIR}/libs/plugin_api/include/gazeora/plugin_api/gazeora_plugin.h
+    api_version_line REGEX "^#define GAZEORA_PLUGIN_API_VERSION [0-9]+u$")
+string(REGEX REPLACE ".* ([0-9]+)u$" "\\1" GAZEORA_PLUGIN_API_VERSION "${api_version_line}")
+
+# gazeora_embed_text(<target> <file> <header> <name>): <file>'s text as `constexpr char <name>[]`
+# in a generated <header> that <target> can include. Editing the file rebuilds it.
+function(gazeora_embed_text target file header name)
+    set(source ${CMAKE_CURRENT_SOURCE_DIR}/${file})
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${source})
+    file(READ ${source} text)
+    set(folder ${CMAKE_CURRENT_BINARY_DIR}/embedded/${target})
+    file(CONFIGURE OUTPUT ${folder}/${header}
+        CONTENT "#pragma once\n\nconstexpr char ${name}[] = R\"gazeora(${text})gazeora\";\n"
+        @ONLY)
+    target_include_directories(${target} PRIVATE ${folder})
+endfunction()
 
 # gazeora_add_bundled_plugin(<target> <id> <category> <name> <summary> <sources>...): the DLL is
 # <id>.dll, and its entry in bundled.json has the category, name and summary for the Plugins page.
@@ -33,7 +51,7 @@ function(gazeora_add_bundled_plugin target id category name summary)
     set(entry "{\"id\": \"${id}\", \"category\": \"${category}\", \"name\": \"${name}\", ")
     string(APPEND entry "\"summary\": \"${summary}\", ")
     string(APPEND entry "\"version\": \"${GAZEORA_VERSION_TEXT}\", \"author\": \"Gazeora\", ")
-    string(APPEND entry "\"license\": \"GPL-3.0-only\", \"api_version\": 2}")
+    string(APPEND entry "\"license\": \"GPL-3.0-only\", \"api_version\": ${GAZEORA_PLUGIN_API_VERSION}}")
     set(GAZEORA_BUNDLED_MANIFEST_ENTRIES ${GAZEORA_BUNDLED_MANIFEST_ENTRIES} "${entry}" PARENT_SCOPE)
     set(GAZEORA_BUNDLED_PLUGINS ${GAZEORA_BUNDLED_PLUGINS} ${target} PARENT_SCOPE)
 endfunction()
@@ -50,11 +68,22 @@ gazeora_add_bundled_plugin(gazeora_usb_plugin gazeora-usb protocol "USB Cable"
 gazeora_add_bundled_plugin(gazeora_h265_plugin gazeora-h265 codec "H.265 (HEVC)"
     "H.265 video: a sharper picture on weak Wi-Fi, for newer phones."
     h265/h265_plugin.cpp)
+gazeora_add_bundled_plugin(gazeora_controller_plugin gazeora-controller controller
+    "Game Controller"
+    "Move around Gazeora with an Xbox, PlayStation, Switch Pro or other controller."
+    controller/controller_panel_values.cpp
+    controller/controller_plugin.cpp
+    controller/controller_settings.cpp)
+# SDL reads the controllers, so it's in this DLL and not in Gazeora.exe.
+target_link_libraries(gazeora_controller_plugin PRIVATE gazeora_sdl_input)
+# Its card's layout, controller_panel.xml, as a string in the DLL (kControllerPanelXml).
+gazeora_embed_text(gazeora_controller_plugin controller/controller_panel.xml
+    controller_panel_xml.h kControllerPanelXml)
 
 # What the Plugins page lists under Available, in the plugin list's format (docs/plugins.md).
 list(JOIN GAZEORA_BUNDLED_MANIFEST_ENTRIES ",\n    " manifest_entries)
 file(GENERATE OUTPUT ${GAZEORA_BUNDLED_PLUGIN_DIR}/bundled.json CONTENT
-    "{\n  \"platform\": \"windows\",\n  \"api_version\": 2,\n  \"plugins\": [\n    ${manifest_entries}\n  ]\n}\n")
+    "{\n  \"platform\": \"windows\",\n  \"api_version\": ${GAZEORA_PLUGIN_API_VERSION},\n  \"plugins\": [\n    ${manifest_entries}\n  ]\n}\n")
 
 # Every bundled plugin: Gazeora.exe depends on them, and cmake --install puts them, with
 # bundled.json, in bundled-plugins\ (Install.cmake).

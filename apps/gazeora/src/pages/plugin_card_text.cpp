@@ -49,6 +49,8 @@ std::string PluginCardText::Contents(const PluginStatus& plugin) {
     add(plugin.codecs, "codec", "codecs");
     add(plugin.encoders, "encoder", "encoders");
     add(plugin.gameStores, "game store", "game stores");
+    add(plugin.gamepadDrivers, "game controller driver", "game controller drivers");
+    add(plugin.uiPanels, "card", "cards");
     std::string text;
     for (size_t i = 0; i < parts.size(); ++i) {
         text += (i == 0 ? "Adds " : i + 1 == parts.size() ? " and " : ", ") + parts[i];

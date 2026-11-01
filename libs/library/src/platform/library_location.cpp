@@ -29,4 +29,10 @@ std::wstring LibraryLocation::DefaultPath() {
     return path;
 }
 
+std::wstring LibraryLocation::DefaultFolder() {
+    const std::wstring path = DefaultPath();
+    const size_t slash = path.find_last_of(L"\\/");
+    return slash == std::wstring::npos ? std::wstring() : path.substr(0, slash);
+}
+
 }  // namespace gazeora

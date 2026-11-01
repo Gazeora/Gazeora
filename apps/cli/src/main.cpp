@@ -296,7 +296,8 @@ bool SaveLibraryOrReport(gazeora::GameLibrary& library) {
 }
 
 int CmdPlugins() {
-    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed());
+    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed(),
+                                    gazeora::LibraryLocation::DefaultFolder());
     wprintf(L"Plugins load from %ls\n", plugins.FolderPath().c_str());
     if (plugins.Plugins().empty()) {
         wprintf(L"No plugins.\n");
@@ -305,8 +306,11 @@ int CmdPlugins() {
         wprintf(L"%ls %ls: %ls", plugin.name.c_str(), plugin.version.c_str(),
                 plugin.loaded ? L"loaded" : L"not loaded");
         if (plugin.loaded) {
-            wprintf(L", %d game stores, %d encoders, %d codecs, %d protocols", plugin.gameStores,
-                    plugin.encoders, plugin.codecs, plugin.protocols);
+            wprintf(
+                L", %d game stores, %d encoders, %d codecs, %d protocols, %d controller drivers, "
+                L"%d cards",
+                plugin.gameStores, plugin.encoders, plugin.codecs, plugin.protocols,
+                plugin.gamepadDrivers, plugin.uiPanels);
         }
         if (!plugin.error.empty()) {
             wprintf(L" (%ls)", plugin.error.c_str());
@@ -317,7 +321,8 @@ int CmdPlugins() {
 }
 
 int CmdList() {
-    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed());
+    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed(),
+                                    gazeora::LibraryLocation::DefaultFolder());
     gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath(),
                                           plugins.Stores());
     gazeora::GameLibrary& library = services.Library();
@@ -422,7 +427,8 @@ void PrintStartedThroughStore(const std::wstring& name, const gazeora::LaunchSpe
 }
 
 int CmdLaunch(const std::wstring& key, bool forceCapture) {
-    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed());
+    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed(),
+                                    gazeora::LibraryLocation::DefaultFolder());
     gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath(),
                                           plugins.Stores());
     gazeora::GameLibrary& library = services.Library();

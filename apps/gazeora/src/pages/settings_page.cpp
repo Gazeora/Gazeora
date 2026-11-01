@@ -48,6 +48,7 @@ void App::DrawSettings() {
     ImGui::TextUnformatted("Settings");
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, S(6)));
+    DrawPluginPanels(ui::UiPage::Settings, ui::UiPosition::Start);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(S(10), S(14)));
     float width = std::min(ImGui::GetContentRegionAvail().x, S(720));
 

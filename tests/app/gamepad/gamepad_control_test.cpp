@@ -3,12 +3,10 @@
 
 #include "gamepad/gamepad_control.h"
 
-#include <windows.h>
-
 #include <gtest/gtest.h>
 
 #include <chrono>
-#include <string>
+#include <memory>
 #include <thread>
 
 #include "support/gamepad_fakes.h"
@@ -18,18 +16,8 @@ namespace {
 
 constexpr auto kTimeout = std::chrono::seconds(5);
 
-// controls.ini in the temp folder, removed afterwards.
-std::wstring TempSettingsPath() {
-    wchar_t folder[MAX_PATH];
-    GetTempPathW(MAX_PATH, folder);
-    return std::wstring(folder) + L"gazeora_gamepad_control_test_" +
-           std::to_wstring(GetCurrentProcessId()) + L".ini";
-}
-
 class GamepadControlTest : public ::testing::Test {
 protected:
-    void TearDown() override { DeleteFileW(m_path.c_str()); }
-
     bool WaitForConnected(const GamepadControl& control) {
         auto deadline = std::chrono::steady_clock::now() + kTimeout;
         while (!control.Connected() && std::chrono::steady_clock::now() < deadline) {
@@ -38,25 +26,49 @@ protected:
         return control.Connected();
     }
 
-    std::wstring m_path = TempSettingsPath();
-    ControlsSettings m_store{m_path};
     input::testing::FakeGamepads m_gamepads;
-    input::testing::FakeGamepadDriverFactory m_drivers{m_gamepads};
+    std::shared_ptr<input::testing::FakeGamepadDriverFactory> m_drivers =
+        std::make_shared<input::testing::FakeGamepadDriverFactory>(m_gamepads);
+    std::shared_ptr<input::testing::FakeGamepadSwitch> m_switch =
+        std::make_shared<input::testing::FakeGamepadSwitch>();
     input::testing::RecordingGamepadListener m_listener;
     input::GamepadSession m_session{m_drivers, m_listener};
 };
 
-TEST_F(GamepadControlTest, ReadsControllersUnlessSwitchedOff) {
+TEST_F(GamepadControlTest, ReadsControllersWhileThePluginsSwitchIsOn) {
     m_gamepads.Connect(L"DualSense Wireless Controller");
-    GamepadControl control(m_session, m_store);
+    GamepadControl control(m_session, m_switch);
     EXPECT_TRUE(control.Enabled());
-    control.Resume();
+    control.Refresh();
     EXPECT_TRUE(WaitForConnected(control));
 }
 
+TEST_F(GamepadControlTest, FollowsThePluginsSwitch) {
+    GamepadControl control(m_session, m_switch);
+    control.Refresh();
+    EXPECT_TRUE(m_session.Running());
+    m_switch->on = false;
+    control.Refresh();
+    EXPECT_FALSE(control.Enabled());
+    EXPECT_FALSE(m_session.Running());
+    m_switch->on = true;
+    control.Refresh();
+    EXPECT_TRUE(m_session.Running());
+}
+
+TEST_F(GamepadControlTest, ReadsNothingWithoutTheControllerPlugin) {
+    input::GamepadSession session(nullptr, m_listener);
+    GamepadControl control(session, nullptr);
+    EXPECT_FALSE(control.Available());
+    EXPECT_FALSE(control.Enabled());
+    control.Refresh();
+    EXPECT_FALSE(session.Running());
+    EXPECT_FALSE(control.Connected());
+}
+
 TEST_F(GamepadControlTest, LeavesControllersToARunningGame) {
-    GamepadControl control(m_session, m_store);
-    control.Resume();
+    GamepadControl control(m_session, m_switch);
+    control.Refresh();
     control.SetGameRunning(true);
     EXPECT_FALSE(m_session.Running());
     EXPECT_TRUE(control.Paused());
@@ -65,17 +77,20 @@ TEST_F(GamepadControlTest, LeavesControllersToARunningGame) {
     EXPECT_FALSE(control.Paused());
 }
 
-TEST_F(GamepadControlTest, RemembersTheSwitch) {
-    GamepadControl control(m_session, m_store);
-    control.Resume();
-    control.SetEnabled(false);
-    EXPECT_FALSE(m_session.Running());
-
-    ControlsSettings reread(m_path);
-    GamepadControl reopened(m_session, reread);
-    EXPECT_FALSE(reopened.Enabled());
-    reopened.Resume();
-    EXPECT_FALSE(m_session.Running());
+TEST_F(GamepadControlTest, TriesAgainAfterAnError) {
+    m_drivers->failure = L"Game controllers can't be read: no HID.";
+    GamepadControl control(m_session, m_switch);
+    control.Refresh();
+    auto deadline = std::chrono::steady_clock::now() + kTimeout;
+    while (control.Snapshot().state != input::GamepadSessionState::Error &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    ASSERT_EQ(control.Snapshot().state, input::GamepadSessionState::Error);
+    m_drivers->failure.clear();
+    m_gamepads.Connect(L"Xbox Controller");
+    control.Restart();
+    EXPECT_TRUE(WaitForConnected(control));
 }
 
 }  // namespace

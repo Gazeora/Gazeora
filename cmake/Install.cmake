@@ -27,7 +27,7 @@ install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
 # and theirs ask for them to travel with the program).
 install(FILES LICENSE NOTICE COMMERCIAL-LICENSE.md TRADEMARKS.md THIRD_PARTY_NOTICES.md
     DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
-foreach(dependency libusb minhook imgui sdl nlohmann_json)
+foreach(dependency libusb minhook imgui sdl nlohmann_json pugixml)
     FetchContent_GetProperties(${dependency} SOURCE_DIR ${dependency}_dir)
 endforeach()
 set(GAZEORA_THIRD_PARTY_DIR ${CMAKE_INSTALL_DOCDIR}/third-party)
@@ -41,6 +41,8 @@ install(FILES ${sdl_dir}/LICENSE.txt
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME sdl-LICENSE.txt COMPONENT Runtime)
 install(FILES ${nlohmann_json_dir}/LICENSE.MIT
     DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME nlohmann_json-LICENSE.txt COMPONENT Runtime)
+install(FILES ${pugixml_dir}/LICENSE.md
+    DESTINATION ${GAZEORA_THIRD_PARTY_DIR} RENAME pugixml-LICENSE.txt COMPONENT Runtime)
 # In a docs folder beside the README, so the README's links to docs/ work installed too.
 install(DIRECTORY docs DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime
     FILES_MATCHING PATTERN "*.md")

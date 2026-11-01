@@ -16,13 +16,17 @@ constexpr auto kPollInterval = std::chrono::milliseconds(8);
 
 }  // namespace
 
-GamepadSession::GamepadSession(IGamepadDriverFactory& drivers, IGamepadListener& listener)
-    : m_drivers(drivers), m_listener(listener) {}
+GamepadSession::GamepadSession(std::shared_ptr<IGamepadDriverFactory> drivers,
+                               IGamepadListener& listener)
+    : m_drivers(std::move(drivers)), m_listener(listener), m_snapshot(Idle()) {}
 
 GamepadSession::~GamepadSession() { Stop(); }
 
 void GamepadSession::Start() {
     Stop();
+    if (!Available()) {
+        return;
+    }
     m_stop = false;
     GamepadSnapshot running;
     running.state = GamepadSessionState::Running;
@@ -35,7 +39,7 @@ void GamepadSession::Stop() {
     if (m_thread.joinable()) {
         m_thread.join();
     }
-    Publish(GamepadSnapshot());
+    Publish(Idle());
 }
 
 GamepadSnapshot GamepadSession::Snapshot() const {
@@ -45,7 +49,7 @@ GamepadSnapshot GamepadSession::Snapshot() const {
 
 void GamepadSession::Run() {
     try {
-        std::unique_ptr<IGamepadDriver> driver = m_drivers.Create();
+        std::unique_ptr<IGamepadDriver> driver = m_drivers->Create();
         Loop(*driver);
     } catch (const InputError& error) {
         Fail(error.Message());
@@ -93,6 +97,12 @@ void GamepadSession::Fail(std::wstring message) {
     failed.state = GamepadSessionState::Error;
     failed.message = std::move(message);
     Publish(std::move(failed));
+}
+
+GamepadSnapshot GamepadSession::Idle() const {
+    GamepadSnapshot idle;
+    idle.state = Available() ? GamepadSessionState::Off : GamepadSessionState::Unavailable;
+    return idle;
 }
 
 }  // namespace gazeora::input

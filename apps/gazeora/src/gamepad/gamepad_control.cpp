@@ -5,35 +5,35 @@
 
 namespace gazeora::app {
 
-GamepadControl::GamepadControl(input::GamepadSession& session, const ControlsSettings& store)
-    : m_session(session), m_store(store), m_enabled(store.LoadGamepadEnabled()) {}
+GamepadControl::GamepadControl(input::GamepadSession& session,
+                               std::shared_ptr<const input::IGamepadSwitch> enabled)
+    : m_session(session), m_enabled(std::move(enabled)) {}
 
-void GamepadControl::Resume() { Apply(); }
-
-void GamepadControl::SetEnabled(bool enabled) {
-    m_enabled = enabled;
-    m_store.SaveGamepadEnabled(enabled);
-    Apply();
-}
-
-void GamepadControl::SetGameRunning(bool running) {
-    if (running == m_gameRunning) {
+void GamepadControl::Refresh() {
+    const bool reading = Reading();
+    if (reading == m_reading) {
         return;
     }
-    m_gameRunning = running;
-    Apply();
-}
-
-bool GamepadControl::Connected() const {
-    return m_session.Running() && !m_session.Snapshot().connected.empty();
-}
-
-void GamepadControl::Apply() {
-    if (Reading()) {
+    m_reading = reading;
+    if (reading) {
         m_session.Start();
     } else {
         m_session.Stop();
     }
+}
+
+void GamepadControl::SetGameRunning(bool running) {
+    m_gameRunning = running;
+    Refresh();
+}
+
+void GamepadControl::Restart() {
+    m_reading = false;
+    Refresh();
+}
+
+bool GamepadControl::Connected() const {
+    return m_session.Running() && !m_session.Snapshot().connected.empty();
 }
 
 }  // namespace gazeora::app

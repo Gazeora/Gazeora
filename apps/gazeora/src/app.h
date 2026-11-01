@@ -24,7 +24,7 @@
 #include "gazeora/host/capture/controller_turn_channel.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/stream/frame_stream.h"
-#include "gazeora/input/gamepad_services.h"
+#include "gazeora/input/services/gamepad_session.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
 #include "gazeora/plugin_manager/plugin_manager_services.h"
@@ -43,11 +43,12 @@
 #include "keyboard/keyboard_view.h"
 #include "keyboard/on_screen_keyboard.h"
 #include "pages/controls_page.h"
-#include "pages/gamepad_card.h"
 #include "pages/head_tracking_card.h"
 #include "pages/launch_via_choices.h"
 #include "pages/plugins_page.h"
 #include "pages/update_card.h"
+#include "plugin_ui/gazeora_ui_values.h"
+#include "plugin_ui/plugin_panels_view.h"
 #include "plugins/elevated_plugin_installer.h"
 #include "plugins/plugin_manager_control.h"
 #include "remote/imgui_pointer_input.h"
@@ -146,6 +147,8 @@ private:
     void DrawSettings();
     void DrawEmptyLibrary();
     void DrawToasts();
+    // Plugins' cards for one of App's own pages (Home, Library, Settings).
+    void DrawPluginPanels(ui::UiPage page, ui::UiPosition position);
     void DrawGameBanner(const Game& game, float height, const char* eyebrow, bool showDetails);
     void DrawSessionCard(const Game& game);
     void DrawGameSettingsCard(Game& game);
@@ -200,7 +203,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     TextureCache m_textures;
     // Loaded first: the library and the stream use the stores and encoders they add.
-    PluginServices m_plugins{PluginFolder::Installed()};
+    PluginServices m_plugins{PluginFolder::Installed(), LibraryLocation::DefaultFolder()};
     GameLibraryServices m_libraryServices{LibraryLocation::DefaultPath(), m_plugins.Stores()};
     GameLibrary& m_library = m_libraryServices.Library();
     // The phone's touches on a flat picture, and its hand pointing at this window in a VR
@@ -264,13 +267,14 @@ private:
     // hold pointers into a library that changed under them.
     std::vector<std::function<void()>> m_deferred;
 
-    // Game controllers and the Controls page; the page is declared last, as it holds
-    // references to the others.
+    // Game controllers, plugins' cards and the Controls page; the page is declared last, as it
+    // holds references to the others.
     ControlsSettings m_controlsSettings;
     // What the controllers do, from their session's thread; declared before m_gamepads, whose
     // thread delivers it. Each change wakes the UI thread to draw.
     GamepadEventQueue m_gamepadEvents{[this] { PostMessageW(m_hwnd, WM_NULL, 0, 0); }};
-    input::GamepadServices m_gamepads{m_gamepadEvents};
+    // Read through the Game Controller plugin's driver; without it, never started.
+    input::GamepadSession m_gamepads{m_plugins.GamepadDrivers(), m_gamepadEvents};
     ImGuiGamepadInput m_gamepadInput;
     GamepadPresses m_gamepadPresses;
     PaneNavigation m_panes;
@@ -282,13 +286,15 @@ private:
     // Last frame, a popup was open, a control was held or the keyboard was up: the
     // controller's buttons were theirs, not the pages'.
     bool m_gamepadBusy = false;
-    GamepadControl m_gamepadControl{m_gamepads.Session(), m_controlsSettings};
-    GamepadCard m_gamepadCard{m_gamepadControl, m_scale};
+    GamepadControl m_gamepadControl{m_gamepads, m_plugins.GamepadSwitch()};
+    // Plugins' cards on the pages, and Gazeora's values they bind to (filled in the constructor).
+    GazeoraUiValues m_uiValues;
+    PluginPanelsView m_pluginPanels{m_plugins.UiPanels(), m_uiValues, m_scale};
     HeadTrackingControl m_headTracking{
         {m_headLook, m_mouseLook, m_controllerLook, m_lastUsedDevice, m_controllerChannel},
         m_controlsSettings};
     HeadTrackingCard m_headTrackingCard{m_headTracking, m_scale};
-    ControlsPage m_controls{m_gamepadCard, m_headTrackingCard, m_scale};
+    ControlsPage m_controls{m_headTrackingCard, m_pluginPanels, m_scale};
 
     // Updates, declared last: m_updates waits for its threads, which use the services.
     UpdateSettings m_updateSettings;
@@ -305,7 +311,8 @@ private:
                                          m_pluginManagerServices.Downloader(),
                                          m_pluginManagerServices.Hasher(),
                                          m_pluginInstaller};
-    PluginsPage m_pluginsPage{m_pluginManager, m_plugins.FolderPath(), m_hwnd, m_scale};
+    PluginsPage m_pluginsPage{m_pluginManager, m_plugins.FolderPath(), m_pluginPanels, m_hwnd,
+                              m_scale};
 };
 
 }  // namespace gazeora::app

@@ -10,7 +10,8 @@
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
 #  - gazeora_plugin_tests:    loading plugin DLLs, with a sample plugin and the bundled ones
 #  - gazeora_plugin_manager_tests: the plugin list, and installing and removing plugins
-#  - gazeora_input_tests:     game controllers
+#  - gazeora_plugin_ui_tests: plugins' UI panels: reading their XML layouts, and bindings
+#  - gazeora_input_tests:     game controllers, and SDL's driver
 #  - gazeora_update_tests:    finding and downloading updates, on a fake web server
 #  - gazeora_app_tests:       the launcher's game controller support, on-screen keyboard,
 #                             problem reports and updates, on a headless ImGui
@@ -86,7 +87,7 @@ gazeora_add_test(gazeora_library_tests
             library/missing_game_pruner_test.cpp
     LIBS gazeora_library)
 
-# The sample plugin, three times: for plugin API version 2, for version 1, and for a version
+# The sample plugin, three times: for plugin API version 3, for version 1, and for a version
 # Gazeora doesn't have (sample_plugin.cpp). In a folder of their own, so the Gazeora.exe in
 # bin\ doesn't load them.
 set(GAZEORA_TEST_PLUGIN_DIR ${CMAKE_BINARY_DIR}/test_plugins)
@@ -94,7 +95,9 @@ foreach(plugin gazeora_test_plugin gazeora_test_plugin_v1 gazeora_test_plugin_v9
     add_library(${plugin} SHARED
         plugins/sample_plugin/sample_codec.cpp
         plugins/sample_plugin/sample_encoder.cpp
+        plugins/sample_plugin/sample_gamepad.cpp
         plugins/sample_plugin/sample_output.cpp
+        plugins/sample_plugin/sample_panel.cpp
         plugins/sample_plugin/sample_plugin.cpp
         plugins/sample_plugin/sample_store.cpp)
     target_link_libraries(${plugin} PRIVATE gazeora_plugin_api)
@@ -109,10 +112,14 @@ target_compile_definitions(gazeora_test_plugin_v99 PRIVATE SAMPLE_PLUGIN_API_VER
 
 gazeora_add_test(gazeora_plugin_tests
     SOURCES plugins/bundled_plugins_test.cpp
+            plugins/exported_gamepad_driver_test.cpp
             plugins/exported_output_test.cpp
+            plugins/exported_ui_panel_test.cpp
             plugins/plugin_dll_test.cpp
             plugins/plugin_loader_test.cpp
     LIBS gazeora_plugins gazeora_plugin_kit gazeora_plugin_api)
+target_include_directories(gazeora_plugin_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/input ${CMAKE_CURRENT_SOURCE_DIR}/plugin_ui)
 # The bundled plugins are tested where the build puts them, as an install has them.
 target_compile_definitions(gazeora_plugin_tests PRIVATE
     GAZEORA_TEST_PLUGIN_DIR="${GAZEORA_TEST_PLUGIN_DIR}"
@@ -141,13 +148,20 @@ gazeora_add_test(gazeora_transport_tests
     LIBS gazeora_hook_core gazeora_host_lib)
 
 
+gazeora_add_test(gazeora_plugin_ui_tests
+    SOURCES
+        plugin_ui/ui_bindings_test.cpp
+        plugin_ui/ui_xml_parser_test.cpp
+    LIBS gazeora_plugin_ui)
+target_include_directories(gazeora_plugin_ui_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/plugin_ui)
+
 gazeora_add_test(gazeora_input_tests
     SOURCES
         input/gamepad/gamepad_state_test.cpp
         input/gamepad/gamepad_state_filter_test.cpp
         input/services/gamepad_session_test.cpp
         input/platform/sdl_gamepad_driver_test.cpp
-    LIBS gazeora_input)
+    LIBS gazeora_sdl_input)
 target_include_directories(gazeora_input_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/input)
 
 gazeora_add_test(gazeora_update_tests
@@ -176,6 +190,15 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/pages/launch_via_choices.cpp
         ${GAZEORA_APP_SOURCE_DIR}/pages/plugin_card_text.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugin_ui/gamepad_ui_values.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugin_ui/gazeora_ui_values.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugin_ui/imgui_ui_renderer.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugin_ui/ui_field_drawer.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugin_ui/ui_input_buffers.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugin_ui/ui_look.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/ui/gamepad_status_line.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/ui/text_format.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/ui/widgets.cpp
         ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_list_fetch.cpp
         ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_manager_control.cpp
         ${GAZEORA_APP_SOURCE_DIR}/report/issue_link.cpp
@@ -197,11 +220,14 @@ gazeora_add_test(gazeora_app_tests
         app/keyboard/on_screen_keyboard_test.cpp
         app/pages/launch_via_choices_test.cpp
         app/pages/plugin_card_text_test.cpp
+        app/plugin_ui/gamepad_ui_values_test.cpp
+        app/plugin_ui/imgui_ui_renderer_test.cpp
         app/plugins/plugin_manager_control_test.cpp
         app/report/issue_link_test.cpp
         app/report/windows_description_test.cpp
         app/update/update_control_test.cpp
     LIBS gazeora_input gazeora_library gazeora_host_lib gazeora_update gazeora_plugin_manager
-         gazeora_plugin_api imgui shell32 ole32 uuid)
+         gazeora_plugin_api gazeora_plugin_ui imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
-    ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)
+    ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input
+    ${CMAKE_CURRENT_SOURCE_DIR}/plugin_ui)

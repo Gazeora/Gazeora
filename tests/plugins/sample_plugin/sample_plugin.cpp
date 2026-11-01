@@ -3,7 +3,8 @@
 
 // A plugin DLL for the tests, written only against gazeora_plugin.h as a third party would.
 // Built three times, with SAMPLE_PLUGIN_API_VERSION:
-//  - 2 (the default): a game store, an encoder, a codec and a protocol (sample_parts.h);
+//  - 3 (the default): a game store, an encoder, a codec, a protocol, a game controller
+//    driver and a card on the Settings page (sample_parts.h);
 //  - 1: as a plugin made before version 2, with the game store and the encoder only;
 //  - 99: for a version Gazeora doesn't support.
 #include "sample_parts.h"
@@ -15,6 +16,7 @@
 namespace {
 
 constexpr bool kVersion2 = SAMPLE_PLUGIN_API_VERSION >= 2u;
+constexpr bool kVersion3 = SAMPLE_PLUGIN_API_VERSION >= 3u;
 
 const GazeoraPluginInfoV1 kInfo = {sizeof(GazeoraPluginInfoV1), SAMPLE_PLUGIN_API_VERSION,
                                    kVersion2 ? "Sample plugin" : "Sample plugin (version 1)",
@@ -24,6 +26,14 @@ bool RegisterVersion2(const GazeoraPluginHostV1* host) {
     const GazeoraPluginHostV2* v2 = GazeoraPluginHostV2Of(host);
     return v2 && v2->register_codec(host->context, &sample::Codec()) == GAZEORA_TRUE &&
            v2->register_protocol(host->context, &sample::Protocol()) == GAZEORA_TRUE;
+}
+
+bool RegisterVersion3(const GazeoraPluginHostV1* host) {
+    const GazeoraPluginHostV3* v3 = GazeoraPluginHostV3Of(host);
+    return v3 &&
+           v3->register_gamepad_driver_provider(host->context, &sample::Gamepads()) ==
+               GAZEORA_TRUE &&
+           v3->register_ui_panel(host->context, &sample::Panel()) == GAZEORA_TRUE;
 }
 
 }  // namespace
@@ -37,7 +47,7 @@ GAZEORA_PLUGIN_EXPORT int32_t GAZEORA_CALL GazeoraPluginRegister(const GazeoraPl
         host->register_game_store(host->context, &sample::Store()) == GAZEORA_TRUE &&
         host->register_encoder_provider(host->context, &sample::Encoders(kVersion2)) ==
             GAZEORA_TRUE &&
-        (!kVersion2 || RegisterVersion2(host));
+        (!kVersion2 || RegisterVersion2(host)) && (!kVersion3 || RegisterVersion3(host));
     return registered ? GAZEORA_TRUE : GAZEORA_FALSE;
 }
 

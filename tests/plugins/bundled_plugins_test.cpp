@@ -5,6 +5,7 @@
 #include <winsock2.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -82,7 +83,7 @@ protected:
 };
 
 TEST_F(BundledPluginsTest, EveryBundledPluginLoads) {
-    ASSERT_EQ(services.Plugins().size(), 4u);
+    ASSERT_EQ(services.Plugins().size(), 5u);
     std::vector<std::wstring> names;
     for (const PluginStatus& plugin : services.Plugins()) {
         EXPECT_TRUE(plugin.loaded) << plugin.path << L": " << plugin.error;
@@ -90,14 +91,58 @@ TEST_F(BundledPluginsTest, EveryBundledPluginLoads) {
         names.push_back(plugin.name);
     }
     // In file order; the same names bundled.json gives the Plugins page (plugins/CMakeLists.txt).
-    EXPECT_EQ(names, (std::vector<std::wstring>{L"H.265 (HEVC)", L"HTTP Live", L"UDP Direct",
-                                                L"USB Cable"}));
+    EXPECT_EQ(names, (std::vector<std::wstring>{L"Game Controller", L"H.265 (HEVC)", L"HTTP Live",
+                                                L"UDP Direct", L"USB Cable"}));
     EXPECT_EQ(IdsOf(*services.Protocols()),
               (std::vector<std::string>{"http", "rtsp-tcp", "rtsp-udp", "udp", "usb"}));
     const VideoCodecInfo* h265 = services.Codecs()->Find(VideoCodec::H265);
     ASSERT_NE(h265, nullptr);
     EXPECT_EQ(h265->name, "H.265");
     EXPECT_EQ(h265->format->FrameFlags(), kFrameFlagH265);
+}
+
+TEST_F(BundledPluginsTest, TheControllerPluginReadsControllersThroughSdl) {
+    std::shared_ptr<input::IGamepadDriverFactory> drivers = services.GamepadDrivers();
+    ASSERT_NE(drivers, nullptr);
+    // Whatever is plugged in: SDL starts without a window, and a second driver after the first.
+    for (int i = 0; i < 2; ++i) {
+        std::unique_ptr<input::IGamepadDriver> driver = drivers->Create();
+        driver->Update();
+        for (const input::GamepadInfo& gamepad : driver->Connected()) {
+            EXPECT_FALSE(gamepad.name.empty());
+        }
+    }
+}
+
+// The Game Controller plugin's card and switch, with its settings in a folder of the test's.
+TEST(ControllerPluginTest, PutsItsCardOnTheControlsPageAndKeepsItsSwitch) {
+    const std::wstring folder =
+        std::filesystem::temp_directory_path() /
+        (L"gazeora_controller_plugin_test_" + std::to_wstring(GetCurrentProcessId()));
+    {
+        PluginServices services(BundledPlugins(), folder);
+        ASSERT_EQ(services.UiPanels().size(), 1u);
+        const ui::UiPanel& card = services.UiPanels()[0];
+        EXPECT_EQ(card.layout.page, ui::UiPage::Controls);
+        EXPECT_EQ(card.layout.position, ui::UiPosition::Start);
+        EXPECT_EQ(card.layout.title, "Game controller");
+        ASSERT_NE(services.GamepadSwitch(), nullptr);
+        EXPECT_TRUE(services.GamepadSwitch()->Enabled());  // on unless saved off
+        EXPECT_EQ(card.values->Get("enabled"), "1");
+        card.values->Set("enabled", "0");
+        EXPECT_FALSE(services.GamepadSwitch()->Enabled());
+    }
+    wchar_t saved[8];
+    GetPrivateProfileStringW(L"game_controller", L"enabled", L"", saved, 8,
+                             (folder + L"\\controls.ini").c_str());
+    EXPECT_STREQ(saved, L"0");  // where Gazeora kept it before it was a plugin
+    std::error_code ignored;
+    std::filesystem::remove_all(folder, ignored);
+}
+
+TEST(GamepadDriversTest, NoneWithoutTheControllerPlugin) {
+    EXPECT_EQ(PluginServices(PluginFolder(L"C:\\gazeora\\no_such_folder")).GamepadDrivers(),
+              nullptr);
 }
 
 TEST_F(BundledPluginsTest, ProtocolsKeepWhatTheDiscoveryReplySays) {

@@ -16,7 +16,6 @@ namespace gazeora::app {
 
 namespace {
 
-constexpr wchar_t kGamepadSection[] = L"game_controller";
 constexpr wchar_t kHeadSection[] = L"head_tracking";
 constexpr wchar_t kEnabled[] = L"enabled";
 constexpr wchar_t kCountsPerDegree[] = L"counts_per_degree";
@@ -30,17 +29,9 @@ constexpr DWORD kMaxText = 1024;
 
 ControlsSettings::ControlsSettings() : m_path(SettingsFile::NextToLibrary(L"controls.ini")) {}
 
-bool ControlsSettings::LoadGamepadEnabled() const { return LoadSwitch(kGamepadSection); }
+bool ControlsSettings::LoadHeadTrackingEnabled() const { return LoadSwitch(); }
 
-void ControlsSettings::SaveGamepadEnabled(bool enabled) const {
-    SaveSwitch(kGamepadSection, enabled);
-}
-
-bool ControlsSettings::LoadHeadTrackingEnabled() const { return LoadSwitch(kHeadSection); }
-
-void ControlsSettings::SaveHeadTrackingEnabled(bool enabled) const {
-    SaveSwitch(kHeadSection, enabled);
-}
+void ControlsSettings::SaveHeadTrackingEnabled(bool enabled) const { SaveSwitch(enabled); }
 
 float ControlsSettings::LoadHeadCountsPerDegree(float fallback) const {
     return LoadHeadNumber(kCountsPerDegree, fallback);
@@ -78,13 +69,11 @@ void ControlsSettings::SaveHeadNumber(const wchar_t* key, float value) const {
     WriteText(kHeadSection, key, std::to_wstring(value));
 }
 
-bool ControlsSettings::LoadSwitch(const wchar_t* section) const {
-    return ReadText(section, kEnabled) != kOff;
-}
+bool ControlsSettings::LoadSwitch() const { return ReadText(kHeadSection, kEnabled) != kOff; }
 
-void ControlsSettings::SaveSwitch(const wchar_t* section, bool enabled) const {
+void ControlsSettings::SaveSwitch(bool enabled) const {
     CreateFolder();
-    WriteText(section, kEnabled, enabled ? kOn : kOff);
+    WriteText(kHeadSection, kEnabled, enabled ? kOn : kOff);
 }
 
 std::wstring ControlsSettings::ReadText(const wchar_t* section, const wchar_t* key) const {

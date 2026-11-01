@@ -12,13 +12,19 @@
 
 namespace gazeora {
 
-PluginServices::PluginServices(const PluginFolder& folder,
+namespace {
+
+constexpr char kPanelIdPrefix[] = "plugin-panel-";
+
+}  // namespace
+
+PluginServices::PluginServices(const PluginFolder& folder, const std::wstring& settingsFolder,
                                std::shared_ptr<const IPluginModuleLoader> modules)
     : m_folder(folder.Path()) {
     if (!modules) {
         modules = std::make_shared<Win32PluginModuleLoader>();
     }
-    Build(PluginLoader(*modules).Load(folder.Dlls()));
+    Build(PluginLoader(*modules, settingsFolder).Load(folder.Dlls()));
 }
 
 void PluginServices::Build(const PluginCatalog& catalog) {
@@ -37,6 +43,14 @@ void PluginServices::Build(const PluginCatalog& catalog) {
     m_outputs = BuildOutputs(catalog);
     m_protocols = BuildProtocols(catalog);
     m_codecs = BuildCodecs(catalog);
+    if (!catalog.gamepadDrivers.empty()) {
+        m_gamepadDrivers = catalog.gamepadDrivers.front();
+        m_gamepadSwitch = catalog.gamepadSwitches.front();
+    }
+    m_uiPanels = catalog.uiPanels;
+    for (size_t i = 0; i < m_uiPanels.size(); ++i) {
+        m_uiPanels[i].id = kPanelIdPrefix + std::to_string(i);
+    }
     m_plugins = catalog.plugins;
 }
 

@@ -22,6 +22,7 @@
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
 #include "platform/shell.h"
+#include "plugin_ui/gamepad_ui_values.h"
 #include "settings/stream_settings.h"
 #include "ui/focus_edge.h"
 #include "ui/gamepad_scroll.h"
@@ -43,6 +44,8 @@ constexpr uint16_t kStreamPort = 8554;
 // Size of the logo frame in the VR settings' preview.
 constexpr int kLogoFrameWidth = 1280;
 constexpr int kLogoFrameHeight = 720;
+// For plugins' cards: "1" while a game launched from here runs.
+constexpr char kGameRunningValue[] = "gazeora.game-running";
 
 }  // namespace
 
@@ -73,7 +76,9 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_stream.SetHeadPoseSink(&m_headLook);
     m_keyboardMouse.Register(m_hwnd);
     StartStream();
-    m_gamepadControl.Resume();
+    GamepadUiValues::AddTo(m_uiValues, m_gamepadControl);
+    m_uiValues.AddValue(kGameRunningValue, [this] { return GazeoraUiValues::Flag(GameRunning()); });
+    m_gamepadControl.Refresh();
     m_updates.Start();
 }
 
@@ -92,6 +97,10 @@ UpdateEvents App::MakeUpdateEvents() {
     };
     events.installerStarted = [this] { PostMessageW(m_hwnd, WM_CLOSE, 0, 0); };
     return events;
+}
+
+void App::DrawPluginPanels(ui::UiPage page, ui::UiPosition position) {
+    m_pluginPanels.Draw(page, position, {m_fonts.heading, m_fonts.caption});
 }
 
 void App::StartStream() {
@@ -379,9 +388,11 @@ void App::Draw() {
     switch (m_page) {
         case Page::Home:
             DrawHome();
+            DrawPluginPanels(ui::UiPage::Home, ui::UiPosition::End);
             break;
         case Page::Library:
             DrawLibrary();
+            DrawPluginPanels(ui::UiPage::Library, ui::UiPosition::End);
             break;
         case Page::Details:
             DrawDetails();
@@ -394,6 +405,7 @@ void App::Draw() {
             break;
         case Page::Settings:
             DrawSettings();
+            DrawPluginPanels(ui::UiPage::Settings, ui::UiPosition::End);
             break;
     }
     ImGui::Dummy(ImVec2(0, S(8)));

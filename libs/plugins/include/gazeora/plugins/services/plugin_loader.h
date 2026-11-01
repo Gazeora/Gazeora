@@ -15,7 +15,9 @@ namespace gazeora {
 // register. A plugin that fails to load is reported in the catalog and skipped.
 class PluginLoader final {
 public:
-    explicit PluginLoader(const IPluginModuleLoader& modules) : m_modules(modules) {}
+    // `settingsFolder` is where plugins may keep their settings; empty for none.
+    explicit PluginLoader(const IPluginModuleLoader& modules, std::wstring settingsFolder = L"")
+        : m_modules(modules), m_settingsFolder(std::move(settingsFolder)) {}
 
     PluginCatalog Load(const std::vector<std::wstring>& paths) const;
 
@@ -29,6 +31,7 @@ private:
                         PluginStatus& status);
 
     const IPluginModuleLoader& m_modules;
+    const std::wstring m_settingsFolder;
 };
 
 }  // namespace gazeora

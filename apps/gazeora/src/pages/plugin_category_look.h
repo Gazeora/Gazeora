@@ -15,9 +15,9 @@ public:
     PluginCategoryLook() = delete;
 
     // Every category, in the order the filter lists them.
-    static constexpr std::array<PluginCategory, 5> kAll = {
-        PluginCategory::Protocol, PluginCategory::Codec, PluginCategory::Encoder,
-        PluginCategory::GameStore, PluginCategory::Other};
+    static constexpr std::array<PluginCategory, 6> kAll = {
+        PluginCategory::Protocol,  PluginCategory::Codec,      PluginCategory::Encoder,
+        PluginCategory::GameStore, PluginCategory::Controller, PluginCategory::Other};
 
     static const char* Icon(PluginCategory category);
     // For one plugin, e.g. "Protocol".

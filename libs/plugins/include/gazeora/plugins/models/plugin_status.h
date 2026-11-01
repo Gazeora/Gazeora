@@ -19,6 +19,8 @@ struct PluginStatus {
     int encoders = 0;
     int codecs = 0;
     int protocols = 0;
+    int gamepadDrivers = 0;
+    int uiPanels = 0;
 };
 
 }  // namespace gazeora

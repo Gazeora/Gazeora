@@ -20,6 +20,14 @@ namespace {
 
 namespace fs = std::filesystem;
 
+// What each bundled plugin is (plugins/CMakeLists.txt).
+PluginCategory CategoryOf(const std::wstring& id) {
+    if (id == L"gazeora-h265") {
+        return PluginCategory::Codec;
+    }
+    return id == L"gazeora-controller" ? PluginCategory::Controller : PluginCategory::Protocol;
+}
+
 class BundledPluginIndexTest : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -69,13 +77,11 @@ TEST(BundledPluginsBuiltTest, TheBuildsManifestListsEveryBundledPlugin) {
         ids.push_back(listing.id);
         EXPECT_FALSE(listing.summary.empty()) << listing.id;
         EXPECT_EQ(listing.apiVersion, GAZEORA_PLUGIN_API_VERSION) << listing.id;
-        EXPECT_EQ(listing.category,
-                  listing.id == L"gazeora-h265" ? PluginCategory::Codec : PluginCategory::Protocol)
-            << listing.id;
+        EXPECT_EQ(listing.category, CategoryOf(listing.id)) << listing.id;
     }
     std::sort(ids.begin(), ids.end());
-    EXPECT_EQ(ids, (std::vector<std::wstring>{L"gazeora-h265", L"gazeora-http", L"gazeora-udp",
-                                              L"gazeora-usb"}));
+    EXPECT_EQ(ids, (std::vector<std::wstring>{L"gazeora-controller", L"gazeora-h265",
+                                              L"gazeora-http", L"gazeora-udp", L"gazeora-usb"}));
 }
 
 }  // namespace

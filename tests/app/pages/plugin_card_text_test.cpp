@@ -23,6 +23,11 @@ TEST(PluginCardTextTest, NamesOnlyWhatAPluginAdded) {
     EXPECT_EQ(PluginCardText::Contents(Loaded(1, 0)), "Adds 1 protocol");
     EXPECT_EQ(PluginCardText::Contents(Loaded(2, 1)), "Adds 2 protocols and 1 codec");
     EXPECT_EQ(PluginCardText::Contents(Loaded(0, 0)), "");
+    PluginStatus controller = Loaded(0, 0);
+    controller.gamepadDrivers = 1;
+    EXPECT_EQ(PluginCardText::Contents(controller), "Adds 1 game controller driver");
+    controller.uiPanels = 1;
+    EXPECT_EQ(PluginCardText::Contents(controller), "Adds 1 game controller driver and 1 card");
 }
 
 TEST(PluginCardTextTest, ShowsTheInstalledVersionAndANewerOne) {

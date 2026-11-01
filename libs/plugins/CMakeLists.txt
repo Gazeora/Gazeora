@@ -2,13 +2,17 @@
 # SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 # Loads plugin DLLs (built against gazeora_plugin_api) and adds what they offer to the
-# host's registries and catalogs: game stores, video encoders, codecs and protocols.
+# host's registries and catalogs: game stores, video encoders, codecs, protocols, game
+# controller drivers and UI panels.
 add_library(gazeora_plugins STATIC
     src/adapters/plugin_encoder_provider.cpp
     src/adapters/plugin_frame_output.cpp
+    src/adapters/plugin_gamepad_driver.cpp
+    src/adapters/plugin_gamepad_driver_factory.cpp
     src/adapters/plugin_game_store.cpp
     src/adapters/plugin_input_router.cpp
     src/adapters/plugin_output_factory.cpp
+    src/adapters/plugin_ui_values.cpp
     src/adapters/plugin_video_encoder.cpp
     src/platform/plugin_folder.cpp
     src/platform/win32_plugin_module.cpp
@@ -21,5 +25,5 @@ target_include_directories(gazeora_plugins
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(gazeora_plugins
-    PUBLIC gazeora_host_lib
+    PUBLIC gazeora_host_lib gazeora_input gazeora_plugin_ui
     PRIVATE gazeora_plugin_api gazeora_plugin_kit)

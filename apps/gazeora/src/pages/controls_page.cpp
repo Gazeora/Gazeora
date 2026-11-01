@@ -28,8 +28,10 @@ void ControlsPage::Draw(const Fonts& fonts) {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
                         ImVec2(S(kCardItemSpacing.x), S(kCardItemSpacing.y)));
     float width = std::min(ImGui::GetContentRegionAvail().x, S(kMaxCardWidth));
-    m_gamepad.Draw(fonts.heading, width);
+    const PluginPanelsView::Fonts panelFonts{fonts.heading, fonts.caption};
+    m_plugins.Draw(ui::UiPage::Controls, ui::UiPosition::Start, panelFonts, width);
     m_head.Draw(fonts.heading, fonts.caption, width);
+    m_plugins.Draw(ui::UiPage::Controls, ui::UiPosition::End, panelFonts, width);
     ImGui::PopStyleVar();
 }
 

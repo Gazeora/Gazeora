@@ -5,10 +5,14 @@
 
 #include "adapters/plugin_encoder_provider.h"
 #include "adapters/plugin_game_store.h"
+#include "adapters/plugin_gamepad_driver_factory.h"
 #include "adapters/plugin_output_factory.h"
+#include "adapters/plugin_ui_values.h"
 #include "gazeora/plugin_kit/adapters/plugin_codec_format.h"
 #include "gazeora/plugin_kit/utils/plugin_struct.h"
 #include "gazeora/plugin_kit/utils/plugin_text.h"
+#include "gazeora/plugin_ui/exceptions/ui_layout_error.h"
+#include "gazeora/plugin_ui/parsing/ui_xml_parser.h"
 #include "services/plugin_codec_check.h"
 #include "services/plugin_id_rule.h"
 
@@ -29,15 +33,19 @@ std::wstring InvalidId(const wchar_t* what, const char* id, const wchar_t* rule)
 
 }  // namespace
 
-GazeoraPluginHostV2 PluginRegistrar::Host() {
-    GazeoraPluginHostV2 host = {};
-    host.v1.struct_size = sizeof(host);
-    host.v1.api_version = GAZEORA_PLUGIN_API_VERSION;
-    host.v1.context = this;
-    host.v1.register_game_store = OnGameStore;
-    host.v1.register_encoder_provider = OnEncoderProvider;
-    host.register_codec = OnCodec;
-    host.register_protocol = OnProtocol;
+GazeoraPluginHostV3 PluginRegistrar::Host() {
+    GazeoraPluginHostV3 host = {};
+    GazeoraPluginHostV1& v1 = host.v2.v1;
+    v1.struct_size = sizeof(host);
+    v1.api_version = GAZEORA_PLUGIN_API_VERSION;
+    v1.context = this;
+    v1.register_game_store = OnGameStore;
+    v1.register_encoder_provider = OnEncoderProvider;
+    host.v2.register_codec = OnCodec;
+    host.v2.register_protocol = OnProtocol;
+    host.register_gamepad_driver_provider = OnGamepadDriverProvider;
+    host.register_ui_panel = OnUiPanel;
+    host.settings_folder = m_settingsFolder.c_str();
     return host;
 }
 
@@ -56,6 +64,15 @@ int32_t GAZEORA_CALL PluginRegistrar::OnCodec(void* context, const GazeoraCodecV
 
 int32_t GAZEORA_CALL PluginRegistrar::OnProtocol(void* context, const GazeoraProtocolV2* protocol) {
     return static_cast<PluginRegistrar*>(context)->AddProtocol(protocol);
+}
+
+int32_t GAZEORA_CALL PluginRegistrar::OnGamepadDriverProvider(
+    void* context, const GazeoraGamepadDriverProviderV3* provider) {
+    return static_cast<PluginRegistrar*>(context)->AddGamepadDriverProvider(provider);
+}
+
+int32_t GAZEORA_CALL PluginRegistrar::OnUiPanel(void* context, const GazeoraUiPanelV3* panel) {
+    return static_cast<PluginRegistrar*>(context)->AddUiPanel(panel);
 }
 
 int32_t PluginRegistrar::AddGameStore(const GazeoraGameStoreV1* store) {
@@ -112,6 +129,31 @@ int32_t PluginRegistrar::AddProtocol(const GazeoraProtocolV2* protocol) {
                             protocol->opened_by_players == GAZEORA_TRUE};
     m_registered.protocols.push_back(std::move(info));
     m_registered.outputs.push_back(std::make_shared<PluginOutputFactory>(m_module, *protocol));
+    return GAZEORA_TRUE;
+}
+
+int32_t PluginRegistrar::AddGamepadDriverProvider(const GazeoraGamepadDriverProviderV3* provider) {
+    if (!provider || provider->struct_size < sizeof(GazeoraGamepadDriverProviderV3) ||
+        !provider->name || !provider->create) {
+        return Refuse(L"a game controller driver with missing fields");
+    }
+    auto drivers = std::make_shared<PluginGamepadDriverFactory>(m_module, *provider);
+    m_registered.gamepadDrivers.push_back(drivers);
+    m_registered.gamepadSwitches.push_back(drivers);
+    return GAZEORA_TRUE;
+}
+
+int32_t PluginRegistrar::AddUiPanel(const GazeoraUiPanelV3* panel) {
+    if (!panel || panel->struct_size < sizeof(GazeoraUiPanelV3) || !panel->xml || !panel->get ||
+        !panel->set || !panel->action) {
+        return Refuse(L"a panel with missing fields");
+    }
+    try {
+        m_registered.uiPanels.push_back({std::string(), ui::UiXmlParser::Parse(panel->xml),
+                                         std::make_shared<PluginUiValues>(m_module, *panel)});
+    } catch (const ui::UiLayoutError& error) {
+        return Refuse(L"a panel whose layout is wrong (" + Utf8::ToWide(error.what()) + L")");
+    }
     return GAZEORA_TRUE;
 }
 

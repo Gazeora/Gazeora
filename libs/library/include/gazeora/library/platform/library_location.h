@@ -14,6 +14,8 @@ public:
 
     // %APPDATA%\Gazeora\library.json, or %GAZEORA_LIBRARY% if set.
     static std::wstring DefaultPath();
+    // The folder DefaultPath() is in, where the settings files are too.
+    static std::wstring DefaultFolder();
 };
 
 }  // namespace gazeora

@@ -33,7 +33,6 @@ add_executable(Gazeora WIN32
     src/pages/chrome.cpp
     src/pages/controls_page.cpp
     src/pages/details_page.cpp
-    src/pages/gamepad_card.cpp
     src/pages/head_tracking_card.cpp
     src/pages/home_page.cpp
     src/pages/launch_via_choices.cpp
@@ -50,6 +49,13 @@ add_executable(Gazeora WIN32
     src/platform/game_open_request.cpp
     src/platform/shell.cpp
     src/platform/usb_driver.cpp
+    src/plugin_ui/gamepad_ui_values.cpp
+    src/plugin_ui/gazeora_ui_values.cpp
+    src/plugin_ui/imgui_ui_renderer.cpp
+    src/plugin_ui/plugin_panels_view.cpp
+    src/plugin_ui/ui_field_drawer.cpp
+    src/plugin_ui/ui_input_buffers.cpp
+    src/plugin_ui/ui_look.cpp
     src/plugins/elevated_plugin_installer.cpp
     src/plugins/plugin_command.cpp
     src/plugins/plugin_list_fetch.cpp
@@ -83,6 +89,7 @@ configure_file(resources/version_info.h.in ${CMAKE_CURRENT_BINARY_DIR}/version_i
 target_include_directories(Gazeora PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(Gazeora PRIVATE
     gazeora_host_lib gazeora_library gazeora_plugins gazeora_plugin_manager gazeora_input
+    gazeora_plugin_ui
     gazeora_update imgui
     d3d11 dxgi dwmapi windowscodecs shell32 ole32 uuid
     crypt32 wintrust setupapi)  # the USB driver install

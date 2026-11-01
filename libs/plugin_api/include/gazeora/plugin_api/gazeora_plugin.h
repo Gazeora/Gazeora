@@ -1,7 +1,7 @@
 /* Copyright (C) 2026 Nithin Aashik
  * SPDX-License-Identifier: MIT
  *
- * The Gazeora plugin interface, version 2. A plugin is a DLL in the "plugins" folder next to
+ * The Gazeora plugin interface, version 3. A plugin is a DLL in the "plugins" folder next to
  * Gazeora.exe that exports GazeoraPluginInfo and GazeoraPluginRegister. Plain C, so a plugin
  * can be built with any compiler. This header is under the MIT license (libs/plugin_api/LICENSE);
  * see NOTICE for the permission that lets plugins keep their own license.
@@ -14,9 +14,9 @@
  *  - Strings and function pointers in the structs a plugin registers stay valid while the DLL
  *    is loaded. Gazeora copies the structs themselves.
  *
- * Versions: a struct that version 2 extends is a new struct whose first member is the version 1
- * one, and struct_size says which a caller has. Gazeora loads plugins built for version 1 or 2,
- * and reads a plugin's version 2 fields only when its struct_size covers them.
+ * Versions: a struct that a version extends is a new struct whose first member is the older
+ * one, and struct_size says which a caller has. Gazeora loads plugins built for versions 1 to 3,
+ * and reads a plugin's newer fields only when its struct_size covers them.
  */
 
 #ifndef GAZEORA_PLUGIN_H
@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-#define GAZEORA_PLUGIN_API_VERSION 2u
+#define GAZEORA_PLUGIN_API_VERSION 3u
 /* The oldest version Gazeora still loads. */
 #define GAZEORA_PLUGIN_API_OLDEST_VERSION 1u
 
@@ -305,6 +305,97 @@ typedef struct GazeoraProtocolV2 {
                                          GazeoraOutputV2* output);
 } GazeoraProtocolV2;
 
+/* ---- Version 3: game controllers ---- */
+
+/* A controller's buttons by where they sit, so every make reads the same: SOUTH is A on an Xbox
+ * pad, Cross on a PlayStation one and B on a Nintendo one. Bit (1u << GAZEORA_GAMEPAD_BUTTON_*)
+ * of GazeoraGamepadStateV3.buttons. */
+#define GAZEORA_GAMEPAD_BUTTON_SOUTH 0u
+#define GAZEORA_GAMEPAD_BUTTON_EAST 1u
+#define GAZEORA_GAMEPAD_BUTTON_WEST 2u
+#define GAZEORA_GAMEPAD_BUTTON_NORTH 3u
+#define GAZEORA_GAMEPAD_BUTTON_BACK 4u
+#define GAZEORA_GAMEPAD_BUTTON_START 5u
+#define GAZEORA_GAMEPAD_BUTTON_LEFT_STICK 6u
+#define GAZEORA_GAMEPAD_BUTTON_RIGHT_STICK 7u
+#define GAZEORA_GAMEPAD_BUTTON_LEFT_SHOULDER 8u
+#define GAZEORA_GAMEPAD_BUTTON_RIGHT_SHOULDER 9u
+#define GAZEORA_GAMEPAD_BUTTON_DPAD_UP 10u
+#define GAZEORA_GAMEPAD_BUTTON_DPAD_DOWN 11u
+#define GAZEORA_GAMEPAD_BUTTON_DPAD_LEFT 12u
+#define GAZEORA_GAMEPAD_BUTTON_DPAD_RIGHT 13u
+#define GAZEORA_GAMEPAD_BUTTON_COUNT 14u
+
+/* A controller's sticks: indexes into GazeoraGamepadStateV3.axes. */
+#define GAZEORA_GAMEPAD_AXIS_LEFT_X 0u
+#define GAZEORA_GAMEPAD_AXIS_LEFT_Y 1u
+#define GAZEORA_GAMEPAD_AXIS_RIGHT_X 2u
+#define GAZEORA_GAMEPAD_AXIS_RIGHT_Y 3u
+#define GAZEORA_GAMEPAD_AXIS_COUNT 4u
+
+/* What the connected controllers do at one moment, merged: any of them can drive. */
+typedef struct GazeoraGamepadStateV3 {
+    uint32_t struct_size; /* sizeof(GazeoraGamepadStateV3) */
+    uint32_t buttons;     /* the buttons held, one bit each */
+    /* Each from -1 to 1: X positive to the right, Y positive down. Gazeora applies its own dead
+     * zone. */
+    float axes[GAZEORA_GAMEPAD_AXIS_COUNT];
+} GazeoraGamepadStateV3;
+
+/* Where a driver lists the connected controllers, by their names for people. */
+typedef void(GAZEORA_CALL* GazeoraGamepadNameSinkV3)(void* sink_context, const char* name);
+
+/* The game controllers connected to the PC. Used from one thread only: the one that created
+ * it, which polls it about 125 times a second until it's destroyed. */
+typedef struct GazeoraGamepadDriverV3 {
+    uint32_t struct_size; /* sizeof(GazeoraGamepadDriverV3) */
+    void* self;
+    /* Takes in controllers plugged in or out, and their latest readings. */
+    void(GAZEORA_CALL* update)(void* self);
+    void(GAZEORA_CALL* connected)(void* self, GazeoraGamepadNameSinkV3 sink, void* sink_context);
+    /* Fills `state`, whose struct_size Gazeora sets. */
+    void(GAZEORA_CALL* state)(void* self, GazeoraGamepadStateV3* state);
+    /* Frees it and lets go of the controllers, so a game can have them; nothing is called on it
+     * after. */
+    void(GAZEORA_CALL* destroy)(void* self);
+} GazeoraGamepadDriverV3;
+
+/* A way of reading game controllers, so they can drive Gazeora's window. Gazeora uses the first
+ * one registered, and reads no controllers without one. */
+typedef struct GazeoraGamepadDriverProviderV3 {
+    uint32_t struct_size; /* sizeof(GazeoraGamepadDriverProviderV3) */
+    void* self;
+    const char* name; /* for the UI, e.g. "SDL" */
+    /* Fills `driver` with a new driver, on the thread that will poll it. GAZEORA_FALSE with
+     * `error` set if controllers can't be read on this PC. */
+    int32_t(GAZEORA_CALL* create)(void* self, GazeoraGamepadDriverV3* driver, char* error,
+                                  size_t capacity);
+    /* Whether the player wants controllers read: the plugin's own switch. Asked on the UI
+     * thread, every frame. Optional: NULL reads them always. Gazeora still leaves them to a
+     * game it launched while that runs. */
+    int32_t(GAZEORA_CALL* enabled)(void* self);
+} GazeoraGamepadDriverProviderV3;
+
+/* ---- Version 3: UI ---- */
+
+/* A card a plugin adds to one of Gazeora's pages. Its layout is XML (docs/plugin-ui.md): the
+ * page it goes on, its title, and the controls on it, which show and change values by key.
+ * Gazeora draws it with its own controls, so it looks like the rest of Gazeora and works with a
+ * game controller. Keys starting with "gazeora." are Gazeora's own values and actions; Gazeora
+ * answers those itself. Every function is called on the UI thread, while the card is shown. */
+typedef struct GazeoraUiPanelV3 {
+    uint32_t struct_size; /* sizeof(GazeoraUiPanelV3) */
+    void* self;
+    const char* xml; /* the layout, UTF-8 */
+    /* Writes the value under `key` as text: "1" or "0" for a toggle, a number for a slider
+     * (with a '.' for decimals), the text for an input or a choice. "" if it has none. */
+    void(GAZEORA_CALL* get)(void* self, const char* key, char* value, size_t capacity);
+    /* The player changed the value under `key` to `value`, in the same form. */
+    void(GAZEORA_CALL* set)(void* self, const char* key, const char* value);
+    /* The player pressed a button with this `action`. */
+    void(GAZEORA_CALL* action)(void* self, const char* action);
+} GazeoraUiPanelV3;
+
 /* What Gazeora offers a plugin while it registers. Valid only during GazeoraPluginRegister. */
 typedef struct GazeoraPluginHostV1 {
     uint32_t struct_size;
@@ -326,6 +417,26 @@ typedef struct GazeoraPluginHostV2 {
 GAZEORA_INLINE const GazeoraPluginHostV2* GazeoraPluginHostV2Of(const GazeoraPluginHostV1* host) {
     return host && host->api_version >= 2u && host->struct_size >= sizeof(GazeoraPluginHostV2)
                ? (const GazeoraPluginHostV2*)host
+               : NULL;
+}
+
+/* Version 3: what Gazeora offers a plugin built for version 3. */
+typedef struct GazeoraPluginHostV3 {
+    GazeoraPluginHostV2 v2; /* v2.v1.struct_size = sizeof(GazeoraPluginHostV3) */
+    int32_t(GAZEORA_CALL* register_gamepad_driver_provider)(
+        void* context, const GazeoraGamepadDriverProviderV3* provider);
+    /* Adds a card to a page. Refused if its XML isn't a valid layout. */
+    int32_t(GAZEORA_CALL* register_ui_panel)(void* context, const GazeoraUiPanelV3* panel);
+    /* The folder Gazeora keeps its settings in (UTF-8), where a plugin can keep its own, in a
+     * file named after it. "" when there's none, as in tests: then keep nothing. Copy it: it's
+     * valid only during GazeoraPluginRegister. */
+    const char* settings_folder;
+} GazeoraPluginHostV3;
+
+/* The version 3 host, or NULL from a Gazeora older than version 3. */
+GAZEORA_INLINE const GazeoraPluginHostV3* GazeoraPluginHostV3Of(const GazeoraPluginHostV1* host) {
+    return host && host->api_version >= 3u && host->struct_size >= sizeof(GazeoraPluginHostV3)
+               ? (const GazeoraPluginHostV3*)host
                : NULL;
 }
 

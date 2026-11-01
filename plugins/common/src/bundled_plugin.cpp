@@ -24,4 +24,16 @@ int32_t BundledPlugin::RegisterCodec(const GazeoraPluginHostV1* host, const Gaze
     return v2 ? v2->register_codec(v2->v1.context, &codec) : GAZEORA_FALSE;
 }
 
+int32_t BundledPlugin::RegisterGamepadDriverProvider(
+    const GazeoraPluginHostV1* host, const GazeoraGamepadDriverProviderV3& provider) {
+    const GazeoraPluginHostV3* v3 = GazeoraPluginHostV3Of(host);
+    return v3 ? v3->register_gamepad_driver_provider(v3->v2.v1.context, &provider) : GAZEORA_FALSE;
+}
+
+int32_t BundledPlugin::RegisterUiPanel(const GazeoraPluginHostV1* host,
+                                       const GazeoraUiPanelV3& panel) {
+    const GazeoraPluginHostV3* v3 = GazeoraPluginHostV3Of(host);
+    return v3 ? v3->register_ui_panel(v3->v2.v1.context, &panel) : GAZEORA_FALSE;
+}
+
 }  // namespace gazeora
