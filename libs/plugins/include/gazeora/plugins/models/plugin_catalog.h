@@ -11,6 +11,9 @@
 #include "gazeora/host/launch/game_store.h"
 #include "gazeora/host/stream/frame_output_factory.h"
 #include "gazeora/host/stream/stream_protocol_info.h"
+#include "gazeora/input/interfaces/gamepad_driver_factory.h"
+#include "gazeora/input/interfaces/gamepad_switch.h"
+#include "gazeora/plugin_ui/models/ui_panel.h"
 #include "gazeora/plugins/models/plugin_status.h"
 
 namespace gazeora {
@@ -24,6 +27,10 @@ struct PluginCatalog {
     // A protocol's description and its outputs' factory, in the same order.
     std::vector<StreamProtocolInfo> protocols;
     std::vector<std::shared_ptr<const FrameOutputFactory>> outputs;
+    std::vector<std::shared_ptr<input::IGamepadDriverFactory>> gamepadDrivers;
+    // Each driver's switch, in the same order.
+    std::vector<std::shared_ptr<const input::IGamepadSwitch>> gamepadSwitches;
+    std::vector<ui::UiPanel> uiPanels;  // their ids not yet set
     std::vector<PluginStatus> plugins;
 };
 

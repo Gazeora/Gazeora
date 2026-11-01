@@ -17,6 +17,8 @@ const char* PluginCategoryLook::Icon(PluginCategory category) {
             return ICON_CHIP;
         case PluginCategory::GameStore:
             return ICON_SHOP;
+        case PluginCategory::Controller:
+            return ICON_GAME;
         default:
             return ICON_PLUGIN;
     }
@@ -32,6 +34,8 @@ const char* PluginCategoryLook::Name(PluginCategory category) {
             return "Encoder";
         case PluginCategory::GameStore:
             return "Game store";
+        case PluginCategory::Controller:
+            return "Controller";
         default:
             return "Other";
     }
@@ -47,6 +51,8 @@ const char* PluginCategoryLook::Plural(PluginCategory category) {
             return "Encoders";
         case PluginCategory::GameStore:
             return "Game stores";
+        case PluginCategory::Controller:
+            return "Controllers";
         default:
             return "Other";
     }

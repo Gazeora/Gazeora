@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <thread>
 
 #include "support/gamepad_fakes.h"
@@ -36,7 +37,8 @@ protected:
     }
 
     testing::FakeGamepads m_gamepads;
-    testing::FakeGamepadDriverFactory m_drivers{m_gamepads};
+    std::shared_ptr<testing::FakeGamepadDriverFactory> m_drivers =
+        std::make_shared<testing::FakeGamepadDriverFactory>(m_gamepads);
     testing::RecordingGamepadListener m_listener;
     GamepadSession m_session{m_drivers, m_listener};
 };
@@ -85,10 +87,21 @@ TEST_F(GamepadSessionTest, LetsGoOfHeldButtonsWhenStopped) {
 }
 
 TEST_F(GamepadSessionTest, SaysWhyControllersCantBeRead) {
-    m_drivers.failure = L"Game controllers can't be read: no HID.";
+    m_drivers->failure = L"Game controllers can't be read: no HID.";
     m_session.Start();
     EXPECT_TRUE(WaitFor([&] { return m_session.Snapshot().state == GamepadSessionState::Error; }));
     EXPECT_EQ(m_session.Snapshot().message, L"Game controllers can't be read: no HID.");
+}
+
+TEST_F(GamepadSessionTest, NeverStartsWithoutDrivers) {
+    GamepadSession session(nullptr, m_listener);
+    EXPECT_FALSE(session.Available());
+    EXPECT_EQ(session.Snapshot().state, GamepadSessionState::Unavailable);
+    session.Start();
+    EXPECT_FALSE(session.Running());
+    EXPECT_EQ(session.Snapshot().state, GamepadSessionState::Unavailable);
+    session.Stop();
+    EXPECT_EQ(session.Snapshot().state, GamepadSessionState::Unavailable);
 }
 
 }  // namespace

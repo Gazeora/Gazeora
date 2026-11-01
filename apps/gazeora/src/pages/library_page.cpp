@@ -75,6 +75,7 @@ void App::DrawLibrary() {
         m_deferred.push_back([this] { AddGamesFromDialog(); });
     }
     ImGui::SetCursorPosY(headerY + controlsHeight + S(20));
+    DrawPluginPanels(ui::UiPage::Library, ui::UiPosition::Start);
 
     if (m_library.Games().empty()) {
         DrawEmptyLibrary();

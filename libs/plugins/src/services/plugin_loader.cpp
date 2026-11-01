@@ -40,10 +40,15 @@ void PluginLoader::Collect(const PluginCatalog& registered, PluginCatalog& catal
     Append(catalog.codecs, registered.codecs);
     Append(catalog.protocols, registered.protocols);
     Append(catalog.outputs, registered.outputs);
+    Append(catalog.gamepadDrivers, registered.gamepadDrivers);
+    Append(catalog.gamepadSwitches, registered.gamepadSwitches);
+    Append(catalog.uiPanels, registered.uiPanels);
     status.gameStores = int(registered.gameStores.size());
     status.encoders = int(registered.encoderProviders.size());
     status.codecs = int(registered.codecs.size());
     status.protocols = int(registered.protocols.size());
+    status.gamepadDrivers = int(registered.gamepadDrivers.size());
+    status.uiPanels = int(registered.uiPanels.size());
 }
 
 PluginCatalog PluginLoader::Load(const std::vector<std::wstring>& paths) const {
@@ -62,9 +67,9 @@ void PluginLoader::LoadOne(const std::wstring& path, PluginCatalog& catalog) con
     if (module && ReadInfo(*module, status)) {
         auto registerPlugin = reinterpret_cast<GazeoraPluginRegisterFn>(
             module->Symbol(GAZEORA_PLUGIN_REGISTER_SYMBOL));
-        PluginRegistrar registrar(module);
-        const GazeoraPluginHostV2 host = registrar.Host();
-        status.loaded = registerPlugin(&host.v1) == GAZEORA_TRUE;
+        PluginRegistrar registrar(module, m_settingsFolder);
+        const GazeoraPluginHostV3 host = registrar.Host();
+        status.loaded = registerPlugin(&host.v2.v1) == GAZEORA_TRUE;
         status.error =
             status.loaded ? Joined(registrar.Refusals()) : L"the plugin stopped while registering";
         if (status.loaded) {

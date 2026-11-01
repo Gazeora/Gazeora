@@ -26,6 +26,10 @@ const GazeoraEncoderProviderV1& Encoders(bool withIds);
 const GazeoraCodecV2& Codec();
 // "sample-out": an output that takes no players but counts the frames it's sent.
 const GazeoraProtocolV2& Protocol();
+// One "Sample controller", holding the bottom face button with its left stick pushed right.
+const GazeoraGamepadDriverProviderV3& Gamepads();
+// A card on the Settings page: a "loud" toggle and a "beep" button.
+const GazeoraUiPanelV3& Panel();
 
 // What the output saw, for the tests.
 int FramesSent();

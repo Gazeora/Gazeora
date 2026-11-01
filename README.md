@@ -27,8 +27,9 @@ UDP or USB.
   game's depth buffer.
 - **Head tracking.** Phone rotation from the Android app becomes mouse movement, or right-stick
   movement for supported controllers, in the game in front.
-- **Game controllers and touch.** A controller can drive the launcher, with an on-screen
-  keyboard. Touches and the hand pointer in the Android app can also drive the launcher window.
+- **Game controllers and touch.** With the bundled Game Controller plugin installed, a
+  controller can drive the launcher, with an on-screen keyboard. Touches and the hand pointer
+  in the Android app can also drive the launcher window.
 - **Updates.** `Gazeora.exe` finds newer releases on gazeora.github.io, then downloads, checks
   and starts the MSI. See [Updating](docs/installer.md#updating).
 
@@ -77,6 +78,7 @@ To build Gazeora, see [Development](docs/development.md#building). In brief:
 | [Installer](docs/installer.md) | MSI features, silent installs, uninstalling |
 | [Tools](docs/tools.md) | The stream probe and the test app |
 | [Plugins](docs/plugins.md) | Installing, updating and removing plugins from the Plugins page, writing one, and publishing it to the plugin list |
+| [Plugin UI](docs/plugin-ui.md) | The XML layout of the cards a plugin adds to Gazeora's pages |
 | [Stream format](docs/stream-format.md) | Wire formats of every protocol (canonical for the Android app) |
 | [Architecture](docs/architecture.md) | Components, the capture-to-stream pipeline, code layout |
 | [Development](docs/development.md) | Building, testing, benchmarks, formatting, releasing |

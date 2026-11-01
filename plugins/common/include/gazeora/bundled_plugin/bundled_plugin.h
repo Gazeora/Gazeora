@@ -10,7 +10,7 @@
 namespace gazeora {
 
 // What every bundled plugin's two exports share: its info, with Gazeora's version, and
-// registering what it offers through the version 2 host.
+// registering what it offers through the version 2 or 3 host.
 class BundledPlugin final {
 public:
     BundledPlugin() = delete;
@@ -22,6 +22,10 @@ public:
     static int32_t RegisterProtocol(const GazeoraPluginHostV1* host,
                                     const GazeoraProtocolV2& protocol);
     static int32_t RegisterCodec(const GazeoraPluginHostV1* host, const GazeoraCodecV2& codec);
+    // GAZEORA_FALSE from a Gazeora without version 3, or if Gazeora refuses it.
+    static int32_t RegisterGamepadDriverProvider(const GazeoraPluginHostV1* host,
+                                                 const GazeoraGamepadDriverProviderV3& provider);
+    static int32_t RegisterUiPanel(const GazeoraPluginHostV1* host, const GazeoraUiPanelV3& panel);
 };
 
 }  // namespace gazeora

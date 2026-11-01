@@ -3,40 +3,43 @@
 
 #pragma once
 
+#include <memory>
+
+#include "gazeora/input/interfaces/gamepad_switch.h"
 #include "gazeora/input/services/gamepad_session.h"
-#include "settings/controls_settings.h"
 
 namespace gazeora::app {
 
-// The game controller switch, and when controllers are read: while it's on and no game
+// When game controllers are read: while the Game Controller plugin's switch is on and no game
 // launched from here runs. A running game has them to itself, untouched, and they're read
-// again as soon as it's closed.
+// again as soon as it's closed. The switch is the plugin's, shown on its own card.
 class GamepadControl {
 public:
-    GamepadControl(input::GamepadSession& session, const ControlsSettings& store);
+    // `enabled` is the plugin's switch; null without the plugin.
+    GamepadControl(input::GamepadSession& session,
+                   std::shared_ptr<const input::IGamepadSwitch> enabled);
 
-    // Starts reading, if the saved switch is on.
-    void Resume();
-    // Saves the switch and starts or stops reading to match.
-    void SetEnabled(bool enabled);
+    // Starts or stops reading to match the switch and the game; call every frame.
+    void Refresh();
     void SetGameRunning(bool running);
     // Reads them again, e.g. after an error.
-    void Restart() { Apply(); }
+    void Restart();
 
-    bool Enabled() const { return m_enabled; }
-    bool Paused() const { return m_enabled && m_gameRunning; }
+    bool Enabled() const { return m_enabled && m_enabled->Enabled(); }
+    // A plugin offers a driver to read controllers with.
+    bool Available() const { return m_session.Available(); }
+    bool Paused() const { return Enabled() && m_gameRunning; }
     // A controller is connected and being read.
     bool Connected() const;
     input::GamepadSnapshot Snapshot() const { return m_session.Snapshot(); }
 
 private:
-    void Apply();
-    bool Reading() const { return m_enabled && !m_gameRunning; }
+    bool Reading() const { return Enabled() && !m_gameRunning; }
 
     input::GamepadSession& m_session;
-    const ControlsSettings& m_store;
-    bool m_enabled;
+    const std::shared_ptr<const input::IGamepadSwitch> m_enabled;
     bool m_gameRunning = false;
+    bool m_reading = false;  // what Refresh last applied
 };
 
 }  // namespace gazeora::app

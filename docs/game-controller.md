@@ -1,11 +1,18 @@
 # Game controller
 
-A game controller can drive Gazeora's window, alongside the mouse and keyboard. It is set in
-**Controls → Game controller** with **Move around Gazeora with a game controller**. It is on by
-default and the setting is saved as `[game_controller] enabled` in
-[`controls.ini`](configuration.md#game_controller).
+A game controller can drive Gazeora's window, alongside the mouse and keyboard. It needs the
+**Game Controller** plugin, which comes with Gazeora but isn't installed: install it on the
+**Plugins** page (under **Available**, category **Controllers**) and restart Gazeora. See
+[Bundled plugins](plugins.md#bundled-plugins). Without it, Gazeora reads no controllers, and
+the **Controls** page has no **Game controller** card.
 
-Gazeora reads controllers through [SDL](https://libsdl.org), which maps most controllers
+The plugin adds the **Game controller** card to the top of the **Controls** page, with the
+switch **Move around Gazeora with a game controller**, which button does what, and the
+connected controllers. The switch is the plugin's: it is on by default, and the plugin saves it
+as `[game_controller] enabled` in [`controls.ini`](configuration.md#game_controller). The card
+is the plugin's XML layout ([Plugin UI](plugin-ui.md)), which Gazeora draws.
+
+The plugin reads controllers through [SDL](https://libsdl.org), which maps most controllers
 (Xbox, PlayStation, Nintendo Switch Pro and others, wired or Bluetooth) to one standard layout.
 Buttons are identified by position, not by label: the "bottom face button" is A on Xbox, Cross
 on PlayStation, and B on Nintendo. Several controllers can be connected at once, and any of
@@ -68,6 +75,9 @@ same.
 
 ## Troubleshooting
 
+- **No Game controller card on the Controls page.** Install **Game Controller** from the
+  **Plugins** page, then restart Gazeora. If it's installed, check on the **Plugins** page that
+  it loaded.
 - **"No controller connected: plug one in or pair it over Bluetooth".** Plug the controller in,
   or pair it in Windows' Bluetooth settings. It is detected without restarting Gazeora.
 - **An error instead of the controller list.** The controller system failed to start. Click

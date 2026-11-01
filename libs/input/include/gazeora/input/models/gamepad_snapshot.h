@@ -10,7 +10,8 @@
 
 namespace gazeora::input {
 
-enum class GamepadSessionState { Off, Running, Error };
+// Unavailable: nothing can read controllers, as no plugin offers a driver.
+enum class GamepadSessionState { Off, Running, Error, Unavailable };
 
 // What reading game controllers is doing right now, for the UI.
 struct GamepadSnapshot {

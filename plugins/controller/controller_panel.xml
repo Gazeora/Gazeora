@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2026 Nithin Aashik
+     SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
+     The Controls page's game controller card: the plugin's switch, which button does what, and
+     what's connected. The guide is written out, not left to a tooltip: a controller can't hover.
+     "enabled" is the plugin's own value; the gazeora.* keys are Gazeora's (docs/plugin-ui.md). -->
+<panel page="controls" position="start" title="Game controller" icon="game">
+  <toggle bind="enabled" label="Move around Gazeora with a game controller"
+          help="Works with Xbox, PlayStation, Switch Pro and most other controllers, wired or
+                Bluetooth. It works while Gazeora is in front or on the stream, and is left to
+                the game while one runs."/>
+  <table enabled-if="enabled">
+    <row><cell tone="dim">Move</cell><cell>D-pad or left stick</cell></row>
+    <row><cell tone="dim">Select</cell><cell>Bottom button (A, Cross)</cell></row>
+    <row><cell tone="dim">Back</cell><cell>Right button (B, Circle)</cell></row>
+    <row><cell tone="dim">Game options</cell><cell>Menu button on a game</cell></row>
+    <row><cell tone="dim">Switch pages</cell><cell>Shoulder buttons</cell></row>
+    <row><cell tone="dim">Scroll</cell><cell>Right stick</cell></row>
+    <row><cell tone="dim">Type</cell><cell>Select a text box</cell></row>
+  </table>
+  <text bind="gazeora.gamepad.status" tone-bind="gazeora.gamepad.tone"/>
+  <button visible-if="gazeora.gamepad.failed" action="gazeora.gamepad.retry" icon="refresh">Try again</button>
+</panel>

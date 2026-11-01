@@ -11,6 +11,7 @@
 
 #include "pages/plugin_category_filter.h"
 #include "pages/plugin_grid.h"
+#include "plugin_ui/plugin_panels_view.h"
 #include "plugins/plugin_manager_control.h"
 
 namespace gazeora::app {
@@ -27,8 +28,10 @@ public:
         ImFont* bold;
     };
 
-    PluginsPage(PluginManagerControl& control, std::wstring folder, HWND owner, float scale)
+    PluginsPage(PluginManagerControl& control, std::wstring folder, PluginPanelsView& panels,
+                HWND owner, float scale)
         : m_control(control),
+          m_panels(panels),
           m_grid(control, scale),
           m_filter(scale),
           m_folder(std::move(folder)),
@@ -54,6 +57,7 @@ private:
     float S(float px) const { return px * m_scale; }
 
     PluginManagerControl& m_control;
+    PluginPanelsView& m_panels;  // plugins' own cards for this page
     PluginGrid m_grid;
     PluginCategoryFilter m_filter;
     const std::wstring m_folder;

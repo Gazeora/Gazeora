@@ -56,6 +56,7 @@ void App::DrawHome() {
     ImGui::TextUnformatted("Home");
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, S(8)));
+    DrawPluginPanels(ui::UiPage::Home, ui::UiPosition::Start);
     DrawGameBanner(*featured, S(260), eyebrow, true);
     ImGui::Dummy(ImVec2(0, S(22)));
 

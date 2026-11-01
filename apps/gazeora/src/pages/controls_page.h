@@ -5,13 +5,13 @@
 
 #include <imgui.h>
 
-#include "pages/gamepad_card.h"
 #include "pages/head_tracking_card.h"
+#include "plugin_ui/plugin_panels_view.h"
 
 namespace gazeora::app {
 
 // The Controls page: ways to control Gazeora besides the PC's own mouse and keyboard, which
-// always keep working. Game controllers and head tracking.
+// always keep working. Head tracking, and plugins' cards such as the Game Controller plugin's.
 class ControlsPage {
 public:
     struct Fonts {
@@ -20,16 +20,16 @@ public:
         ImFont* caption;
     };
 
-    ControlsPage(GamepadCard& gamepad, HeadTrackingCard& head, float scale)
-        : m_gamepad(gamepad), m_head(head), m_scale(scale) {}
+    ControlsPage(HeadTrackingCard& head, PluginPanelsView& plugins, float scale)
+        : m_head(head), m_plugins(plugins), m_scale(scale) {}
 
     void Draw(const Fonts& fonts);
 
 private:
     float S(float px) const { return px * m_scale; }
 
-    GamepadCard& m_gamepad;
     HeadTrackingCard& m_head;
+    PluginPanelsView& m_plugins;
     float m_scale;
 };
 

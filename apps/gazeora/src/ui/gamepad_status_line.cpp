@@ -12,14 +12,15 @@ namespace {
 
 using input::GamepadSessionState;
 using input::GamepadSnapshot;
+using ui::UiTone;
 
 constexpr char kNameSeparator[] = ", ";
 
 }  // namespace
 
 GamepadStatusLine::GamepadStatusLine(const GamepadSnapshot& snapshot, bool paused)
-    : m_color(kTextDim) {
-    if (paused) {
+    : m_tone(UiTone::Dim) {
+    if (paused && snapshot.state != GamepadSessionState::Unavailable) {
         m_text = "Paused while a game runs, so the game gets your controller";
         return;
     }
@@ -30,14 +31,18 @@ void GamepadStatusLine::Describe(const GamepadSnapshot& snapshot) {
     switch (snapshot.state) {
         case GamepadSessionState::Off:
             m_text = "Off";
-            m_color = kTextFaint;
+            m_tone = UiTone::Faint;
             return;
         case GamepadSessionState::Running:
             DescribeConnected(snapshot);
             return;
         case GamepadSessionState::Error:
             m_text = U8(snapshot.message);
-            m_color = kDanger;
+            m_tone = UiTone::Danger;
+            return;
+        case GamepadSessionState::Unavailable:
+            m_text = "No game controller driver: install the Game Controller plugin";
+            m_tone = UiTone::Warning;
             return;
     }
 }
@@ -45,14 +50,14 @@ void GamepadStatusLine::Describe(const GamepadSnapshot& snapshot) {
 void GamepadStatusLine::DescribeConnected(const GamepadSnapshot& snapshot) {
     if (snapshot.connected.empty()) {
         m_text = "No controller connected: plug one in or pair it over Bluetooth";
-        m_color = kWarning;
+        m_tone = UiTone::Warning;
         return;
     }
     m_text = ICON_CHECK "  ";
     for (size_t i = 0; i < snapshot.connected.size(); ++i) {
         m_text += (i > 0 ? kNameSeparator : "") + U8(snapshot.connected[i].name);
     }
-    m_color = kSuccess;
+    m_tone = UiTone::Success;
 }
 
 }  // namespace gazeora::app

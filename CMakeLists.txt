@@ -40,7 +40,7 @@ endif()
 option(GAZEORA_STREAM_OVERLAY "Offer the stream overlay in Gazeora.exe" ON)
 
 add_subdirectory(libs)   # common, hook (gazeora_hook.dll), host, library
-add_subdirectory(plugins)  # the bundled plugins: UDP, HTTP, USB and H.265, in bundled-plugins
+add_subdirectory(plugins)  # the bundled plugins: UDP, HTTP, USB, H.265 and game controllers
 add_subdirectory(apps)   # Gazeora.exe (launcher UI) and GazeoraCLI.exe
 # Built with Gazeora.exe, so the Plugins page of a build offers them.
 add_dependencies(Gazeora ${GAZEORA_BUNDLED_PLUGINS})

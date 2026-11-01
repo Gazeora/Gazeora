@@ -81,7 +81,7 @@ Only used by builds with the stream overlay (see [Stream overlay](streaming.md#s
 
 | Key | Values | Default | Effect |
 |---|---|---|---|
-| `enabled` | `0`, `1` | `1` | Game controllers drive the launcher. See [Game controller](game-controller.md) |
+| `enabled` | `0`, `1` | `1` | Game controllers drive the launcher. Read and written by the Game Controller plugin, not by `Gazeora.exe`, and used only while the plugin is installed. See [Game controller](game-controller.md) |
 
 ### `[head_tracking]`
 

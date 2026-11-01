@@ -10,19 +10,22 @@
 namespace gazeora {
 namespace {
 
-PluginStatus Registered(int protocols, int codecs, int encoders, int gameStores) {
+PluginStatus Registered(int protocols, int codecs, int encoders, int gameStores,
+                        int gamepadDrivers = 0) {
     PluginStatus status;
     status.loaded = true;
     status.protocols = protocols;
     status.codecs = codecs;
     status.encoders = encoders;
     status.gameStores = gameStores;
+    status.gamepadDrivers = gamepadDrivers;
     return status;
 }
 
 TEST(PluginCategoryTest, ReadsTheListsIds) {
     EXPECT_EQ(PluginCategories::Parse("protocol"), PluginCategory::Protocol);
     EXPECT_EQ(PluginCategories::Parse("game-store"), PluginCategory::GameStore);
+    EXPECT_EQ(PluginCategories::Parse("controller"), PluginCategory::Controller);
     EXPECT_EQ(PluginCategories::Parse("other"), PluginCategory::Other);
     EXPECT_FALSE(PluginCategories::Parse("Protocol").has_value());
     EXPECT_FALSE(PluginCategories::Parse("").has_value());
@@ -34,6 +37,8 @@ TEST(PluginCategoryTest, IsWhatAPluginRegisteredMostOf) {
     EXPECT_EQ(PluginCategories::Of(Registered(0, 1, 2, 0)), PluginCategory::Encoder);
     EXPECT_EQ(PluginCategories::Of(Registered(0, 1, 1, 0)), PluginCategory::Codec);  // a tie
     EXPECT_EQ(PluginCategories::Of(Registered(0, 0, 0, 1)), PluginCategory::GameStore);
+    EXPECT_EQ(PluginCategories::Of(Registered(0, 0, 0, 0, 1)), PluginCategory::Controller);
+    EXPECT_EQ(PluginCategories::Of(Registered(0, 0, 0, 1, 1)), PluginCategory::GameStore);  // a tie
     EXPECT_EQ(PluginCategories::Of(Registered(0, 0, 0, 0)), PluginCategory::Other);
 }
 

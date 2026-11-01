@@ -22,8 +22,9 @@ Building, testing, benchmarks, formatting and releasing. For how the code is org
   | [MinHook](https://github.com/TsudaKageyu/minhook) | 1.3.3 | API hooking in the hook DLL |
   | [Dear ImGui](https://github.com/ocornut/imgui) | 1.91.5 | The launcher UI |
   | [libusb](https://github.com/libusb/libusb) | 1.0.29 | The USB protocol |
-  | [SDL](https://github.com/libsdl-org/SDL) | 3.4.18 | Game controllers |
+  | [SDL](https://github.com/libsdl-org/SDL) | 3.4.18 | Game controllers, in the Game Controller plugin |
   | [nlohmann/json](https://github.com/nlohmann/json) | 3.11.3 | The library file |
+  | [pugixml](https://github.com/zeux/pugixml) | 1.15 | Plugins' card layouts |
   | [GoogleTest](https://github.com/google/googletest) | 1.15.2 | Tests and benchmarks |
 
 - Optional: the .NET SDK (for the MSI), clang-format (for the `format` targets), and Python
@@ -129,12 +130,13 @@ each attach to a per-process shared memory block:
 | `gazeora_host_tests` | Capture client, injector, launcher, the test app captured end to end with the real hook, frame read-back, GPU scaling and the VR pass, NV12 conversion, H.264 and H.265 encoding, RTP round trips, the RTSP server, pointer and head pose input |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library, store resolution |
-| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output exported and loaded back, and the bundled plugins streaming over UDP and HTTP |
+| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output and game controller driver exported and loaded back, the bundled plugins streaming over UDP and HTTP, and the Game Controller plugin starting SDL |
 | `gazeora_plugin_manager_tests` | Reading the plugin list, matching it with installed plugins, and installing, replacing and removing DLLs in a temporary plugins folder, including a loaded one |
 | `gazeora_installer_tests` | The MSI's custom actions, against a fake installer session |
-| `gazeora_input_tests` | Game controllers: stick filtering, the polling session, SDL without a window |
+| `gazeora_plugin_ui_tests` | Plugin cards: reading XML layouts and their mistakes, conditions, and which keys go to Gazeora |
+| `gazeora_input_tests` | Game controllers: stick filtering, the polling session with and without a driver, SDL without a window |
 | `gazeora_update_tests` | Release versions and channels, the release feed, and the MSI download's size and SHA-256 checks, against a fake web server |
-| `gazeora_app_tests` | The launcher's controller navigation and on-screen keyboard on a headless ImGui, `controls.ini`, head tracking, and the update steps, the Plugins page's tasks |
+| `gazeora_app_tests` | The launcher's controller navigation, on-screen keyboard and plugin cards on a headless ImGui, `controls.ini`, head tracking, and the update steps, the Plugins page's tasks |
 
 Some tests depend on what the machine offers (for example a hardware encoder) and may skip
 themselves when it is missing.

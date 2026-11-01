@@ -9,8 +9,9 @@ the GNU GPL version 3. `cmake --install` copies each one's license text beside t
 | [libusb](https://libusb.info) | 1.0.29 | USB stream to Android phones | LGPL 2.1 or later | Linked statically into Gazeora.exe |
 | [MinHook](https://github.com/TsudaKageyu/minhook) | 1.3.3 | Hooking the game's graphics API | BSD 2-Clause | Linked statically into gazeora_hook.dll |
 | [Dear ImGui](https://github.com/ocornut/imgui) | 1.91.5 | The launcher UI | MIT | Linked statically into Gazeora.exe |
-| [SDL](https://libsdl.org) | 3.4.18 | Reading game controllers | zlib | Linked statically into Gazeora.exe |
+| [SDL](https://libsdl.org) | 3.4.18 | Reading game controllers | zlib | Linked statically into the Game Controller plugin (gazeora-controller.dll) |
 | [nlohmann/json](https://github.com/nlohmann/json) | 3.11.3 | The game library file | MIT | Compiled in (header-only) |
+| [pugixml](https://pugixml.org) | 1.15 | Reading the XML layouts of plugins' cards | MIT | Linked statically into Gazeora.exe |
 
 [GoogleTest](https://github.com/google/googletest) (BSD 3-Clause) builds the unit tests and
 benchmarks only; it is not part of what is installed.

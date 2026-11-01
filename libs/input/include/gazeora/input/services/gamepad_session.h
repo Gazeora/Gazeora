@@ -4,6 +4,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -17,19 +18,22 @@ namespace gazeora::input {
 
 // Game controllers read in the background: a driver made on a thread of its own, polled
 // until stopped. The listener hears each change, and a neutral state when it stops, so
-// nothing stays held.
+// nothing stays held. Without drivers (no plugin offers them) it never starts and stays
+// Unavailable.
 class GamepadSession {
 public:
-    GamepadSession(IGamepadDriverFactory& drivers, IGamepadListener& listener);
+    // `drivers` may be null; `listener` must outlive this.
+    GamepadSession(std::shared_ptr<IGamepadDriverFactory> drivers, IGamepadListener& listener);
     ~GamepadSession();
 
     GamepadSession(const GamepadSession&) = delete;
     GamepadSession& operator=(const GamepadSession&) = delete;
 
-    // Starts over, stopping a session already running.
+    // Starts over, stopping a session already running. Does nothing without drivers.
     void Start();
     void Stop();
     bool Running() const { return m_thread.joinable(); }
+    bool Available() const { return m_drivers != nullptr; }
     GamepadSnapshot Snapshot() const;
 
 private:
@@ -41,8 +45,10 @@ private:
     void PublishConnected(std::vector<GamepadInfo> connected);
     void Publish(GamepadSnapshot snapshot);
     void Fail(std::wstring message);
+    // What it is while not running: Off, or Unavailable without drivers.
+    GamepadSnapshot Idle() const;
 
-    IGamepadDriverFactory& m_drivers;
+    const std::shared_ptr<IGamepadDriverFactory> m_drivers;
     IGamepadListener& m_listener;
     const GamepadStateFilter m_filter;
 

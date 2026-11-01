@@ -11,11 +11,12 @@ namespace gazeora {
 namespace {
 
 // In the order that breaks ties.
-constexpr std::array<std::pair<PluginCategory, const char*>, 5> kIds = {{
+constexpr std::array<std::pair<PluginCategory, const char*>, 6> kIds = {{
     {PluginCategory::Protocol, "protocol"},
     {PluginCategory::Codec, "codec"},
     {PluginCategory::Encoder, "encoder"},
     {PluginCategory::GameStore, "game-store"},
+    {PluginCategory::Controller, "controller"},
     {PluginCategory::Other, "other"},
 }};
 
@@ -40,11 +41,12 @@ const char* PluginCategories::IdOf(PluginCategory category) {
 }
 
 PluginCategory PluginCategories::Of(const PluginStatus& plugin) {
-    const std::array<std::pair<PluginCategory, int>, 4> counts = {{
+    const std::array<std::pair<PluginCategory, int>, 5> counts = {{
         {PluginCategory::Protocol, plugin.protocols},
         {PluginCategory::Codec, plugin.codecs},
         {PluginCategory::Encoder, plugin.encoders},
         {PluginCategory::GameStore, plugin.gameStores},
+        {PluginCategory::Controller, plugin.gamepadDrivers},
     }};
     std::pair<PluginCategory, int> most = {PluginCategory::Other, 0};
     for (const auto& count : counts) {

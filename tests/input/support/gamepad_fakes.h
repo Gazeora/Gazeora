@@ -11,6 +11,7 @@
 #include "gazeora/input/exceptions/input_error.h"
 #include "gazeora/input/interfaces/gamepad_driver_factory.h"
 #include "gazeora/input/interfaces/gamepad_listener.h"
+#include "gazeora/input/interfaces/gamepad_switch.h"
 
 namespace gazeora::input::testing {
 
@@ -68,6 +69,14 @@ public:
 
 private:
     const FakeGamepads& m_gamepads;
+};
+
+// A controller plugin's switch a test flips.
+class FakeGamepadSwitch final : public IGamepadSwitch {
+public:
+    bool Enabled() const override { return on; }
+
+    bool on = true;
 };
 
 // Remembers every state it was told, in order.

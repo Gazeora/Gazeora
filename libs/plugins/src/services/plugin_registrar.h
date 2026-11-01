@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/plugin_api/gazeora_plugin.h"
 #include "gazeora/plugins/interfaces/plugin_module.h"
 #include "gazeora/plugins/models/plugin_catalog.h"
@@ -16,13 +17,14 @@ namespace gazeora {
 // its adapter. The Host() it hands out points at this object, so keep it alive for the call.
 class PluginRegistrar final {
 public:
-    explicit PluginRegistrar(std::shared_ptr<const IPluginModule> module)
-        : m_module(std::move(module)) {}
+    // `settingsFolder` is handed to the plugin; empty for none.
+    PluginRegistrar(std::shared_ptr<const IPluginModule> module, const std::wstring& settingsFolder)
+        : m_module(std::move(module)), m_settingsFolder(Utf8::FromWide(settingsFolder)) {}
     PluginRegistrar(const PluginRegistrar&) = delete;
     PluginRegistrar& operator=(const PluginRegistrar&) = delete;
 
-    // The version 2 host; a version 1 plugin reads its first part only.
-    GazeoraPluginHostV2 Host();
+    // The version 3 host; a plugin for an older version reads its first parts only.
+    GazeoraPluginHostV3 Host();
 
     // What was accepted, without the statuses.
     const PluginCatalog& Registered() const { return m_registered; }
@@ -35,13 +37,19 @@ private:
                                                   const GazeoraEncoderProviderV1* provider);
     static int32_t GAZEORA_CALL OnCodec(void* context, const GazeoraCodecV2* codec);
     static int32_t GAZEORA_CALL OnProtocol(void* context, const GazeoraProtocolV2* protocol);
+    static int32_t GAZEORA_CALL
+    OnGamepadDriverProvider(void* context, const GazeoraGamepadDriverProviderV3* provider);
+    static int32_t GAZEORA_CALL OnUiPanel(void* context, const GazeoraUiPanelV3* panel);
     int32_t AddGameStore(const GazeoraGameStoreV1* store);
     int32_t AddEncoderProvider(const GazeoraEncoderProviderV1* provider);
     int32_t AddCodec(const GazeoraCodecV2* codec);
     int32_t AddProtocol(const GazeoraProtocolV2* protocol);
+    int32_t AddGamepadDriverProvider(const GazeoraGamepadDriverProviderV3* provider);
+    int32_t AddUiPanel(const GazeoraUiPanelV3* panel);
     int32_t Refuse(std::wstring why);
 
     const std::shared_ptr<const IPluginModule> m_module;
+    const std::string m_settingsFolder;  // UTF-8, for the host struct
     PluginCatalog m_registered;
     std::vector<std::wstring> m_refusals;
 };

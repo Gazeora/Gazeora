@@ -11,10 +11,10 @@
 namespace gazeora {
 
 // What kind of plugin it is, for the Plugins page's labels and filter.
-enum class PluginCategory { Protocol, Codec, Encoder, GameStore, Other };
+enum class PluginCategory { Protocol, Codec, Encoder, GameStore, Controller, Other };
 
 // Plugin categories by their ids in the plugin list ("protocol", "codec", "encoder",
-// "game-store", "other"), and worked out from what a plugin registered.
+// "game-store", "controller", "other"), and worked out from what a plugin registered.
 class PluginCategories final {
 public:
     PluginCategories() = delete;
@@ -22,8 +22,8 @@ public:
     // Nothing for an id that isn't one of them.
     static std::optional<PluginCategory> Parse(const std::string& id);
     static const char* IdOf(PluginCategory category);
-    // What a loaded plugin registered most of; protocols, then codecs, encoders and game stores
-    // break a tie. Other if it registered none.
+    // What a loaded plugin registered most of; protocols, then codecs, encoders, game stores and
+    // game controller drivers break a tie. Other if it registered none.
     static PluginCategory Of(const PluginStatus& plugin);
 };
 

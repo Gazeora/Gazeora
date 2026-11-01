@@ -43,6 +43,8 @@ void PluginsPage::Draw(const Fonts& fonts) {
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + width);
     DrawHeader(fonts);
     ImGui::PopTextWrapPos();
+    const PluginPanelsView::Fonts panelFonts{fonts.heading, fonts.caption};
+    m_panels.Draw(ui::UiPage::Plugins, ui::UiPosition::Start, panelFonts, width);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(S(10), S(12)));
     DrawToolbar(fonts, width);
     m_filter.Draw(fonts.bold, m_control.Entries());
@@ -54,6 +56,7 @@ void PluginsPage::Draw(const Fonts& fonts) {
     ImGui::Dummy(ImVec2(0.0f, S(kSectionGap)));
     DrawAvailableNote(DrawSection(fonts, "Available", false, width));
     ImGui::PopStyleVar();
+    m_panels.Draw(ui::UiPage::Plugins, ui::UiPosition::End, panelFonts, width);
 }
 
 void PluginsPage::DrawHeader(const Fonts& fonts) {
