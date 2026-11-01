@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -794,6 +795,25 @@ TEST(FrameStreamServerTest, KeepsTheFrameRateInRange) {
     EXPECT_EQ(server.FrameRate(), FrameStreamServer::kMinFrameRate);
     server.SetFrameRate(1000);
     EXPECT_EQ(server.FrameRate(), FrameStreamServer::kMaxFrameRate);
+}
+
+TEST(FrameStreamServerTest, StartsAProtocolFromPartsHandedInLater) {
+    FrameStreamServer server;  // RTSP and H.264 only, as without plugins
+    server.SetProtocol(StreamProtocol::Udp);
+    server.SetDiscoveryPort(0);
+    std::wstring error;
+    EXPECT_FALSE(server.Start(0, false, error));
+    // The UDP plugin was installed.
+    server.SetParts({BuiltInVideoEncoders::Registry(), BundledProtocols::Outputs(),
+                     BundledProtocols::Catalog(), BundledVideoCodecs::Catalog()});
+    ASSERT_TRUE(server.Start(0, false, error)) << Utf8::FromWide(error);
+    EXPECT_NE(server.Port(), 0);
+    server.Stop();
+}
+
+TEST(FrameStreamServerTest, RefusesMissingParts) {
+    FrameStreamServer server;
+    EXPECT_THROW(server.SetParts({}), std::invalid_argument);
 }
 
 }  // namespace

@@ -126,12 +126,11 @@ private:
     std::deque<uint64_t> m_times;
 };
 
-template <typename Registry>
-std::shared_ptr<const Registry> Required(std::shared_ptr<const Registry> registry) {
-    if (!registry) {
+StreamParts Required(StreamParts parts) {
+    if (!parts.encoders || !parts.outputs || !parts.protocols || !parts.codecs) {
         throw std::invalid_argument("FrameStreamServer: null registry");
     }
-    return registry;
+    return parts;
 }
 
 }  // namespace
@@ -140,10 +139,19 @@ FrameStreamServer::FrameStreamServer(std::shared_ptr<const VideoEncoderRegistry>
                                      std::shared_ptr<const FrameOutputRegistry> outputs,
                                      std::shared_ptr<const StreamProtocolCatalog> protocols,
                                      std::shared_ptr<const VideoCodecCatalog> codecs)
-    : m_encoders(Required(std::move(encoders))),
-      m_outputs(Required(std::move(outputs))),
-      m_protocols(Required(std::move(protocols))),
-      m_codecs(Required(std::move(codecs))) {}
+    : m_parts(Required(
+          {std::move(encoders), std::move(outputs), std::move(protocols), std::move(codecs)})) {}
+
+void FrameStreamServer::SetParts(StreamParts parts) {
+    parts = Required(std::move(parts));
+    std::lock_guard<std::mutex> lock(m_partsMutex);
+    m_parts = std::move(parts);
+}
+
+StreamParts FrameStreamServer::Parts() const {
+    std::lock_guard<std::mutex> lock(m_partsMutex);
+    return m_parts;
+}
 
 void FrameStreamServer::SetProtocol(const StreamProtocol& protocol) {
     std::lock_guard<std::mutex> lock(m_choiceMutex);
@@ -177,12 +185,13 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
     bindAddress.s_addr = htonl(lan ? INADDR_ANY : INADDR_LOOPBACK);
 
     const StreamProtocol protocol = Protocol();
+    const StreamParts parts = Parts();
     {
         std::lock_guard<std::mutex> lock(m_choiceMutex);
         m_runningProtocol = protocol;
         m_encodable.clear();
-        for (const VideoCodecInfo& codec : m_codecs->All()) {
-            if (codec.id != VideoCodec::H264 && m_encoders->Available(codec.id)) {
+        for (const VideoCodecInfo& codec : parts.codecs->All()) {
+            if (codec.id != VideoCodec::H264 && parts.encoders->Available(codec.id)) {
                 m_encodable.insert(codec.id);
             }
         }
@@ -205,7 +214,7 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
         m_log.Write("touches and head turns from the Android app won't reach this PC: %ls",
                     inputError.c_str());
     }
-    m_log.Write("streaming over %s", m_protocols->NameOf(protocol).c_str());
+    m_log.Write("streaming over %s", parts.protocols->NameOf(protocol).c_str());
     m_running = true;
     // The idle frame set before a restart (a protocol change) still stands.
     m_mailbox.RepostIdle();
@@ -218,9 +227,10 @@ bool FrameStreamServer::Start(uint16_t port, bool lan, std::wstring& error) {
 
 bool FrameStreamServer::StartOutput(const StreamProtocol& protocol, in_addr address, uint16_t port,
                                     std::wstring& error) {
-    m_output = m_outputs->Create(protocol, m_log);
+    const StreamParts parts = Parts();
+    m_output = parts.outputs->Create(protocol, m_log);
     if (!m_output) {
-        error = L"this build has no output for " + Utf8::ToWide(m_protocols->NameOf(protocol));
+        error = L"this build has no output for " + Utf8::ToWide(parts.protocols->NameOf(protocol));
         return false;
     }
     m_output->SetPointerSink(&m_pointerGate);
@@ -369,7 +379,8 @@ std::string FrameStreamServer::Describe() {
         }
     }
     const StreamProtocol protocol = RunningProtocol();
-    const StreamProtocolInfo* info = m_protocols->Find(protocol);
+    const std::shared_ptr<const StreamProtocolCatalog> protocols = Parts().protocols;
+    const StreamProtocolInfo* info = protocols->Find(protocol);
     const std::string path = info ? info->discoveryPath : kDefaultDiscoveryPath;
     return std::string("{\"service\":\"gazeora\",\"version\":1,\"name\":") + JsonString(name) +
            ",\"protocol\":" + JsonString(protocol.Id()) + ",\"port\":" + std::to_string(m_port) +
@@ -694,7 +705,8 @@ bool FrameStreamServer::OnSetup(RequestContext& context) {
     const StreamProtocol running = RunningProtocol();
     if (transport.interleaved != (running == StreamProtocol::RtspTcp)) {
         m_log.Write("%s asked for RTP over %s; the stream is %s", connection.Peer().c_str(),
-                    transport.interleaved ? "TCP" : "UDP", m_protocols->NameOf(running).c_str());
+                    transport.interleaved ? "TCP" : "UDP",
+                    Parts().protocols->NameOf(running).c_str());
         return connection.Send(
             RtspResponse("461 Unsupported Transport", context.request).Serialize());
     }
@@ -901,7 +913,8 @@ void FrameStreamServer::HeardFrom(const sockaddr_in& from, uint64_t now) {
 }
 
 uint32_t FrameStreamServer::BitrateAt(int step) const {
-    const VideoCodecInfo* codec = m_codecs->Find(Codec());
+    const std::shared_ptr<const VideoCodecCatalog> codecs = Parts().codecs;
+    const VideoCodecInfo* codec = codecs->Find(Codec());
     uint32_t top =
         m_maxBitrate / kFullBitratePercent * (codec ? codec->bitratePercent : kFullBitratePercent);
     return BitrateController::BitrateAt(step, top);
@@ -919,7 +932,8 @@ void FrameStreamServer::SetCodec(const VideoCodec& codec) {
     }
     if (Codec() != before) {
         ++m_codecGeneration;
-        m_log.Write("codec now %s; players were disconnected", m_codecs->NameOf(Codec()).c_str());
+        m_log.Write("codec now %s; players were disconnected",
+                    Parts().codecs->NameOf(Codec()).c_str());
     }
 }
 
@@ -934,7 +948,8 @@ bool FrameStreamServer::CodecAvailable(const VideoCodec& codec) const {
 }
 
 std::string FrameStreamServer::EncodingNameOf(const VideoCodec& codec) const {
-    const VideoCodecInfo* info = m_codecs->Find(codec);
+    const std::shared_ptr<const VideoCodecCatalog> codecs = Parts().codecs;
+    const VideoCodecInfo* info = codecs->Find(codec);
     return info && info->format ? info->format->Rtp().EncodingName() : codec.Id();
 }
 
@@ -970,7 +985,7 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     bool reopened = false;
     if (!pipeline.Prepare(config, width, height, reopened, error, device.Get())) {
         m_log.Write("cannot open an %s encoder for %ux%u: %ls",
-                    m_codecs->NameOf(config.codec).c_str(), width, height, error.c_str());
+                    Parts().codecs->NameOf(config.codec).c_str(), width, height, error.c_str());
         if (config.codec != VideoCodec::H264) {
             // Listed but not working (a size it doesn't take, a driver problem): fall back to
             // H.264, which always has the software encoder.
@@ -987,7 +1002,7 @@ bool FrameStreamServer::StreamPicture(VideoPipeline& pipeline, const Picture& pi
     if (reopened) {
         std::wstring name = pipeline.EncoderName();
         m_log.Write("encoding %s %ux%u with %ls at %.1f Mbit/s",
-                    m_codecs->NameOf(config.codec).c_str(), width, height, name.c_str(),
+                    Parts().codecs->NameOf(config.codec).c_str(), width, height, name.c_str(),
                     config.bitrate / 1e6);
         std::lock_guard<std::mutex> lock(m_statusMutex);
         m_encoderName = std::move(name);
@@ -1030,8 +1045,10 @@ void FrameStreamServer::EncodeLoop() {
             L"Media Foundation is unavailable (Windows N without the Media Feature Pack?)");
         return;
     }
-    std::shared_ptr<const VideoEncoderRegistry> encoders = m_encoders;
-    VideoPipeline pipeline([encoders] { return encoders->Create(); }, m_codecs);
+    // The parts as the stream started: new ones apply when it starts again.
+    const StreamParts parts = Parts();
+    std::shared_ptr<const VideoEncoderRegistry> encoders = parts.encoders;
+    VideoPipeline pipeline([encoders] { return encoders->Create(); }, parts.codecs);
     Picture live, idle;
     Picture overlaid;  // the picture streamed with the overlay drawn on
     OverlayRenderer overlay;
@@ -1111,9 +1128,10 @@ const Picture* FrameStreamServer::DrawOverlay(const Picture& picture, Picture& t
         return &picture;
     }
     OverlayStats stats;
-    stats.protocol = m_protocols->NameOf(RunningProtocol());
+    const StreamParts parts = Parts();
+    stats.protocol = parts.protocols->NameOf(RunningProtocol());
     stats.viewers = m_viewers;
-    stats.codec = m_codecs->NameOf(Codec());
+    stats.codec = parts.codecs->NameOf(Codec());
     stats.width = picture.width & ~1u;  // as encoded
     stats.height = picture.height & ~1u;
     stats.frameRate = frameRate;

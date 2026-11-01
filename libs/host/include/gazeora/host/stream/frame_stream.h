@@ -39,6 +39,7 @@
 #include "gazeora/host/stream/remote_input_receiver.h"
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_overlay.h"
+#include "gazeora/host/stream/stream_parts.h"
 #include "gazeora/host/stream/stream_protocol.h"
 #include "gazeora/host/stream/stream_protocol_catalog.h"
 #include "gazeora/host/stream/video_pipeline.h"
@@ -88,6 +89,12 @@ public:
     FrameStreamServer(const FrameStreamServer&) = delete;
     FrameStreamServer& operator=(const FrameStreamServer&) = delete;
     ~FrameStreamServer() override;
+
+    // Hands it new parts, e.g. after a plugin was installed or uninstalled; throws
+    // std::invalid_argument for a null one. A protocol started from now on starts with them.
+    // The running stream keeps its output, encoders and codecs: Stop and Start again to use new
+    // ones there.
+    void SetParts(StreamParts parts);
 
     // Starts the protocol (SetProtocol), listening on `port` (0 picks a free one) if it has
     // one, on every network interface when `lan` is set and on 127.0.0.1 only otherwise.
@@ -276,10 +283,11 @@ private:
     bool StartOutput(const StreamProtocol& protocol, in_addr address, uint16_t port,
                      std::wstring& error);
 
-    const std::shared_ptr<const VideoEncoderRegistry> m_encoders;
-    const std::shared_ptr<const FrameOutputRegistry> m_outputs;
-    const std::shared_ptr<const StreamProtocolCatalog> m_protocols;
-    const std::shared_ptr<const VideoCodecCatalog> m_codecs;
+    // A copy of the parts, which may be replaced while other threads use the old ones.
+    StreamParts Parts() const;
+
+    mutable std::mutex m_partsMutex;
+    StreamParts m_parts;  // guarded by m_partsMutex
     net::WinsockRuntime m_winsock;
     bool m_lan = false;
     // The protocol and codec chosen, and the codecs this PC can encode besides H.264: read
