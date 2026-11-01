@@ -7,11 +7,13 @@
 
 #include <atomic>
 #include <functional>
+#include <memory>
 #include <string>
 #include <thread>
 #include <utility>
 
 #include "gazeora/host/capture/capture_client.h"
+#include "gazeora/host/launch/game_store.h"
 
 namespace gazeora {
 
@@ -19,13 +21,15 @@ struct LaunchSpec {
     std::wstring exePath;
     std::wstring arguments;   // command line after the exe, as typed
     std::wstring workingDir;  // empty = the exe's folder
-    // Non-empty: start through Steam (steam://rungameid/<id>) instead of running the exe.
-    std::wstring steamAppId;
+    // Set: start through this store's client instead of running the exe.
+    std::shared_ptr<const GameStore> store;
+    std::wstring storeAppId;  // the game's id in `store`
     // The exe name of the real game process, when it differs from exePath's (e.g. a
     // launcher.exe that starts game.exe). Empty = exePath's file name.
     std::wstring processName;
 
     std::wstring GameProcessName() const;
+    bool ThroughStore() const { return store != nullptr; }
 };
 
 // A game whose process exits this soon after starting is assumed to have handed off to a
@@ -79,13 +83,6 @@ private:
     std::atomic<bool> m_stop{false};
     std::thread m_thread;
 };
-
-// The Steam app id of the game whose exe this is (from steamapps/appmanifest_<id>.acf),
-// or empty if the exe isn't in a Steam library.
-std::wstring FindSteamAppId(const std::wstring& exePath);
-
-// Asks Steam to start the game. There is no process to track until it appears.
-bool LaunchThroughSteam(const std::wstring& appId, std::wstring& error);
 
 // Waits for a process named `exeName` (other than `ignorePid`) to start, then until it is
 // safe to inject: it has finished starting up (shows a window) and loaded a graphics

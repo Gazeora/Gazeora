@@ -19,7 +19,7 @@ json GameJsonMapper::ToJson(const Game& game) const {
         {"workingDir", Utf8::FromWide(game.workingDir)},
         {"coverPath", Utf8::FromWide(game.coverPath)},
         {"captureOnLaunch", game.captureOnLaunch},
-        {"launchVia", LaunchViaNames::NameOf(game.launchVia)},
+        {"launchVia", LaunchViaNames::NameOf(game)},
         {"processName", Utf8::FromWide(game.processName)},
         {"addedAt", game.addedAt},
         {"lastPlayed", game.lastPlayed},
@@ -36,7 +36,7 @@ Game GameJsonMapper::FromJson(const json& entry) const {
     game.workingDir = Utf8::ToWide(entry.value("workingDir", ""));
     game.coverPath = Utf8::ToWide(entry.value("coverPath", ""));
     game.captureOnLaunch = entry.value("captureOnLaunch", false);
-    game.launchVia = LaunchViaNames::FromName(entry.value("launchVia", "auto"));
+    LaunchViaNames::Apply(entry.value("launchVia", ""), game);
     game.processName = Utf8::ToWide(entry.value("processName", ""));
     game.addedAt = entry.value("addedAt", int64_t(0));
     game.lastPlayed = entry.value("lastPlayed", int64_t(0));

@@ -3,41 +3,37 @@
 
 #include "mappers/launch_via_names.h"
 
-#include <cstring>
-
 namespace gazeora {
 
 namespace {
 
-struct LaunchViaName {
-    LaunchVia via;
-    const char* name;
-};
-
-constexpr LaunchViaName kNames[] = {
-    {LaunchVia::Auto, "auto"},
-    {LaunchVia::Direct, "direct"},
-    {LaunchVia::Steam, "steam"},
-};
+constexpr char kAuto[] = "auto";
+constexpr char kDirect[] = "direct";
 
 }  // namespace
 
-const char* LaunchViaNames::NameOf(LaunchVia via) {
-    for (const LaunchViaName& entry : kNames) {
-        if (entry.via == via) {
-            return entry.name;
-        }
+std::string LaunchViaNames::NameOf(const Game& game) {
+    switch (game.launchVia) {
+        case LaunchVia::Direct:
+            return kDirect;
+        case LaunchVia::Store:
+            return game.storeId.empty() ? kAuto : game.storeId;
+        case LaunchVia::Auto:
+            break;
     }
-    return kNames[0].name;
+    return kAuto;
 }
 
-LaunchVia LaunchViaNames::FromName(const std::string& name) {
-    for (const LaunchViaName& entry : kNames) {
-        if (name == entry.name) {
-            return entry.via;
-        }
+void LaunchViaNames::Apply(const std::string& name, Game& game) {
+    game.storeId.clear();
+    if (name.empty() || name == kAuto) {
+        game.launchVia = LaunchVia::Auto;
+    } else if (name == kDirect) {
+        game.launchVia = LaunchVia::Direct;
+    } else {
+        game.launchVia = LaunchVia::Store;
+        game.storeId = name;
     }
-    return LaunchVia::Auto;
 }
 
 }  // namespace gazeora
