@@ -4,6 +4,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -30,15 +31,21 @@ public:
         : m_repository(std::move(path)),
           m_stores(Required(std::move(stores))),
           m_library(m_repository, m_clock, m_names),
-          m_launchSpecs(*m_stores),
+          m_launchSpecs(std::in_place, *m_stores),
           m_pruner(m_files) {}
 
     GameLibraryServices(const GameLibraryServices&) = delete;
     GameLibraryServices& operator=(const GameLibraryServices&) = delete;
 
     GameLibrary& Library() { return m_library; }
-    const LaunchSpecFactory& LaunchSpecs() const { return m_launchSpecs; }
+    const LaunchSpecFactory& LaunchSpecs() const { return *m_launchSpecs; }
     const GameStoreRegistry& Stores() const { return *m_stores; }
+    // The stores games start through from now on, e.g. after a plugin was installed; throws
+    // std::invalid_argument for null. A launch already made keeps the store it started with.
+    void SetStores(std::shared_ptr<const GameStoreRegistry> stores) {
+        m_stores = Required(std::move(stores));
+        m_launchSpecs.emplace(*m_stores);
+    }
     const IGameNameResolver& Names() const { return m_names; }
     const IShortcutResolver& Shortcuts() const { return m_shortcuts; }
     const IClock& Clock() const { return m_clock; }
@@ -61,7 +68,7 @@ private:
     ShellLinkResolver m_shortcuts;
     Win32FileChecker m_files;
     GameLibrary m_library;
-    LaunchSpecFactory m_launchSpecs;
+    std::optional<LaunchSpecFactory> m_launchSpecs;  // made again with each new m_stores
     MissingGamePruner m_pruner;
 };
 

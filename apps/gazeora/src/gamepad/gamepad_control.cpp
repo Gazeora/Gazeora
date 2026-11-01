@@ -32,6 +32,16 @@ void GamepadControl::Restart() {
     Refresh();
 }
 
+void GamepadControl::SetDriver(std::shared_ptr<input::IGamepadDriverFactory> drivers,
+                               std::shared_ptr<const input::IGamepadSwitch> enabled) {
+    if (drivers == m_session.Drivers() && enabled == m_enabled) {
+        return;  // the same plugin's: nothing to restart
+    }
+    m_session.SetDrivers(std::move(drivers));
+    m_enabled = std::move(enabled);
+    Restart();
+}
+
 bool GamepadControl::Connected() const {
     return m_session.Running() && !m_session.Snapshot().connected.empty();
 }
