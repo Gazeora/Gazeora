@@ -21,6 +21,7 @@ layout. For building and testing, see [Development](development.md).
 | `apps/gazeora` | `Gazeora.exe`, `gazeora_plugin_manager` | The launcher UI (Dear ImGui on Direct3D 11), settings, head tracking, and the stream. `src/plugin_manager` is the Plugins page's work (the plugin list on gazeora.github.io, installing and removing plugin DLLs), a library of its own for its tests |
 | `apps/cli` | `GazeoraCLI.exe` | Command-line front end for the library and capture |
 | `plugins/<name>` | `gazeora_<name>`, `bundled-plugins\gazeora-<name>.dll` | The [bundled plugins](plugins.md#bundled-plugins), one folder each with only that plugin's code: `udp`, `http` (with the MPEG-TS muxer), `usb` (with libusb), `h265` (its format and RTP payload) and `controller` (SDL, its switch and card). Each builds a static library of its code, which the tests, tools and benchmarks use too, and its DLL |
+| `examples/plugins/frame_recorder` | `example_plugins\frame-recorder.dll` | The [example plugin](plugin-development.md#the-example-plugin): a protocol that records the stream to a file, with a card. Built against `plugin_api` alone, as a third-party plugin is. Only the tests load it |
 | `tools/` | `gazeora_testapp.exe`, `gazeora_stream_probe.exe` | [Developer tools](tools.md) |
 | `installer/` | MSI | [Installer](installer.md) |
 
@@ -31,15 +32,54 @@ Dependencies point downward: the apps use `host`, `library`, `plugins` and `inpu
 and `update` use `common`; `hook` does not depend on `host`, and nothing under `libs/` but
 `bundled_parts` depends on a plugin.
 
+```mermaid
+flowchart TB
+    subgraph apps
+        GZ[Gazeora.exe]
+        CLI[GazeoraCLI.exe]
+        PM[gazeora_plugin_manager]
+    end
+    subgraph bundled["plugins/ (one folder each)"]
+        BP["gazeora_udp, _http, _usb, _h265, _controller<br/>and their DLLs"]
+    end
+    EX["examples/plugins/frame_recorder"]
+    BPARTS[bundled_parts]
+    subgraph libs
+        LIB[library]
+        PLG[plugins]
+        KIT[plugin_kit]
+        UI[plugin_ui]
+        API[plugin_api]
+        IN[input]
+        UPD[update]
+        HOST[host]
+        COM[common]
+        HOOK["hook (gazeora_hook.dll)"]
+    end
+    GZ --> HOST & LIB & PLG & PM & IN & UI & UPD
+    CLI --> HOST & LIB & PLG
+    PM --> PLG & UPD
+    LIB --> HOST
+    PLG --> KIT
+    KIT --> HOST & IN & UI & API
+    BP --> KIT
+    BPARTS --> BP
+    EX --> API
+    HOST & IN & UPD & HOOK --> COM
+```
+
+An arrow means "links to". `bundled_parts` is used only by the tests, the stream probe and the
+benchmarks. The example plugin, like any third-party plugin, uses only the plugin interface.
+
 ## Capture to stream
 
 ```mermaid
 flowchart LR
-    subgraph Game process
+    subgraph game["Game process"]
         G[Game] -->|Present / SwapBuffers| H[gazeora_hook.dll]
         H -->|copy| R[(Ring of 3 shared textures<br/>+ shared fences)]
     end
-    subgraph Gazeora.exe
+    subgraph app["Gazeora.exe"]
         C[CaptureClient] --> T[GPU scale, VR pass,<br/>NV12 conversion]
         T --> M[FrameMailbox]
         M --> E[VideoPipeline:<br/>Media Foundation encoder]
@@ -147,8 +187,39 @@ classes fill the default registries.
   store id such as `"steam"`. A store id that this build doesn't know is kept, and the game
   starts from its exe.
 
+## Plugins
+
 Plugin DLLs can add game stores, encoders, codecs, protocols, game controller drivers and cards
-at run time ([Plugins](plugins.md)).
+at run time ([Plugins](plugins.md), [Plugin development](plugin-development.md)). Each part a
+plugin registers through the C interface is wrapped in an adapter that makes it one of
+Gazeora's own C++ interfaces:
+
+```mermaid
+flowchart LR
+    subgraph dll["plugin DLL (gazeora_plugin.h)"]
+        S[GazeoraGameStoreV1]
+        E["GazeoraEncoderProviderV1, V2"]
+        C[GazeoraCodecV2]
+        P[GazeoraProtocolV2]
+        D[GazeoraGamepadDriverProviderV3]
+        U[GazeoraUiPanelV3]
+    end
+    subgraph host["Gazeora.exe: libs/plugins"]
+        AS[PluginGameStore] --> RS[(GameStoreRegistry)]
+        AE[PluginEncoderProvider] --> RE[(VideoEncoderRegistry)]
+        AC[PluginCodecFormat] --> RC[(VideoCodecCatalog)]
+        AP[PluginOutputFactory] --> RP[(FrameOutputRegistry,<br/>StreamProtocolCatalog)]
+        AD[PluginGamepadDriverFactory] --> GS[GamepadSession]
+        AU[UiLayout + PluginUiValues] --> PV[PluginPanelsView]
+    end
+    S --> AS
+    E --> AE
+    C --> AC
+    P --> AP
+    D --> AD
+    U --> AU
+```
+
 `PluginServices` loads the DLLs in the `plugins` folder beside the exe's `bin` folder
 (`PluginFolder::Installed`) and builds the
 registries: built-in stores first, then plugin stores; plugin encoders first, then Media
@@ -238,8 +309,9 @@ apps/
 plugins/              The bundled plugins, one folder each: udp/, http/, usb/, h265/, controller/
   <name>/               include/gazeora/bundled/<name>/ and src/: only that plugin's code;
                         CMakeLists.txt: its library and DLL (cmake/BundledPlugins.cmake)
+examples/plugins/     Example plugins, built against libs/plugin_api alone: frame_recorder/
 tools/                The test app, the stream probe, and license_headers.py
-tests/                GoogleTest suites, mirroring the code they test
+tests/                GoogleTest suites, mirroring the code they test; examples/: the example plugin
 bench/                gazeora_bench, the benchmarks
 installer/            The MSI: WiX sources, custom actions, Uninstall.exe
 cmake/                Compiler settings, dependency fetching, formatting, signing, install rules

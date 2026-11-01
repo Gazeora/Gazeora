@@ -9,6 +9,17 @@ Gazeora injects a capture hook (`gazeora_hook.dll`) into the game, copies each p
 on the GPU, encodes it as H.264 or H.265 with Media Foundation, and serves it over RTSP, HTTP,
 UDP or USB.
 
+```mermaid
+flowchart LR
+    G[Game] -->|gazeora_hook.dll| C[Gazeora.exe:<br/>capture, GPU scaling, VR pass]
+    C --> E[Encoder:<br/>H.264, H.265]
+    E --> O[Protocol:<br/>RTSP, HTTP, UDP, USB]
+    O --> P[Players:<br/>Gazeora app, VLC]
+    X[Plugin DLLs] -.->|codecs, protocols, encoders,<br/>game stores, controllers, cards| C
+```
+
+[Architecture](docs/architecture.md) explains each step.
+
 ## Current capabilities
 
 - **Game library.** Add games by `.exe` or shortcut, launch them directly or through Steam,
@@ -17,10 +28,12 @@ UDP or USB.
 - **Two releases.** The x64 release captures 64-bit games and the x86 release captures 32-bit
   games. Direct3D 8 games are always 32-bit.
 - **Streaming.** One protocol at a time: RTSP with RTP over TCP or UDP, MPEG-TS over HTTP, or
-  Gazeora's own UDP and USB formats for the Android app. The stream is always on. While no
-  game runs, it shows Gazeora's own window.
-- **Encoding.** H.264 or H.265, using the GPU's encoder through Media Foundation where one is
-  available. The bitrate steps down when players report packet loss.
+  Gazeora's own UDP and USB formats for the Android app. HTTP, UDP and USB come as bundled
+  plugins, installed from the **Plugins** page. The stream is always on. While no game runs,
+  it shows Gazeora's own window.
+- **Encoding.** H.264, or H.265 with the bundled H.265 plugin installed, using the GPU's encoder
+  through Media Foundation where one is available. The bitrate steps down when players report
+  packet loss.
 - **VR viewer mode.** Side-by-side output with lens distortion and color-fringe correction.
   The correction runs on the phone (the default) or on the PC for other players.
 - **3D from depth.** In Direct3D 11 and 12 games, a separate view for each eye, built from the
@@ -30,6 +43,10 @@ UDP or USB.
 - **Game controllers and touch.** With the bundled Game Controller plugin installed, a
   controller can drive the launcher, with an on-screen keyboard. Touches and the hand pointer
   in the Android app can also drive the launcher window.
+- **Plugins.** DLLs that add game stores, encoders, codecs, protocols, game controller drivers
+  and cards on Gazeora's pages. Gazeora's own HTTP, UDP, USB, H.265 and game controller support
+  are bundled plugins, which come with Gazeora but are installed only when chosen. See
+  [Plugins](docs/plugins.md) and [Plugin development](docs/plugin-development.md).
 - **Updates.** `Gazeora.exe` finds newer releases on gazeora.github.io, then downloads, checks
   and starts the MSI. See [Updating](docs/installer.md#updating).
 
@@ -42,8 +59,8 @@ To run Gazeora:
 - Windows. The x64 release needs 64-bit Windows. No minimum Windows version is enforced or
   verified. CI builds and tests on GitHub's `windows-latest` runner.
 - The release that matches the game: x64 for 64-bit games, x86 for 32-bit games.
-- For H.265, a hardware or installed software H.265 encoder. Without one, only H.264 is
-  offered.
+- For H.265, the bundled H.265 plugin installed from the **Plugins** page, and a hardware or
+  installed software H.265 encoder. Without either, only H.264 is offered.
 
 To build Gazeora, see [Development](docs/development.md#building). In brief:
 
@@ -77,10 +94,11 @@ To build Gazeora, see [Development](docs/development.md#building). In brief:
 | [Troubleshooting](docs/troubleshooting.md) | Common problems and how to diagnose them |
 | [Installer](docs/installer.md) | MSI features, silent installs, uninstalling |
 | [Tools](docs/tools.md) | The stream probe and the test app |
-| [Plugins](docs/plugins.md) | Installing, updating and removing plugins from the Plugins page, writing one, and publishing it to the plugin list |
+| [Plugins](docs/plugins.md) | The bundled plugins, and installing, updating and removing plugins from the Plugins page |
+| [Plugin development](docs/plugin-development.md) | Writing, building, testing and publishing a plugin, the example plugin, and adding a bundled plugin |
 | [Plugin UI](docs/plugin-ui.md) | The XML layout of the cards a plugin adds to Gazeora's pages |
 | [Stream format](docs/stream-format.md) | Wire formats of every protocol (canonical for the Android app) |
-| [Architecture](docs/architecture.md) | Components, the capture-to-stream pipeline, code layout |
+| [Architecture](docs/architecture.md) | Components and their dependencies, the capture-to-stream pipeline, plugins, code layout |
 | [Development](docs/development.md) | Building, testing, benchmarks, formatting, releasing |
 
 ## Known limitations
