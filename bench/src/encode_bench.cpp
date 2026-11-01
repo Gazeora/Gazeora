@@ -14,8 +14,10 @@
 
 #include "bench_util.h"
 #include "gazeora/host/capture/frame_dump.h"
+#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/gpu_nv12_converter.h"
+#include "gazeora/host/encode/media_foundation_encoder_provider.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/video_pipeline.h"
 
@@ -49,8 +51,8 @@ std::string Kilobytes(double bytes) {
 void BenchEncoder(VideoCodec codec, bool preferHardware, Size size,
                   const std::vector<std::vector<uint8_t>>& frames) {
     std::string label =
-        std::string(CodecName(codec)) + (preferHardware ? " hw " : " sw ") + size.name;
-    auto encoder = CreateVideoEncoder();
+        BundledVideoCodecs::NameOf(codec) + (preferHardware ? " hw " : " sw ") + size.name;
+    auto encoder = MediaFoundationEncoderProvider().Create();
     VideoEncoder::Settings settings;
     settings.codec = codec;
     settings.width = size.width;
@@ -114,8 +116,8 @@ void BenchEncoder(VideoCodec codec, bool preferHardware, Size size,
 TEST(Encode, EveryCodecAndEncoder) {
     PrintHeader("VideoEncoder, 8 Mbit/s, 30 fps, key frame every 30");
     for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) {
-        if (!VideoEncoder::Available(codec)) {
-            PrintNote(CodecName(codec), "no encoder on this PC");
+        if (!MediaFoundationEncoderProvider().Supports(codec)) {
+            PrintNote(BundledVideoCodecs::NameOf(codec).c_str(), "no encoder on this PC");
             continue;
         }
         for (Size size : {k720p, k1080p}) {
@@ -137,7 +139,7 @@ TEST(Encode, VideoPipelinePerFrame) {
         pictures[i].height = size.height;
     }
     for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) {
-        if (!VideoEncoder::Available(codec)) continue;
+        if (!MediaFoundationEncoderProvider().Supports(codec)) continue;
         VideoPipeline pipeline;
         VideoPipeline::Config config;
         config.codec = codec;
@@ -165,7 +167,7 @@ TEST(Encode, VideoPipelinePerFrame) {
         char note[96];
         snprintf(note, sizeof(note), "%.1f packets/frame, %s",
                  frames ? double(packets) / frames : 0.0, Narrow(pipeline.EncoderName()).c_str());
-        Print(std::string(CodecName(codec)) + " " + size.name, s, note);
+        Print(BundledVideoCodecs::NameOf(codec) + " " + size.name, s, note);
     }
 }
 
@@ -228,7 +230,7 @@ TEST(Encode, GameFrameReadBackOrOnTheGpu) {
         ASSERT_TRUE(SUCCEEDED(device->CreateTexture2D(&desc, &data, &frames[i])));
     }
     for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) {
-        if (!VideoEncoder::Available(codec)) continue;
+        if (!MediaFoundationEncoderProvider().Supports(codec)) continue;
         for (bool gpu : {false, true}) {
             VideoPipeline pipeline;
             VideoPipeline::Config config;
@@ -252,7 +254,7 @@ TEST(Encode, GameFrameReadBackOrOnTheGpu) {
             double cpuPerFrame = (CpuSeconds() - cpuStart) / (kFrames + kWarmupFrames);
             std::string note =
                 FormatSeconds(cpuPerFrame) + " CPU/frame, " + Narrow(pipeline.EncoderName());
-            Print(std::string(CodecName(codec)) + (gpu ? " kept on the GPU" : " read back"), s,
+            Print(BundledVideoCodecs::NameOf(codec) + (gpu ? " kept on the GPU" : " read back"), s,
                   note);
         }
     }

@@ -54,6 +54,10 @@ std::vector<std::wstring> PickFiles(HWND owner, PickKind kind) {
             {L"All files", L"*.*"}};
         dialog->SetFileTypes(ARRAYSIZE(filters), filters);
         dialog->SetTitle(L"Choose cover art");
+    } else if (kind == PickKind::Plugin) {
+        COMDLG_FILTERSPEC filters[] = {{L"Gazeora plugins", L"*.dll"}};
+        dialog->SetFileTypes(ARRAYSIZE(filters), filters);
+        dialog->SetTitle(L"Install a plugin");
     } else {
         options |= FOS_PICKFOLDERS;
         dialog->SetTitle(L"Choose the folder to start the game in");

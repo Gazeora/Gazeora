@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/host/encode/bundled_video_codecs.h"
+
 #include "gazeora/host/stream/rtp_video.h"
 
 namespace {
@@ -316,7 +318,7 @@ int main(int argc, char** argv) {
     } else {
         printf("playing %s for %d s (RTP/UDP on port %u)\n", url.c_str(), seconds, rtpPort);
     }
-    printf("codec %s\n", gazeora::CodecName(codec));
+    printf("codec %s\n", gazeora::BundledVideoCodecs::NameOf(codec).c_str());
     if (dropPercent > 0) printf("dropping %.1f%% of arriving packets\n", dropPercent);
     printf("\n");
     printf("  time     fps    Mbit/s   loss   damaged   keys   latency avg/max   gap max\n");
@@ -331,7 +333,7 @@ int main(int argc, char** argv) {
     uint32_t packetsTotal = 0, lostTotal = 0;
     uint32_t sourceSsrc = 0, receiverSsrc = GetTickCount() * 2654435761u;
     // The frame being assembled: everything with one RTP timestamp, up to the marker bit.
-    gazeora::RtpVideoDepacketizer depacketizer(codec);
+    gazeora::RtpVideoDepacketizer depacketizer(gazeora::BundledVideoCodecs::FormatOf(codec).Rtp());
     std::string frame;
     bool assembling = false, intact = false;
     uint32_t frameTimestamp = 0;
@@ -468,7 +470,7 @@ int main(int argc, char** argv) {
         gazeora::SplitAnnexB(frame, nalUnits);
         bool keyFrame =
             std::any_of(nalUnits.begin(), nalUnits.end(), [codec](const std::string& nal) {
-                return gazeora::RtpPayloadFormat::For(codec).IsKeyFrame(nal);
+                return gazeora::BundledVideoCodecs::FormatOf(codec).Rtp().IsKeyFrame(nal);
             });
         keyFramesTotal += keyFrame, interval.keyFrames += keyFrame;
         if (!intact) {

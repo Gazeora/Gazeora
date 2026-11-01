@@ -12,7 +12,6 @@
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/library/platform/version_info_name_resolver.h"
 #include "gazeora/library/repositories/json_game_repository.h"
-#include "gazeora/library/services/launch_spec_factory.h"
 
 namespace gazeora {
 namespace {
@@ -22,15 +21,6 @@ constexpr int64_t kNow = 1750000000;
 class FixedClock final : public IClock {
 public:
     int64_t NowUnixSeconds() const override { return kNow; }
-};
-
-class FakeSteam final : public ISteamAppIdFinder {
-public:
-    std::wstring AppIdFor(const std::wstring&) const override {
-        ++calls;
-        return L"440";
-    }
-    mutable int calls = 0;
 };
 
 std::wstring SystemExe(const wchar_t* name) {
@@ -94,7 +84,8 @@ TEST_F(GameLibraryTest, SaveAndLoadRoundTrip) {
     game.workingDir = L"C:\\Games\\Racer";
     game.coverPath = L"C:\\Art\\racer.png";
     game.captureOnLaunch = true;
-    game.launchVia = LaunchVia::Steam;
+    game.launchVia = LaunchVia::Store;
+    game.storeId = "steam";
     game.processName = L"RacerGame.exe";
     uint32_t id = lib.Add(game);
     lib.Find(id)->lastPlayed = 1700000000;
@@ -113,7 +104,8 @@ TEST_F(GameLibraryTest, SaveAndLoadRoundTrip) {
     EXPECT_EQ(g.workingDir, game.workingDir);
     EXPECT_EQ(g.coverPath, game.coverPath);
     EXPECT_TRUE(g.captureOnLaunch);
-    EXPECT_EQ(g.launchVia, LaunchVia::Steam);
+    EXPECT_EQ(g.launchVia, LaunchVia::Store);
+    EXPECT_EQ(g.storeId, "steam");
     EXPECT_EQ(g.processName, L"RacerGame.exe");
     EXPECT_EQ(g.addedAt, kNow);
     EXPECT_EQ(g.lastPlayed, 1700000000);
@@ -240,27 +232,26 @@ TEST_F(GameLibraryTest, OlderFilesLoadWithDefaultLaunchSettings) {
     EXPECT_EQ(lib.Games()[0].processName, L"");
 }
 
-TEST(LaunchSpecFactoryTest, DirectGamesSkipSteam) {
-    FakeSteam steam;
-    Game game;
-    game.exePath = L"C:\\Games\\a.exe";
-    game.arguments = L"-x";
-    game.processName = L"b.exe";
-    game.launchVia = LaunchVia::Direct;
-    LaunchSpec spec = LaunchSpecFactory(steam).Create(game);
-    EXPECT_EQ(spec.exePath, game.exePath);
-    EXPECT_EQ(spec.arguments, L"-x");
-    EXPECT_EQ(spec.GameProcessName(), L"b.exe");
-    EXPECT_TRUE(spec.steamAppId.empty());
-    EXPECT_EQ(steam.calls, 0);
-}
-
-TEST(LaunchSpecFactoryTest, AutoGamesAskSteam) {
-    FakeSteam steam;
-    Game game;
-    game.exePath = L"C:\\Games\\a.exe";
-    EXPECT_EQ(LaunchSpecFactory(steam).Create(game).steamAppId, L"440");
-    EXPECT_EQ(steam.calls, 1);
+TEST_F(GameLibraryTest, LaunchViaNamesReadAsModesOrStores) {
+    WriteFile(R"({"version": 1, "games": [
+        {"id": 1, "name": "A", "exePath": "C:\\a.exe", "launchVia": "direct"},
+        {"id": 2, "name": "B", "exePath": "C:\\b.exe", "launchVia": "steam"},
+        {"id": 3, "name": "C", "exePath": "C:\\c.exe", "launchVia": "somestore"}]})");
+    LibraryOnDisk disk(path);
+    std::wstring error;
+    ASSERT_TRUE(disk.library.Load(error)) << error;
+    const auto& games = disk.library.Games();
+    ASSERT_EQ(games.size(), 3u);
+    EXPECT_EQ(games[0].launchVia, LaunchVia::Direct);
+    EXPECT_EQ(games[1].launchVia, LaunchVia::Store);
+    EXPECT_EQ(games[1].storeId, "steam");
+    // A store this build doesn't have is kept, so saving doesn't lose it.
+    EXPECT_EQ(games[2].launchVia, LaunchVia::Store);
+    EXPECT_EQ(games[2].storeId, "somestore");
+    ASSERT_TRUE(disk.library.Save(error)) << error;
+    LibraryOnDisk other(path);
+    ASSERT_TRUE(other.library.Load(error)) << error;
+    EXPECT_EQ(other.library.Games()[2].storeId, "somestore");
 }
 
 TEST(Utf8, RoundTrip) {

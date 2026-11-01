@@ -16,8 +16,8 @@
 #include <string>
 
 #include "gazeora/host/capture/vr_layout.h"
-#include "gazeora/host/encode/video_codec.h"
 #include "gazeora/host/stream/frame_source.h"
+#include "gazeora/host/stream/video_codec_format.h"
 
 namespace gazeora {
 
@@ -28,9 +28,6 @@ constexpr char kViewInfoId[] = "GazeoraViewInfo1";  // 16 bytes, no terminator s
 std::string ViewInfoText(const VrLayout& vr, bool pair, FrameSource source);
 
 // The SEI NAL unit, without a start code, carrying `text` for `codec`.
-std::string ViewInfoNal(VideoCodec codec, const std::string& text);
-
-// Whether `nal` (without a start code) is a picture's coded slice, which SEI must come before.
-bool IsPictureNal(VideoCodec codec, const std::string& nal);
+std::string ViewInfoNal(const VideoCodecFormat& format, const std::string& text);
 
 }  // namespace gazeora

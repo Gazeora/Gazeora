@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include "gazeora/host/launch/injector.h"
+#include "gazeora/host/launch/steam_game_store.h"
 
 #include <cstdio>
 #include <cstring>
@@ -146,18 +147,18 @@ TEST_F(SteamLibraryTest, FindsAppIdFromManifestInstallDir) {
     WriteManifest("100", "Other Game");
     WriteManifest("2208920", "Assassin's Creed Valhalla");
     std::wstring exe = steamapps + L"\\common\\Assassin's Creed Valhalla\\bin\\ACValhalla.exe";
-    EXPECT_EQ(FindSteamAppId(exe), L"2208920");
+    EXPECT_EQ(SteamGameStore().AppIdFor(exe), L"2208920");
 }
 
 TEST_F(SteamLibraryTest, InstallDirMatchIsCaseInsensitive) {
     WriteManifest("42", "My Game");
-    EXPECT_EQ(FindSteamAppId(steamapps + L"\\common\\MY GAME\\game.exe"), L"42");
+    EXPECT_EQ(SteamGameStore().AppIdFor(steamapps + L"\\common\\MY GAME\\game.exe"), L"42");
 }
 
 TEST_F(SteamLibraryTest, NoAppIdOutsideSteamOrWithoutManifest) {
     WriteManifest("42", "My Game");
-    EXPECT_EQ(FindSteamAppId(steamapps + L"\\common\\Unknown Game\\game.exe"), L"");
-    EXPECT_EQ(FindSteamAppId(L"C:\\Games\\My Game\\game.exe"), L"");
+    EXPECT_EQ(SteamGameStore().AppIdFor(steamapps + L"\\common\\Unknown Game\\game.exe"), L"");
+    EXPECT_EQ(SteamGameStore().AppIdFor(L"C:\\Games\\My Game\\game.exe"), L"");
 }
 
 TEST(Launcher, GameProcessNameDefaultsToExeName) {

@@ -22,6 +22,7 @@ constexpr size_t kMaxRequestBytes = 8192;
 constexpr uint64_t kRequestTimeoutMs = 10000;
 // Connections open at once, each with its thread; more are closed as they come.
 constexpr size_t kMaxConnections = 16;
+constexpr char kStreamPath[] = "/stream.ts";
 
 std::string Response(const char* status, const char* type, const std::string& body) {
     return std::string("HTTP/1.1 ") + status + "\r\nServer: Gazeora\r\nContent-Type: " + type +
@@ -45,6 +46,13 @@ std::string UserAgent(const std::string& request) {
 }
 
 }  // namespace
+
+StreamProtocolInfo HttpTsOutput::Info() {
+    return {StreamProtocol::Http, "HTTP",
+            "HTTP: a live MPEG-TS stream for the Gazeora app, VLC and ffplay. Reliable: nothing "
+            "is lost, and a slow connection skips frames instead.",
+            kStreamPath, true};
+}
 
 bool HttpTsOutput::Start(in_addr address, uint16_t port, std::wstring& error) {
     m_listen.Reset(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
@@ -190,7 +198,7 @@ bool HttpTsOutput::Answer(RtspConnection& connection, const std::string& request
         connection.Send(Response("405 Method Not Allowed", "text/plain", "GET only\n"));
         return false;
     }
-    if (path != "/" && path != "/stream.ts") {
+    if (path != "/" && path != kStreamPath) {
         connection.Send(Response("404 Not Found", "text/plain", "The stream is at /stream.ts\n"));
         return false;
     }
@@ -273,11 +281,11 @@ void HttpTsOutput::Serve(RtspConnection& connection) {
     connection.done = true;
 }
 
-void HttpTsOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+void HttpTsOutput::Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
                         uint64_t now) {
     m_ts.clear();
     // Muxed even with no one watching, so the continuity counters run on.
-    m_muxer.Mux(frame.codec, frame.annexB, frame.timestamp, frame.keyFrame, m_ts);
+    m_muxer.Mux(frame.format, frame.annexB, frame.timestamp, frame.keyFrame, m_ts);
     std::lock_guard<std::mutex> lock(m_playersMutex);
     for (Player& player : m_players) {
         if (!player.streaming) {
@@ -299,8 +307,8 @@ void HttpTsOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateControl
         }
         if (now - player.countedSinceMs >= 1000) {
             uint32_t frames = player.framesSent + player.framesSkipped;
-            float loss = frames ? float(player.framesSkipped) / float(frames) : 0.0f;
-            bitrate.Report(uint64_t(uintptr_t(&connection)), loss, now);
+            float skipped = frames ? float(player.framesSkipped) / float(frames) : 0.0f;
+            loss.Report(uint64_t(uintptr_t(&connection)), skipped, now);
             if (player.framesSkipped > 0) {
                 m_log.Write("%s skipped %u of %u frames: the connection can't keep up",
                             connection.Peer().c_str(), player.framesSkipped, frames);

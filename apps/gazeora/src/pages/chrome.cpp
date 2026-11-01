@@ -37,6 +37,7 @@ const App::NavItem App::kNavItems[] = {
     {ICON_HOME, "Home", Page::Home},
     {ICON_LIBRARY, "Library", Page::Library},
     {ICON_HAND, "Controls", Page::Controls},
+    {ICON_PLUGIN, "Plugins", Page::Plugins},
     {ICON_SETTINGS, "Settings", Page::Settings},
 };
 

@@ -22,7 +22,8 @@ public:
 
     // False if the payload is short or its state unknown.
     static bool Read(const uint8_t* payload, size_t size, CameraReport& out);
-    // A whole message, header and payload, as the app sends it (for tests).
+    // A whole message, header and payload, as the app sends it (for tests, and for bundled plugins
+    // handing input on).
     static std::string Write(const CameraReport& report);
 };
 

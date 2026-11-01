@@ -7,11 +7,11 @@
 #include <cstdint>
 #include <string>
 
-#include "gazeora/host/encode/video_codec.h"
+#include "gazeora/host/stream/video_codec_format.h"
 
 namespace gazeora {
 
-// Live H.264 or H.265 in an MPEG transport stream (ISO/IEC 13818-1), for the HTTP protocol:
+// Live video in an MPEG transport stream (ISO/IEC 13818-1), for the HTTP protocol:
 // one program with one video stream. Every key frame comes after the PAT and PMT and carries
 // the random access flag, so a player can join on any key frame. Each frame is one PES
 // packet, with an access unit delimiter in front (transport streams require one) and the
@@ -23,11 +23,13 @@ public:
     static constexpr uint16_t kVideoPid = 0x0100;
 
     // Appends the TS packets of one access unit (Annex B) to `out`.
-    void Mux(VideoCodec codec, const std::string& annexB, uint32_t timestamp, bool keyFrame,
-             std::string& out);
+    void Mux(const VideoCodecFormat& format, const std::string& annexB, uint32_t timestamp,
+             bool keyFrame, std::string& out);
 
 private:
-    void WriteTables(VideoCodec codec, std::string& out);
+    void WriteTables(const VideoCodecFormat& format, std::string& out);
+    // Whether `annexB` starts with an access unit delimiter.
+    static bool StartsWithDelimiter(const VideoCodecFormat& format, const std::string& annexB);
     void WriteSection(uint16_t pid, const uint8_t* section, size_t size, std::string& out);
     void WritePes(const std::string& pes, uint64_t pcrBase, bool keyFrame, std::string& out);
 
@@ -36,6 +38,9 @@ private:
     uint32_t m_lastTimestamp = 0;
     uint64_t m_wraps = 0;
     bool m_started = false;
+    // The PMT's version goes up when the stream type does, so a player rereads it.
+    uint8_t m_streamType = 0;
+    uint8_t m_pmtVersion = 0;
     std::string m_pes;  // reused between frames
 };
 

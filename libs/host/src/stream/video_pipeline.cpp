@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <random>
+#include <stdexcept>
 #include <utility>
 
 #include "gazeora/host/encode/color_convert.h"
@@ -12,11 +13,31 @@
 
 namespace gazeora {
 
-VideoPipeline::VideoPipeline(EncoderFactory factory)
+namespace {
+
+// H.264's format in `codecs`, which every stream falls back to.
+const VideoCodecFormat& H264FormatIn(const std::shared_ptr<const VideoCodecCatalog>& codecs) {
+    const VideoCodecInfo* info = codecs ? codecs->Find(VideoCodec::H264) : nullptr;
+    if (!info || !info->format) {
+        throw std::invalid_argument("VideoPipeline: the codecs have no H.264 format");
+    }
+    return *info->format;
+}
+
+}  // namespace
+
+VideoPipeline::VideoPipeline(EncoderFactory factory,
+                             std::shared_ptr<const VideoCodecCatalog> codecs)
     : m_factory(std::move(factory)),
-      m_format(&RtpPayloadFormat::For(VideoCodec::H264)),
-      m_parameterSets(*m_format),
+      m_codecs(std::move(codecs)),
+      m_format(&H264FormatIn(m_codecs)),
+      m_parameterSets(m_format->Rtp()),
       m_seq(uint16_t(std::random_device()())) {}
+
+const VideoCodecFormat* VideoPipeline::FormatOf(const VideoCodec& codec) const {
+    const VideoCodecInfo* info = m_codecs->Find(codec);
+    return info ? info->format.get() : nullptr;
+}
 
 bool VideoPipeline::Prepare(const Config& config, uint32_t width, uint32_t height, bool& reopened,
                             std::wstring& error, ID3D11Device* device) {
@@ -51,6 +72,12 @@ bool VideoPipeline::Prepare(const Config& config, uint32_t width, uint32_t heigh
 
 bool VideoPipeline::Open(const Config& config, uint32_t width, uint32_t height,
                          ID3D11Device* device, std::wstring& error) {
+    const VideoCodecFormat* format = FormatOf(config.codec);
+    if (!format) {
+        error = L"no stream format for the codec " +
+                std::wstring(config.codec.Id().begin(), config.codec.Id().end());
+        return false;
+    }
     VideoEncoder::Settings settings;
     settings.codec = config.codec;
     settings.width = width;
@@ -62,8 +89,8 @@ bool VideoPipeline::Open(const Config& config, uint32_t width, uint32_t height,
     if (!m_encoder->Open(settings, error)) {
         return false;
     }
-    m_format = &RtpPayloadFormat::For(config.codec);
-    m_parameterSets = ParameterSetCache(*m_format);
+    m_format = format;
+    m_parameterSets = ParameterSetCache(format->Rtp());
     return true;
 }
 
@@ -97,30 +124,30 @@ bool VideoPipeline::Encode(const Picture& picture, const FrameSink& sink, bool& 
         // H.265) is what a player can start decoding from.
         bool keyFrame =
             std::any_of(m_nalUnits.begin(), m_nalUnits.end(),
-                        [&](const std::string& nal) { return m_format->IsKeyFrame(nal); });
+                        [&](const std::string& nal) { return m_format->Rtp().IsKeyFrame(nal); });
         fmtpChanged |= m_parameterSets.Update(m_nalUnits);
         // Every key frame carries the parameter sets, for players that join on it.
         if (keyFrame) {
             m_parameterSets.PrependTo(m_nalUnits);
         }
-        // How to show it, just before the picture itself.
-        if (!m_viewInfo.empty()) {
-            auto picture = std::find_if(
-                m_nalUnits.begin(), m_nalUnits.end(),
-                [&](const std::string& nal) { return IsPictureNal(m_config.codec, nal); });
-            m_nalUnits.insert(picture, ViewInfoNal(m_config.codec, m_viewInfo));
+        // How to show it, just before the picture itself, for a codec that can carry it.
+        if (!m_viewInfo.empty() && !m_format->SeiHeader().empty()) {
+            auto picture =
+                std::find_if(m_nalUnits.begin(), m_nalUnits.end(),
+                             [&](const std::string& nal) { return m_format->IsPictureNal(nal); });
+            m_nalUnits.insert(picture, ViewInfoNal(*m_format, m_viewInfo));
         }
         // Back to the 90 kHz clock, rounding up so it lands on the captured value.
         uint32_t timestamp = uint32_t((uint64_t(frame.time) * 9 + 999) / 1000);
-        m_format->Packetize(m_nalUnits, timestamp, m_config.ssrc, m_config.maxPacketSize, m_seq,
-                            m_packets);
+        m_format->Rtp().Packetize(m_nalUnits, timestamp, m_config.ssrc, m_config.maxPacketSize,
+                                  m_seq, m_packets);
         m_annexB.clear();
         for (const std::string& nal : m_nalUnits) {
             m_annexB.append("\0\0\0\1", 4);
             m_annexB += nal;
         }
-        sink(EncodedFrame{m_packets, m_annexB, timestamp, keyFrame, m_config.codec, size.width,
-                          size.height, m_config.bitrate, m_config.fps});
+        sink(EncodedFrame{m_packets, m_annexB, timestamp, keyFrame, m_config.codec, *m_format,
+                          size.width, size.height, m_config.bitrate, m_config.fps});
     }
     return true;
 }

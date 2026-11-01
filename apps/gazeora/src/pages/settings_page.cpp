@@ -41,30 +41,6 @@ namespace {
 // Extra space between groups of controls in a card, at 100% scaling.
 constexpr float kGroupGap = 4.0f;
 
-// What each protocol is good for, in the protocol choice's help.
-const char* ProtocolHelp(StreamProtocol protocol) {
-    switch (protocol) {
-        case StreamProtocol::RtspTcp:
-            return "RTSP over TCP: works with the Gazeora app, VLC, ffplay and OBS. Reliable: "
-                   "nothing is lost, and a slow connection skips frames instead. Players set "
-                   "to UDP can't connect.";
-        case StreamProtocol::RtspUdp:
-            return "RTSP over UDP: works with VLC, ffplay and OBS. The lowest delay on a good "
-                   "network, but a lost packet briefly smears the picture. Doesn't work with "
-                   "Android emulators.";
-        case StreamProtocol::Udp:
-            return "UDP: for the Gazeora app. Frames go straight to the phone with the least "
-                   "overhead, and a lost packet drops its frame.";
-        case StreamProtocol::Http:
-            return "HTTP: a live MPEG-TS stream for the Gazeora app, VLC and ffplay. Reliable: "
-                   "nothing is lost, and a slow connection skips frames instead.";
-        case StreamProtocol::Usb:
-            return "USB: for the Gazeora app on a phone plugged into this PC. No Wi-Fi "
-                   "needed. Turn on USB debugging on the phone, or install the USB driver below.";
-    }
-    return "";
-}
-
 }  // namespace
 
 void App::DrawSettings() {
@@ -117,10 +93,11 @@ void App::DrawSettings() {
     BeginCard("##stream", m_scale, width);
     CardTitle(m_fonts.heading, ICON_CAMERA "  Frame stream");
     const StreamProtocol protocol = m_stream.Protocol();
-    std::string help = std::string(ProtocolHelp(protocol)) +
+    const StreamProtocolInfo* protocolInfo = m_plugins.Protocols()->Find(protocol);
+    std::string help = (protocolInfo ? protocolInfo->help : std::string()) +
                        "\n\nThe stream is always on: while no game runs, it shows this window. "
                        "The Gazeora app finds this PC by itself on the same network.";
-    if (protocol != StreamProtocol::Udp && protocol != StreamProtocol::Usb) {
+    if (protocolInfo && protocolInfo->openedByPlayers) {
         // VLC buffers a second of any network stream by default; that's most of the delay.
         help +=
             "\n\nVLC waits 1 second before playing by default. To cut the delay, lower its "
@@ -166,8 +143,8 @@ void App::DrawSettings() {
         }
         ImGui::PushStyleColor(ImGuiCol_Text, kTextDim);
         ImGui::Text("%d %s  \xC2\xB7  %s%s%s", viewers, viewers == 1 ? "viewer" : "viewers",
-                    CodecName(m_stream.Codec()), encoder.empty() ? "" : "  \xC2\xB7  ",
-                    U8(encoder).c_str());
+                    m_plugins.Codecs()->NameOf(m_stream.Codec()).c_str(),
+                    encoder.empty() ? "" : "  \xC2\xB7  ", U8(encoder).c_str());
         ImGui::PopStyleColor();
         std::string health = StreamHealth(m_stream);
         if (!health.empty()) {
@@ -216,12 +193,13 @@ void App::DrawSettings() {
 }
 
 void App::DrawProtocolChoice() {
+    const StreamProtocolCatalog& protocols = *m_plugins.Protocols();
     StreamProtocol current = m_stream.Protocol();
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##protocol", ProtocolName(current))) {
-        for (StreamProtocol protocol : kAllStreamProtocols) {
-            if (ImGui::Selectable(ProtocolName(protocol), protocol == current) &&
-                protocol != current) {
+    if (ImGui::BeginCombo("##protocol", protocols.NameOf(current).c_str())) {
+        for (const StreamProtocolInfo& info : protocols.All()) {
+            const StreamProtocol protocol = info.id;
+            if (ImGui::Selectable(info.name.c_str(), protocol == current) && protocol != current) {
                 // After the frame: restarting joins the stream's threads.
                 m_deferred.push_back([this, protocol] {
                     bool watched = m_stream.Viewers() > 0;
@@ -230,7 +208,7 @@ void App::DrawProtocolChoice() {
                     m_settings.SaveProtocol(protocol);
                     StartStream();
                     if (m_stream.Running()) {
-                        ShowToast(std::string("Now streaming over ") + ProtocolName(protocol) +
+                        ShowToast("Now streaming over " + m_plugins.Protocols()->NameOf(protocol) +
                                   (watched ? ". Viewers need to reconnect." : ""));
                     }
                 });
@@ -316,29 +294,24 @@ void App::DrawUsbDriverButton() {
 }
 
 void App::DrawCodecChoice() {
-    struct Choice {
-        VideoCodec codec;
-        const char* name;
-    };
-    static const Choice kChoices[] = {
-        {VideoCodec::H264, "H.264 - works on every device"},
-        {VideoCodec::H265, "H.265 - sharper on weak Wi-Fi, newer devices only"},
-    };
+    const VideoCodecCatalog& codecs = *m_plugins.Codecs();
     VideoCodec current = m_stream.Codec();
+    const VideoCodecInfo* currentInfo = codecs.Find(current);
     FieldLabel(m_fonts.caption, "Video codec");
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::BeginCombo("##codec", kChoices[current == VideoCodec::H265].name)) {
-        for (const Choice& choice : kChoices) {
-            bool available = m_stream.CodecAvailable(choice.codec);
-            std::string label = choice.name;
+    if (ImGui::BeginCombo("##codec",
+                          currentInfo ? currentInfo->choice.c_str() : current.Id().c_str())) {
+        for (const VideoCodecInfo& choice : codecs.All()) {
+            bool available = m_stream.CodecAvailable(choice.id);
+            std::string label = choice.choice;
             if (!available) label += " (not supported on this PC)";
-            if (ImGui::Selectable(label.c_str(), choice.codec == current,
+            if (ImGui::Selectable(label.c_str(), choice.id == current,
                                   available ? 0 : ImGuiSelectableFlags_Disabled) &&
-                choice.codec != current) {
+                choice.id != current) {
                 bool watched = m_stream.Viewers() > 0;
-                m_stream.SetCodec(choice.codec);
-                m_settings.SaveCodec(choice.codec);
-                ShowToast(std::string("Now streaming ") + CodecName(choice.codec) +
+                m_stream.SetCodec(choice.id);
+                m_settings.SaveCodec(choice.id);
+                ShowToast("Now streaming " + choice.name +
                           (watched ? ". Viewers need to reconnect." : ""));
             }
         }

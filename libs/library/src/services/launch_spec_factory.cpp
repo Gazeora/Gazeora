@@ -11,10 +11,23 @@ LaunchSpec LaunchSpecFactory::Create(const Game& game) const {
     spec.arguments = game.arguments;
     spec.workingDir = game.workingDir;
     spec.processName = game.processName;
-    if (game.launchVia != LaunchVia::Direct) {
-        spec.steamAppId = m_steam.AppIdFor(game.exePath);
-    }
+    ResolveStore(game, spec);
     return spec;
+}
+
+void LaunchSpecFactory::ResolveStore(const Game& game, LaunchSpec& spec) const {
+    std::shared_ptr<const GameStore> store;
+    std::wstring appId;
+    if (game.launchVia == LaunchVia::Auto) {
+        store = m_stores.OwnerOf(game.exePath, appId);
+    } else if (game.launchVia == LaunchVia::Store) {
+        store = m_stores.Find(game.storeId);
+        appId = store ? store->AppIdFor(game.exePath) : std::wstring();
+    }
+    if (store && !appId.empty()) {
+        spec.store = std::move(store);
+        spec.storeAppId = std::move(appId);
+    }
 }
 
 }  // namespace gazeora

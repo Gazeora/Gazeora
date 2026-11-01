@@ -206,12 +206,16 @@ replies to the sender with one line of JSON:
 | `service` | Always `gazeora` |
 | `version` | Discovery format version, currently `1` |
 | `name` | The PC's name |
-| `protocol` | The current protocol ID: `rtsp-tcp`, `rtsp-udp`, `udp`, `http` or `usb` |
+| `protocol` | The current protocol ID. This version of Gazeora sends `rtsp-tcp`, `rtsp-udp`, `udp`, `http` or `usb` |
 | `port` | The stream port, `0` for USB |
 | `path` | The stream path, such as `/` for RTSP or `/stream.ts` for HTTP |
-| `codec` | `h264` or `h265` |
+| `codec` | The codec ID. This version of Gazeora sends `h264` or `h265` |
 
 The address to connect to is the address the reply came from.
+
+Protocol and codec IDs are an open set: a later version of Gazeora may send others. IDs are
+lowercase ASCII. An app that doesn't know a reply's protocol should leave that PC out of its list,
+as the Gazeora Android app does, rather than fail.
 
 ## Security
 

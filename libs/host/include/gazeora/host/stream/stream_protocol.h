@@ -7,26 +7,34 @@
 
 namespace gazeora {
 
-// How frames leave the PC. One at a time: the stream server runs the chosen one only.
-enum class StreamProtocol {
-    RtspTcp,  // RTSP, RTP interleaved in the RTSP connection
-    RtspUdp,  // RTSP, RTP over UDP
-    Udp,      // encoded frames in UDP datagrams, no RTSP or RTP (frame_packet.h)
-    Http,     // a live MPEG-TS stream over HTTP
-    Usb,      // encoded frames to an Android phone in USB accessory mode (frame_packet.h)
+// How frames leave the PC, by its id: the one in stream.ini and in the Android app's discovery
+// reply. One at a time: the stream server runs the chosen one only. Its name and help are in a
+// StreamProtocolCatalog (stream_protocol_catalog.h).
+class StreamProtocol final {
+public:
+    explicit StreamProtocol(std::string id) : m_id(std::move(id)) {}
+
+    static const StreamProtocol RtspTcp;  // RTSP, RTP interleaved in the RTSP connection
+    static const StreamProtocol RtspUdp;  // RTSP, RTP over UDP
+    static const StreamProtocol Udp;      // encoded frames in UDP datagrams (frame_packet.h)
+    static const StreamProtocol Http;     // a live MPEG-TS stream over HTTP
+    static const StreamProtocol Usb;      // to an Android phone in USB accessory mode
+
+    const std::string& Id() const { return m_id; }
+    // Whether the server handles it itself, rather than through a FrameOutput.
+    bool IsRtsp() const { return *this == RtspTcp || *this == RtspUdp; }
+    bool operator==(const StreamProtocol& other) const { return m_id == other.m_id; }
+    bool operator!=(const StreamProtocol& other) const { return m_id != other.m_id; }
+    bool operator<(const StreamProtocol& other) const { return m_id < other.m_id; }
+
+private:
+    std::string m_id;
 };
 
-inline constexpr StreamProtocol kAllStreamProtocols[] = {
-    StreamProtocol::RtspTcp, StreamProtocol::RtspUdp, StreamProtocol::Udp,
-    StreamProtocol::Http,    StreamProtocol::Usb,
-};
-
-// The protocol's id in stream.ini and in discovery replies: "rtsp-tcp", "rtsp-udp", "udp",
-// "http", "usb".
-const char* ProtocolId(StreamProtocol protocol);
-// For people: "RTSP over TCP".
-const char* ProtocolName(StreamProtocol protocol);
-// False, leaving `protocol` alone, for an unknown id.
-bool ParseProtocolId(const std::string& id, StreamProtocol& protocol);
+inline const StreamProtocol StreamProtocol::RtspTcp{"rtsp-tcp"};
+inline const StreamProtocol StreamProtocol::RtspUdp{"rtsp-udp"};
+inline const StreamProtocol StreamProtocol::Udp{"udp"};
+inline const StreamProtocol StreamProtocol::Http{"http"};
+inline const StreamProtocol StreamProtocol::Usb{"usb"};
 
 }  // namespace gazeora

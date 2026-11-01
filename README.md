@@ -76,6 +76,7 @@ To build Gazeora, see [Development](docs/development.md#building). In brief:
 | [Troubleshooting](docs/troubleshooting.md) | Common problems and how to diagnose them |
 | [Installer](docs/installer.md) | MSI features, silent installs, uninstalling |
 | [Tools](docs/tools.md) | The stream probe and the test app |
+| [Plugins](docs/plugins.md) | Installing, updating and removing plugins from the Plugins page, writing one, and publishing it to the plugin list |
 | [Stream format](docs/stream-format.md) | Wire formats of every protocol (canonical for the Android app) |
 | [Architecture](docs/architecture.md) | Components, the capture-to-stream pipeline, code layout |
 | [Development](docs/development.md) | Building, testing, benchmarks, formatting, releasing |
@@ -112,6 +113,10 @@ Copyright (C) 2026 Nithin Aashik. Gazeora is free software under the
 "Gazeora by Nithin Aashik" in their About screen, are marked as modified, and do not use the
 Gazeora name or logo as their own (see [TRADEMARKS.md](TRADEMARKS.md)). Third-party components
 are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Plugins are an exception: NOTICE also lets a plugin DLL that uses only the
+[plugin interface](libs/plugin_api/include/gazeora/plugin_api/gazeora_plugin.h) (MIT licensed)
+have any license, closed-source included. See [Plugins](docs/plugins.md).
 
 Gazeora is also available under a commercial license. See
 [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cwchar>
+#include <cwctype>
 #include <string>
 
 #include "gazeora/common/text/utf8.h"
@@ -71,16 +72,11 @@ void StreamSettings::SaveVrLayout(const VrLayout& vr) const {
 }
 
 VideoCodec StreamSettings::LoadCodec() const {
-    wchar_t text[16];
-    GetPrivateProfileStringW(L"stream", L"codec", L"h264", text, 16, m_path.c_str());
-    return _wcsicmp(text, L"h265") == 0 ? VideoCodec::H265 : VideoCodec::H264;
+    std::string id = LoadId(L"codec");
+    return id.empty() ? VideoCodec::H264 : VideoCodec(std::move(id));
 }
 
-void StreamSettings::SaveCodec(VideoCodec codec) const {
-    EnsureFolder();
-    WritePrivateProfileStringW(L"stream", L"codec", codec == VideoCodec::H265 ? L"h265" : L"h264",
-                               m_path.c_str());
-}
+void StreamSettings::SaveCodec(const VideoCodec& codec) const { SaveId(L"codec", codec.Id()); }
 
 uint32_t StreamSettings::LoadMaxBitrate() const {
     UINT mbits = GetPrivateProfileIntW(L"stream", L"max_bitrate_mbps", 0, m_path.c_str());
@@ -105,12 +101,23 @@ void StreamSettings::SaveFrameRate(uint32_t fps) const {
 }
 
 StreamProtocol StreamSettings::LoadProtocol() const {
-    wchar_t text[32];
-    GetPrivateProfileStringW(L"stream", L"protocol", L"", text, 32, m_path.c_str());
-    std::wstring wide(text);
-    StreamProtocol protocol = StreamProtocol::RtspTcp;
-    ParseProtocolId(Utf8::FromWide(wide), protocol);  // ids are ASCII
-    return protocol;
+    std::string id = LoadId(L"protocol");
+    return id.empty() ? StreamProtocol::RtspTcp : StreamProtocol(std::move(id));
+}
+
+std::string StreamSettings::LoadId(const wchar_t* key) const {
+    wchar_t text[kMaxIdChars];
+    GetPrivateProfileStringW(L"stream", key, L"", text, kMaxIdChars, m_path.c_str());
+    std::wstring id(text);
+    for (wchar_t& c : id) {
+        c = wchar_t(towlower(c));
+    }
+    return Utf8::FromWide(id);
+}
+
+void StreamSettings::SaveId(const wchar_t* key, const std::string& id) const {
+    EnsureFolder();
+    WritePrivateProfileStringW(L"stream", key, Utf8::ToWide(id).c_str(), m_path.c_str());
 }
 
 namespace {
@@ -175,11 +182,8 @@ void StreamSettings::SaveOverlay(const OverlaySettings& overlay) const {
     WritePrivateProfileStringW(L"overlay", L"text", overlay.text.c_str(), file);
 }
 
-void StreamSettings::SaveProtocol(StreamProtocol protocol) const {
-    EnsureFolder();
-    std::string id = ProtocolId(protocol);
-    WritePrivateProfileStringW(L"stream", L"protocol", std::wstring(id.begin(), id.end()).c_str(),
-                               m_path.c_str());
+void StreamSettings::SaveProtocol(const StreamProtocol& protocol) const {
+    SaveId(L"protocol", protocol.Id());
 }
 
 }  // namespace gazeora::app

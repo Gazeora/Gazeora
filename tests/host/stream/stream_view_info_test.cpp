@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 #include "gazeora/host/stream/stream_view_info.h"
+#include "gazeora/host/encode/bundled_video_codecs.h"
 
 #include <gtest/gtest.h>
 
@@ -45,7 +46,7 @@ TEST(StreamViewInfoTest, MarksGazeorasOwnWindow) {
 
 TEST(StreamViewInfoTest, IsAnUnregisteredUserDataSei) {
     std::string text = "vr=1 pair=0";
-    std::string h264 = ViewInfoNal(VideoCodec::H264, text);
+    std::string h264 = ViewInfoNal(BundledVideoCodecs::FormatOf(VideoCodec::H264), text);
     EXPECT_EQ(h264[0], '\x06');  // SEI
     EXPECT_EQ(h264[1], '\x05');  // user data unregistered
     EXPECT_EQ(uint8_t(h264[2]), 16 + text.size());
@@ -53,27 +54,31 @@ TEST(StreamViewInfoTest, IsAnUnregisteredUserDataSei) {
     EXPECT_EQ(h264.substr(19, text.size()), text);
     EXPECT_EQ(h264.back(), '\x80');
 
-    std::string h265 = ViewInfoNal(VideoCodec::H265, text);
+    std::string h265 = ViewInfoNal(BundledVideoCodecs::FormatOf(VideoCodec::H265), text);
     EXPECT_EQ(h265.substr(0, 2), std::string("\x4E\x01", 2));  // prefix SEI, layer 0, tid 0
     EXPECT_EQ(h265.substr(2), h264.substr(1));
 }
 
 TEST(StreamViewInfoTest, LongTextsTakeSizeBytesOf255) {
     std::string text(300, 'x');
-    std::string nal = ViewInfoNal(VideoCodec::H264, text);
+    std::string nal = ViewInfoNal(BundledVideoCodecs::FormatOf(VideoCodec::H264), text);
     EXPECT_EQ(uint8_t(nal[2]), 0xFF);
     EXPECT_EQ(uint8_t(nal[3]), 16 + 300 - 255);
 }
 
 TEST(StreamViewInfoTest, TellsPicturesFromTheRest) {
-    EXPECT_TRUE(IsPictureNal(VideoCodec::H264, "\x65"));                       // IDR
-    EXPECT_TRUE(IsPictureNal(VideoCodec::H264, "\x41"));                       // P slice
-    EXPECT_FALSE(IsPictureNal(VideoCodec::H264, "\x67"));                      // SPS
-    EXPECT_FALSE(IsPictureNal(VideoCodec::H264, "\x06"));                      // SEI
-    EXPECT_TRUE(IsPictureNal(VideoCodec::H265, std::string("\x26\x01", 2)));   // IDR_W_RADL
-    EXPECT_TRUE(IsPictureNal(VideoCodec::H265, std::string("\x02\x01", 2)));   // TRAIL_R
-    EXPECT_FALSE(IsPictureNal(VideoCodec::H265, std::string("\x40\x01", 2)));  // VPS
-    EXPECT_FALSE(IsPictureNal(VideoCodec::H265, std::string("\x4E\x01", 2)));  // SEI
+    EXPECT_TRUE(BundledVideoCodecs::FormatOf(VideoCodec::H264).IsPictureNal("\x65"));   // IDR
+    EXPECT_TRUE(BundledVideoCodecs::FormatOf(VideoCodec::H264).IsPictureNal("\x41"));   // P slice
+    EXPECT_FALSE(BundledVideoCodecs::FormatOf(VideoCodec::H264).IsPictureNal("\x67"));  // SPS
+    EXPECT_FALSE(BundledVideoCodecs::FormatOf(VideoCodec::H264).IsPictureNal("\x06"));  // SEI
+    EXPECT_TRUE(BundledVideoCodecs::FormatOf(VideoCodec::H265)
+                    .IsPictureNal(std::string("\x26\x01", 2)));  // IDR_W_RADL
+    EXPECT_TRUE(BundledVideoCodecs::FormatOf(VideoCodec::H265)
+                    .IsPictureNal(std::string("\x02\x01", 2)));  // TRAIL_R
+    EXPECT_FALSE(BundledVideoCodecs::FormatOf(VideoCodec::H265)
+                     .IsPictureNal(std::string("\x40\x01", 2)));  // VPS
+    EXPECT_FALSE(BundledVideoCodecs::FormatOf(VideoCodec::H265)
+                     .IsPictureNal(std::string("\x4E\x01", 2)));  // SEI
 }
 
 }  // namespace

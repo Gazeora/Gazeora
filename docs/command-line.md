@@ -6,6 +6,7 @@ PATH** feature lets you run it from any new command prompt.
 
 ```text
 GazeoraCLI list
+GazeoraCLI plugins
 GazeoraCLI add <game.exe | shortcut.lnk> [--name N] [--args A] [--workdir D] [--capture]
 GazeoraCLI remove <id | name>
 GazeoraCLI launch <id | name> [--capture]
@@ -19,6 +20,7 @@ GazeoraCLI help
 | Command | Does |
 |---|---|
 | `list` | Lists the library: ID, name, play time, CLI capture flag, launch method and path |
+| `plugins` | Lists the DLLs in the `plugins` folder, whether each loaded, and what it added. See [Plugins](plugins.md) |
 | `add` | Adds a game. `--name`, `--args` and `--workdir` set its name, launch arguments and working directory. `--capture` sets the game's CLI capture flag |
 | `remove` | Removes a game by ID or name |
 | `launch` | Starts a game from the library. With capture (the game's flag or `--capture`), the hook is injected and the console receives its frames. Without it, the game just starts |

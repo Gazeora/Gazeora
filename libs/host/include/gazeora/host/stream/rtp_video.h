@@ -16,8 +16,7 @@ namespace gazeora {
 // Video over RTP, one class per codec: H.264 (RFC 6184, packetization mode 1) and H.265
 // (RFC 7798). A NAL unit that fits goes in a packet of its own, a larger one is cut into
 // fragmentation units. Everything that differs between the codecs lives behind
-// RtpPayloadFormat, so the stream server never asks which codec it has; supporting another
-// codec means adding one implementation and a case in For().
+// RtpPayloadFormat; a codec's VideoCodecFormat (video_codec_format.h) says which one it uses.
 
 constexpr uint8_t kRtpVideoPayloadType = 96;  // dynamic, declared in the SDP
 
@@ -53,8 +52,9 @@ class RtpPayloadFormat {
 public:
     virtual ~RtpPayloadFormat() = default;
 
-    // The format for `codec`. Stateless and shared: one instance per codec for the program.
-    static const RtpPayloadFormat& For(VideoCodec codec);
+    // The built-in formats. Stateless and shared: one instance each for the program.
+    static const RtpPayloadFormat& H264();
+    static const RtpPayloadFormat& H265();
 
     virtual VideoCodec Codec() const = 0;
     // The SDP encoding name, as in "a=rtpmap:96 H264/90000".
@@ -81,7 +81,6 @@ public:
     virtual bool Depacketize(const uint8_t* payload, size_t size, bool& inFragment,
                              std::string& annexB) const = 0;
 
-protected:
     // The NAL header size (1 or 2 bytes), and the fragmentation unit's headers for `nal`:
     // the payload header that replaces the NAL header, and the fragment header's type bits.
     virtual size_t NalHeaderSize() const = 0;
@@ -95,8 +94,8 @@ void SplitAnnexB(const std::string& annexB, std::vector<std::string>& nalUnits);
 // Receiver side of RtpPayloadFormat: rebuilds NAL units from RTP payloads.
 class RtpVideoDepacketizer {
 public:
-    explicit RtpVideoDepacketizer(VideoCodec codec = VideoCodec::H264)
-        : m_format(&RtpPayloadFormat::For(codec)) {}
+    explicit RtpVideoDepacketizer(const RtpPayloadFormat& format = RtpPayloadFormat::H264())
+        : m_format(&format) {}
 
     // False if the payload is malformed or continues a fragment whose start was lost; the
     // caller should then treat the frame as damaged.

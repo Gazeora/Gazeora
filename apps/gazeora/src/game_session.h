@@ -61,7 +61,8 @@ public:
     bool Capture() const { return m_capture; }
     // The exe the session waits for while WaitingForGame.
     std::wstring GameProcessName() const { return m_spec.GameProcessName(); }
-    bool ThroughSteam() const { return !m_spec.steamAppId.empty(); }
+    // The store it was started through, e.g. "Steam"; empty when it ran the exe.
+    std::wstring StoreName() const { return m_spec.ThroughStore() ? m_spec.store->Name() : L""; }
     Stats Snapshot() const;
     bool Finished() const;
 

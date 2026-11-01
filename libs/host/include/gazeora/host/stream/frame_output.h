@@ -10,12 +10,13 @@
 #include <string>
 #include <vector>
 
-#include "gazeora/host/stream/bitrate_controller.h"
 #include "gazeora/host/stream/camera_status_sink.h"
 #include "gazeora/host/stream/head_pose_sink.h"
+#include "gazeora/host/stream/loss_report_sink.h"
 #include "gazeora/host/stream/pointer_event_sink.h"
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_protocol.h"
+#include "gazeora/host/stream/stream_protocol_info.h"
 #include "gazeora/host/stream/video_pipeline.h"
 
 namespace gazeora {
@@ -27,8 +28,10 @@ struct UsbPhone {
     std::wstring name;        // as Windows calls it
 };
 
-// Where FrameStreamServer hands encoded frames for a protocol other than RTSP: UDP, HTTP or
-// USB. Each output runs its own threads for its players; Send runs on the encode thread.
+// Where FrameStreamServer hands encoded frames for a protocol other than RTSP: UDP, HTTP,
+// USB, or a plugin's. Each output runs its own threads for its players; Send runs on the
+// encode thread. Outputs are made by the factories in a FrameOutputRegistry
+// (frame_output_registry.h).
 class FrameOutput {
 public:
     virtual ~FrameOutput() = default;
@@ -45,8 +48,8 @@ public:
     virtual int AppViewers() const { return Viewers(); }
     // True once after a player joined or lost a frame: the next frame should be a key frame.
     virtual bool TakeKeyFrameRequest() = 0;
-    // Sends one frame to every player. Loss the players see is reported to `bitrate`.
-    virtual void Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+    // Sends one frame to every player. Loss the players see is reported to `loss`.
+    virtual void Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
                       uint64_t now) = 0;
 
     // What a player opens to watch from `host`, e.g. "http://192.168.1.20:8554/stream.ts";
@@ -72,8 +75,5 @@ public:
         return false;
     }
 };
-
-// The output for `protocol`; null for the RTSP ones, which the server handles itself.
-std::unique_ptr<FrameOutput> CreateFrameOutput(StreamProtocol protocol, StreamLog& log);
 
 }  // namespace gazeora

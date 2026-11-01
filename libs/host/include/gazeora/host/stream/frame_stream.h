@@ -12,17 +12,24 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "gazeora/host/capture/vr_layout.h"
+#include "gazeora/host/encode/built_in_video_encoders.h"
+#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/video_codec.h"
+#include "gazeora/host/encode/video_codec_catalog.h"
+#include "gazeora/host/encode/video_encoder_registry.h"
 #include "gazeora/host/stream/bitrate_controller.h"
+#include "gazeora/host/stream/bundled_protocols.h"
 #include "gazeora/host/stream/camera_status_monitor.h"
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_output.h"
+#include "gazeora/host/stream/frame_output_registry.h"
 #include "gazeora/host/stream/frame_source.h"
 #include "gazeora/host/stream/head_pose_gate.h"
 #include "gazeora/host/stream/head_pose_monitor.h"
@@ -33,6 +40,7 @@
 #include "gazeora/host/stream/stream_log.h"
 #include "gazeora/host/stream/stream_overlay.h"
 #include "gazeora/host/stream/stream_protocol.h"
+#include "gazeora/host/stream/stream_protocol_catalog.h"
 #include "gazeora/host/stream/video_pipeline.h"
 
 namespace gazeora {
@@ -48,7 +56,7 @@ struct RtspRequest;
 //    frame, at most a second later. Interleaved in the RTSP connection (RFC 2326 10.12),
 //    nothing is lost, and a player that falls behind skips frames up to the next key frame.
 //    The protocol picks which of the two players may set up; the other is refused.
-//  - UDP, HTTP and USB: a FrameOutput each (frame_output.h).
+//  - UDP, HTTP and USB: a FrameOutput each (frame_output.h), made by the FrameOutputRegistry.
 // Whatever the protocol, the PC answers the Android app's search for it (discovery.h).
 // Frames are pushed from the capture thread and encoded on the server's own thread; frames
 // arriving faster than they can be encoded are dropped, newest wins. They come as BGRA8 in
@@ -66,8 +74,15 @@ public:
     static constexpr uint32_t kMaxWidth = 1920;
     static constexpr uint32_t kMaxHeight = 1080;
 
-    // `encoderFactory` supplies the video encoder; the default is the Media Foundation one.
-    explicit FrameStreamServer(VideoPipeline::EncoderFactory encoderFactory = CreateVideoEncoder);
+    // `encoders` supplies the video encoders, `outputs` the protocols other than RTSP,
+    // `protocols` and `codecs` their names and what the discovery reply says of them. The
+    // defaults are the built-in ones and the bundled plugins' (for tests and tools); Gazeora.exe
+    // passes what its plugins add. Throws std::invalid_argument for a null one.
+    explicit FrameStreamServer(
+        std::shared_ptr<const VideoEncoderRegistry> encoders = BuiltInVideoEncoders::Registry(),
+        std::shared_ptr<const FrameOutputRegistry> outputs = BundledProtocols::Outputs(),
+        std::shared_ptr<const StreamProtocolCatalog> protocols = BundledProtocols::Catalog(),
+        std::shared_ptr<const VideoCodecCatalog> codecs = BundledVideoCodecs::Catalog());
     FrameStreamServer(const FrameStreamServer&) = delete;
     FrameStreamServer& operator=(const FrameStreamServer&) = delete;
     ~FrameStreamServer() override;
@@ -79,8 +94,8 @@ public:
 
     // The protocol the next Start runs; RTSP over TCP unless set. Stop and Start again to
     // switch while running: players watching are disconnected.
-    void SetProtocol(StreamProtocol protocol) { m_protocol = protocol; }
-    StreamProtocol Protocol() const { return m_protocol; }
+    void SetProtocol(const StreamProtocol& protocol);
+    StreamProtocol Protocol() const;
     // Where the discovery responder listens: kDiscoveryPort unless set before Start (0 picks
     // a free port, for tests). Its port while running, 0 if it couldn't start.
     void SetDiscoveryPort(uint16_t port) { m_discoveryPort = port; }
@@ -116,16 +131,17 @@ public:
     // The encoder in use, e.g. "NVIDIA H.264 Encoder MFT"; empty before the first frame.
     std::wstring EncoderName();
 
-    // The codec to stream in. H.265 only takes effect when this PC has an encoder for it
-    // (CodecAvailable); otherwise the stream stays H.264. A change disconnects the players
-    // watching, as they can't switch codecs mid-stream; they have to open the stream again.
-    void SetCodec(VideoCodec codec);
-    VideoCodec Codec() const;                     // the one players get
-    bool CodecAvailable(VideoCodec codec) const;  // known once the server has started
+    // The codec to stream in. One other than H.264 only takes effect when this PC has an
+    // encoder for it (CodecAvailable); otherwise the stream stays H.264. A change disconnects
+    // the players watching, as they can't switch codecs mid-stream; they have to open the
+    // stream again.
+    void SetCodec(const VideoCodec& codec);
+    VideoCodec Codec() const;                            // the one players get
+    bool CodecAvailable(const VideoCodec& codec) const;  // known once the server has started
 
-    // The bitrate at full quality, for H.264, in bits/s (H.265 gets 70% of it, for about the
-    // same picture). The stream steps down from it while players report loss. Applies from the
-    // next frame.
+    // The bitrate at full quality, for H.264, in bits/s (other codecs get their
+    // VideoCodecInfo::bitratePercent of it, for about the same picture). The stream steps down from
+    // it while players report loss. Applies from the next frame.
     static constexpr uint32_t kDefaultMaxBitrate = 20000000;
     void SetMaxBitrate(uint32_t bitrate) { m_maxBitrate = bitrate; }
     uint32_t MaxBitrate() const { return m_maxBitrate; }
@@ -244,16 +260,33 @@ private:
                                float frameRate);
     void SetLastError(const std::wstring& error);
     bool StartRtsp(in_addr address, uint16_t port, std::wstring& error);
+    StreamProtocol RunningProtocol() const;
+    // The SDP encoding name of `codec`, as in "a=rtpmap:96 H264/90000".
+    std::string EncodingNameOf(const VideoCodec& codec) const;
+    // The SDP fmtp parameters for `codec`; with m_statusMutex held.
+    std::string FmtpOf(const VideoCodec& codec) const;
     // Whether a player at `address` is watching, on whichever protocol (FrameOutput::Watching).
     bool Watching(const in_addr& address);
     // The discovery reply (discovery.h).
     std::string Describe();
 
-    VideoPipeline::EncoderFactory m_encoderFactory;
+    // Starts the output for a protocol other than RTSP.
+    bool StartOutput(const StreamProtocol& protocol, in_addr address, uint16_t port,
+                     std::wstring& error);
+
+    const std::shared_ptr<const VideoEncoderRegistry> m_encoders;
+    const std::shared_ptr<const FrameOutputRegistry> m_outputs;
+    const std::shared_ptr<const StreamProtocolCatalog> m_protocols;
+    const std::shared_ptr<const VideoCodecCatalog> m_codecs;
     net::WinsockRuntime m_winsock;
     bool m_lan = false;
-    std::atomic<StreamProtocol> m_protocol{StreamProtocol::RtspTcp};
-    std::atomic<StreamProtocol> m_runningProtocol{StreamProtocol::RtspTcp};  // as started
+    // The protocol and codec chosen, and the codecs this PC can encode besides H.264: read
+    // from any thread.
+    mutable std::mutex m_choiceMutex;
+    StreamProtocol m_protocol = StreamProtocol::RtspTcp;
+    StreamProtocol m_runningProtocol = StreamProtocol::RtspTcp;  // as started
+    VideoCodec m_requestedCodec = VideoCodec::H264;
+    std::set<VideoCodec> m_encodable;  // found at Start
     std::atomic<bool> m_running{false};
     // The protocol's output when it isn't RTSP. Set while stopped only.
     std::unique_ptr<FrameOutput> m_output;
@@ -278,10 +311,8 @@ private:
     // Reports and Update from the encode thread; its readers from any.
     BitrateController m_bitrate;
     std::atomic<bool> m_keyFrameWanted{false};  // a player just started: send one now
-    std::atomic<VideoCodec> m_requestedCodec{VideoCodec::H264};
     std::atomic<uint32_t> m_maxBitrate{kDefaultMaxBitrate};
     std::atomic<uint32_t> m_frameRate{kDefaultFrameRate};
-    std::atomic<bool> m_h265Available{false};
     // Bumped when the codec players get changes; their connections close on seeing it.
     std::atomic<uint32_t> m_codecGeneration{0};
     std::thread m_acceptThread;
@@ -302,7 +333,7 @@ private:
     std::wstring m_lastError;
     std::wstring m_encoderName;
     // SDP fmtp parameters by codec, from the encoder's parameter sets.
-    std::string m_fmtp[2] = {"packetization-mode=1", ""};
+    std::map<VideoCodec, std::string> m_fmtp{{VideoCodec::H264, "packetization-mode=1"}};
     std::condition_variable m_fmtpChanged;  // with m_statusMutex
     // A DESCRIBE came before anything was encoded: encode the idle frame for its parameter
     // sets even with no viewers.

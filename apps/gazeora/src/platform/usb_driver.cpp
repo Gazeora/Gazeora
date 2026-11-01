@@ -26,6 +26,8 @@
 #include <vector>
 
 #include "gazeora/common/text/utf8.h"
+#include "platform/elevated_run.h"
+#include "platform/win32_error_text.h"
 
 namespace gazeora::app {
 
@@ -40,10 +42,6 @@ constexpr wchar_t kProvider[] = L"Microsoft Enhanced RSA and AES Cryptographic P
 // each installed one (as oemNN.inf).
 constexpr char kPackageMarker[] = "; Gazeora USB driver package";
 constexpr char kPhoneEntry[] = " = PhoneInstall, ";
-// What the elevated run writes back of what went wrong, at most: the pipe it goes through holds
-// more, so the write never waits on the reader (who reads once it has exited).
-constexpr size_t kMaxResultChars = 1024;
-constexpr DWORD kResultPipeBytes = 16384;
 
 // Whether `id` is a phone's hardware ID as UsbPhone gives it: USB\VID_xxxx&PID_xxxx, maybe
 // with &MI_xx. It goes into the INF as it is, so anything else (a line break, above all) could
@@ -198,26 +196,6 @@ Function SystemFunction(const wchar_t* dll, const char* name) {
                : nullptr;
 }
 
-std::wstring ErrorText(const wchar_t* what, DWORD code = GetLastError()) {
-    wchar_t* text = nullptr;
-    FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr, code, 0, reinterpret_cast<wchar_t*>(&text), 0, nullptr);
-    std::wstring message = std::wstring(what) + L": ";
-    if (text) {
-        message += text;
-        LocalFree(text);
-        while (!message.empty() && (message.back() == L'\n' || message.back() == L'\r')) {
-            message.pop_back();
-        }
-    } else {
-        wchar_t hex[16];
-        swprintf(hex, 16, L"0x%08lX", static_cast<unsigned long>(code));
-        message += hex;
-    }
-    return message;
-}
-
 // MinGW's fstream doesn't take wide paths.
 bool WriteBytes(const std::wstring& path, const void* data, size_t size) {
     HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
@@ -231,68 +209,12 @@ bool WriteBytes(const std::wstring& path, const void* data, size_t size) {
     return ok;
 }
 
-// What's waiting in the pipe, its writer gone: up to kMaxResultChars.
-std::wstring ReadPipe(HANDLE pipe) {
-    wchar_t buffer[kMaxResultChars] = {};
-    DWORD available = 0, read = 0;
-    if (!PeekNamedPipe(pipe, nullptr, 0, nullptr, &available, nullptr) || available == 0 ||
-        !ReadFile(pipe, buffer, std::min<DWORD>(available, sizeof(buffer)), &read, nullptr)) {
-        return {};
-    }
-    return std::wstring(buffer, read / sizeof(wchar_t));
-}
-
-// The process that started this one: for a run as administrator, the one that asked for it.
-DWORD ParentProcessId() {
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snapshot == INVALID_HANDLE_VALUE) {
-        return 0;
-    }
-    DWORD self = GetCurrentProcessId(), parent = 0;
-    PROCESSENTRY32W entry = {sizeof(entry)};
-    for (BOOL ok = Process32FirstW(snapshot, &entry); ok && !parent;
-         ok = Process32NextW(snapshot, &entry)) {
-        if (entry.th32ProcessID == self) {
-            parent = entry.th32ParentProcessID;
-        }
-    }
-    CloseHandle(snapshot);
-    return parent;
-}
-
-// Writes `text` to the pipe whose write end is `handle` (as a number) in the process that
-// started this one (RunElevated). Only a pipe, and only out of that process: the number comes
-// from the command line, which anything could have written.
-void ReportToParent(const std::wstring& handle, const std::wstring& text) {
-    wchar_t* end = nullptr;
-    unsigned long long value = wcstoull(handle.c_str(), &end, 10);
-    DWORD parentId = ParentProcessId();
-    if (handle.empty() || *end || value == 0 || parentId == 0) {
-        return;
-    }
-    HANDLE parent = OpenProcess(PROCESS_DUP_HANDLE, FALSE, parentId);
-    if (!parent) {
-        return;
-    }
-    HANDLE pipe = nullptr;
-    if (DuplicateHandle(parent, reinterpret_cast<HANDLE>(uintptr_t(value)), GetCurrentProcess(),
-                        &pipe, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
-        if (GetFileType(pipe) == FILE_TYPE_PIPE) {
-            DWORD written = 0;
-            size_t chars = std::min(text.size(), kMaxResultChars);
-            WriteFile(pipe, text.data(), DWORD(chars * sizeof(wchar_t)), &written, nullptr);
-        }
-        CloseHandle(pipe);
-    }
-    CloseHandle(parent);
-}
-
 // A self-signed code signing certificate, its key in `container` (machine-wide).
 PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstring& error) {
     HCRYPTPROV provider = 0;
     if (!CryptAcquireContextW(&provider, container.c_str(), kProvider, PROV_RSA_AES,
                               CRYPT_NEWKEYSET | CRYPT_MACHINE_KEYSET)) {
-        error = ErrorText(L"Couldn't create a signing key");
+        error = Win32ErrorText(L"Couldn't create a signing key");
         return nullptr;
     }
     HCRYPTKEY key = 0;
@@ -303,7 +225,7 @@ PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstr
     }
     CryptReleaseContext(provider, 0);
     if (!made) {
-        error = ErrorText(L"Couldn't create a signing key", code);
+        error = Win32ErrorText(L"Couldn't create a signing key", code);
         return nullptr;
     }
 
@@ -344,7 +266,7 @@ PCCERT_CONTEXT CreateSigningCertificate(const std::wstring& container, std::wstr
     PCCERT_CONTEXT certificate = CertCreateSelfSignCertificate(
         0, &nameBlob, 0, &keyInfo, &algorithm, nullptr, &expiry, &extensions);
     if (!certificate) {
-        error = ErrorText(L"Couldn't create a signing certificate");
+        error = Win32ErrorText(L"Couldn't create a signing certificate");
     }
     return certificate;
 }
@@ -405,7 +327,7 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
     WideCharToMultiByte(CP_ACP, 0, text.c_str(), int(text.size()), ansi.data(), size, nullptr,
                         nullptr);
     if (!WriteBytes(definition, ansi.data(), ansi.size())) {
-        error = ErrorText(L"Couldn't write the driver catalog's definition");
+        error = Win32ErrorText(L"Couldn't write the driver catalog's definition");
         return false;
     }
     using EnumAttributes =
@@ -429,8 +351,8 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
                            ? CryptCATCDFOpen(const_cast<LPWSTR>(definition.c_str()), onError)
                            : nullptr;
     if (!cdf) {
-        error =
-            ErrorText(L"Couldn't create the driver catalog", failure ? failure : GetLastError());
+        error = Win32ErrorText(L"Couldn't create the driver catalog",
+                               failure ? failure : GetLastError());
         DeleteFileW(definition.c_str());
         return false;
     }
@@ -449,7 +371,8 @@ bool CreateCatalog(const std::wstring& folder, std::wstring& error) {
     if (!ok) {
         DWORD code = failure ? failure : GetLastError();
         std::wstring what = L"Couldn't create the driver catalog";
-        error = ErrorText(failure ? (what + L" (" + where + L")").c_str() : what.c_str(), code);
+        error =
+            Win32ErrorText(failure ? (what + L" (" + where + L")").c_str() : what.c_str(), code);
     }
     DeleteFileW(definition.c_str());
     return ok;
@@ -485,7 +408,7 @@ bool SignCatalog(const std::wstring& cat, PCCERT_CONTEXT certificate, std::wstri
     }
     FreeLibrary(mssign);
     if (FAILED(result)) {
-        error = ErrorText(L"Couldn't sign the driver catalog", DWORD(result));
+        error = Win32ErrorText(L"Couldn't sign the driver catalog", DWORD(result));
         return false;
     }
     return true;
@@ -522,7 +445,7 @@ bool TrustCertificate(PCCERT_CONTEXT certificate, std::wstring& error) {
         ok = store && CertAddCertificateContextToStore(store, copy, CERT_STORE_ADD_REPLACE_EXISTING,
                                                        nullptr);
         if (!ok) {
-            error = ErrorText(L"Couldn't trust the driver's certificate");
+            error = Win32ErrorText(L"Couldn't trust the driver's certificate");
         }
         if (store) {
             CertCloseStore(store, 0);
@@ -546,14 +469,14 @@ bool CreatePrivateFolder(std::wstring& folder, std::wstring& error) {
     wchar_t name[40];
     if (length == 0 || length >= MAX_PATH || FAILED(CoCreateGuid(&id)) ||
         !StringFromGUID2(id, name, ARRAYSIZE(name))) {
-        error = ErrorText(L"Couldn't name a folder for the driver");
+        error = Win32ErrorText(L"Couldn't name a folder for the driver");
         return false;
     }
     // Nothing inherited; full control for SYSTEM and Administrators, no one else.
     PSECURITY_DESCRIPTOR descriptor = nullptr;
     if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
             L"D:P(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)", SDDL_REVISION_1, &descriptor, nullptr)) {
-        error = ErrorText(L"Couldn't secure a folder for the driver");
+        error = Win32ErrorText(L"Couldn't secure a folder for the driver");
         return false;
     }
     SECURITY_ATTRIBUTES attributes = {sizeof(attributes), descriptor, FALSE};
@@ -564,7 +487,7 @@ bool CreatePrivateFolder(std::wstring& folder, std::wstring& error) {
     DWORD code = GetLastError();
     LocalFree(descriptor);
     if (!made) {
-        error = ErrorText((L"Couldn't create the folder " + folder).c_str(), code);
+        error = Win32ErrorText((L"Couldn't create the folder " + folder).c_str(), code);
     }
     return made;
 }
@@ -639,7 +562,7 @@ bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& err
              now.wHour, now.wMinute, now.wSecond, now.wMilliseconds);
     std::string text = BuildInf(phoneIds, stamp, now);
     if (!WriteBytes(inf, text.data(), text.size())) {
-        error = ErrorText((L"Couldn't write the driver to " + folder).c_str());
+        error = Win32ErrorText((L"Couldn't write the driver to " + folder).c_str());
         RemoveDirectoryW(folder.c_str());
         return false;
     }
@@ -667,7 +590,7 @@ bool InstallPackage(const std::vector<std::wstring>& phoneIds, std::wstring& err
             ok = false;
         } else if (!installDriver(nullptr, inf.c_str(), DIIRFLAG_FORCE_INF, &reboot) &&
                    GetLastError() != ERROR_NO_SUCH_DEVINST) {
-            error = ErrorText(L"Windows didn't install the driver");
+            error = Win32ErrorText(L"Windows didn't install the driver");
             ok = false;
         }
     }
@@ -859,56 +782,6 @@ void ReinstallDevices(const std::vector<std::wstring>& hardwareIds) {
     }
 }
 
-// Runs Gazeora as an administrator with `command` and `arguments` (Windows asks the user
-// first), and waits. `what` names it in errors.
-bool RunElevated(HWND owner, const wchar_t* command, const std::wstring& arguments,
-                 const wchar_t* what, std::wstring& error) {
-    wchar_t exe[MAX_PATH * 2];
-    GetModuleFileNameW(nullptr, exe, ARRAYSIZE(exe));
-    // What went wrong comes back through a pipe, whose write end the elevated run takes out of
-    // this process (ReportToParent). A file named on its command line would let anything that
-    // starts it have an administrator write wherever it liked.
-    HANDLE readEnd = nullptr, writeEnd = nullptr;
-    if (!CreatePipe(&readEnd, &writeEnd, nullptr, kResultPipeBytes)) {
-        error = ErrorText(L"Couldn't create a pipe for the result");
-        return false;
-    }
-    std::wstring parameters = std::wstring(command) + L" " +
-                              std::to_wstring(uint64_t(reinterpret_cast<uintptr_t>(writeEnd))) +
-                              arguments;
-
-    SHELLEXECUTEINFOW info = {sizeof(info)};
-    info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
-    info.hwnd = owner;
-    info.lpVerb = L"runas";  // as an administrator: Windows asks first
-    info.lpFile = exe;
-    info.lpParameters = parameters.c_str();
-    info.nShow = SW_HIDE;
-    if (!ShellExecuteExW(&info)) {
-        error = GetLastError() == ERROR_CANCELLED
-                    ? std::wstring(what) + L" was cancelled: it needs administrator permission"
-                    : ErrorText(L"Couldn't get administrator permission");
-        CloseHandle(readEnd);
-        CloseHandle(writeEnd);
-        return false;
-    }
-    WaitForSingleObject(info.hProcess, INFINITE);
-    DWORD code = 1;
-    GetExitCodeProcess(info.hProcess, &code);
-    CloseHandle(info.hProcess);
-    CloseHandle(writeEnd);
-    if (code == 0) {
-        CloseHandle(readEnd);
-        return true;
-    }
-    error = ReadPipe(readEnd);
-    CloseHandle(readEnd);
-    if (error.empty()) {
-        error = std::wstring(what) + L" failed";
-    }
-    return false;
-}
-
 }  // namespace
 
 std::vector<std::wstring> InstalledPhoneIds() {
@@ -962,7 +835,8 @@ bool UninstallUsbDriver(std::wstring& error) {
     bool ok = true;
     for (const auto& package : packages) {
         if (!SetupUninstallOEMInfW(package.first.c_str(), SUOI_FORCEDELETE, nullptr)) {
-            error = ErrorText((L"Couldn't remove the driver package " + package.first).c_str());
+            error =
+                Win32ErrorText((L"Couldn't remove the driver package " + package.first).c_str());
             ok = false;
         }
     }
@@ -975,15 +849,13 @@ bool UninstallUsbDriver(std::wstring& error) {
 
 bool InstallUsbDriverElevated(HWND owner, const std::vector<std::wstring>& phoneIds,
                               std::wstring& error) {
-    std::wstring arguments;
-    for (const std::wstring& id : phoneIds) {
-        arguments += L" \"" + id + L"\"";
-    }
-    return RunElevated(owner, kInstallUsbDriverArgument, arguments, L"The driver install", error);
+    return ElevatedRun::Run(owner, kInstallUsbDriverArgument, phoneIds, L"The driver install",
+                            error);
 }
 
 bool RestoreFileTransferElevated(HWND owner, std::wstring& error) {
-    return RunElevated(owner, kRestoreFileTransferArgument, L"", L"Restoring file transfer", error);
+    return ElevatedRun::Run(owner, kRestoreFileTransferArgument, {}, L"Restoring file transfer",
+                            error);
 }
 
 int RunUsbDriverCommand() {
@@ -1008,7 +880,7 @@ int RunUsbDriverCommand() {
         return -1;
     }
     if (!ok && !result.empty()) {
-        ReportToParent(result, error);
+        ElevatedRun::ReportToParent(result, error);
     }
     return ok ? 0 : 1;
 }

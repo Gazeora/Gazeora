@@ -9,9 +9,9 @@
 namespace gazeora {
 
 enum class LaunchVia {
-    Auto,    // through Steam if the exe is in a Steam library, else directly
+    Auto,    // through the first store the exe belongs to (GameStoreRegistry), else directly
     Direct,  // run the exe
-    Steam,   // steam://rungameid/<app id>
+    Store,   // through the store named by Game::storeId
 };
 
 // One game in the library, as stored in library.json.
@@ -24,6 +24,8 @@ struct Game {
     std::wstring coverPath;   // optional image shown instead of the exe icon
     bool captureOnLaunch = false;
     LaunchVia launchVia = LaunchVia::Auto;
+    // With LaunchVia::Store: the store's id (GameStore::Id), e.g. "steam".
+    std::string storeId;
     // The real game exe, when exePath is a launcher that starts something else. Empty =
     // exePath's file name.
     std::wstring processName;

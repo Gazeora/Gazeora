@@ -129,7 +129,7 @@ void App::DrawDetails() {
         m_editArgs = U8(game->arguments);
         m_editWorkDir = U8(game->workingDir);
         m_editProcess = U8(game->processName);
-        m_editSteamAppId = FindSteamAppId(game->exePath);
+        m_editLaunchVia.emplace(m_libraryServices.Stores(), *game);
     }
 
     if (LinkButton(ICON_BACK "   Library##back", m_fonts.body, kTextDim, kText)) {
@@ -177,9 +177,10 @@ void App::DrawSessionCard(const Game& game) {
                                                   : "Launching...");
     } else if (stats.state == GameSession::State::WaitingForGame) {
         ImGui::PushTextWrapPos(0.0f);
+        const std::wstring store = session->StoreName();
         ImGui::Text("Waiting for %s to start (launched through %s)...",
                     U8(session->GameProcessName()).c_str(),
-                    session->ThroughSteam() ? "Steam" : "its launcher");
+                    store.empty() ? "its launcher" : U8(store).c_str());
         ImGui::PopTextWrapPos();
         ImGui::PopStyleColor();
         if (FilledButton("Stop waiting##cancel", ImVec2(S(140), S(36)), kSecondary, kSecondaryHover,
@@ -339,19 +340,21 @@ void App::DrawGameSettingsCard(Game& game) {
     }
 
     FieldLabel(m_fonts.caption, "Launch through");
-    std::string autoLabel = m_editSteamAppId.empty()
-                                ? std::string("Automatic (start the exe)")
-                                : "Automatic (through Steam, app " + U8(m_editSteamAppId) + ")";
-    const char* viaNames[] = {autoLabel.c_str(), "The game's exe", "Steam"};
-    int via = int(game.launchVia);
+    const std::vector<std::string>& viaLabels = m_editLaunchVia->Labels();
+    std::vector<const char*> viaNames;
+    for (const std::string& label : viaLabels) {
+        viaNames.push_back(label.c_str());
+    }
+    int via = m_editLaunchVia->IndexOf(game);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::Combo("##via", &via, viaNames, IM_ARRAYSIZE(viaNames))) {
-        game.launchVia = LaunchVia(via);
+    if (ImGui::Combo("##via", &via, viaNames.data(), int(viaNames.size()))) {
+        m_editLaunchVia->Apply(via, game);
         SaveLibrary();
     }
-    if (game.launchVia == LaunchVia::Steam && m_editSteamAppId.empty()) {
+    const std::string viaWarning = m_editLaunchVia->Warning(game);
+    if (!viaWarning.empty()) {
         ImGui::PushStyleColor(ImGuiCol_Text, kWarning);
-        ImGui::TextUnformatted(ICON_WARNING "  Not in a Steam library, so the exe starts directly");
+        ImGui::TextUnformatted((ICON_WARNING "  " + viaWarning).c_str());
         ImGui::PopStyleColor();
     }
 

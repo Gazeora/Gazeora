@@ -33,6 +33,10 @@ version 3 and [NOTICE](NOTICE) don't allow, for example:
   [NOTICE](NOTICE) requires;
 - have terms the GPL can't give, such as a warranty, support or indemnity.
 
+You don't need one to make or sell a plugin: a separate DLL that works with Gazeora only
+through its plugin interface can have any license, closed-source included. See the
+additional permission for plugins in [NOTICE](NOTICE) and [Plugins](docs/plugins.md).
+
 If you're unsure whether your use needs one, ask: it costs nothing to check.
 
 ## What it covers

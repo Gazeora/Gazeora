@@ -1,6 +1,9 @@
 // Copyright (C) 2026 Nithin Aashik
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
+#include "gazeora/host/encode/bundled_video_codecs.h"
+#include "gazeora/host/stream/built_in_stream_protocols.h"
+#include "gazeora/host/stream/bundled_protocols.h"
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/stream_protocol.h"
@@ -8,21 +11,41 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace gazeora {
 namespace {
 
-TEST(StreamProtocolTest, IdsRoundTrip) {
-    for (StreamProtocol protocol : kAllStreamProtocols) {
-        StreamProtocol parsed = StreamProtocol::Usb;
-        ASSERT_TRUE(ParseProtocolId(ProtocolId(protocol), parsed)) << ProtocolId(protocol);
-        EXPECT_EQ(parsed, protocol);
+TEST(StreamProtocolTest, BundledIdsAreWhatStreamIniAndTheAndroidAppUse) {
+    const std::shared_ptr<const StreamProtocolCatalog> catalog = BundledProtocols::Catalog();
+    std::vector<std::string> ids;
+    for (const StreamProtocolInfo& info : catalog->All()) {
+        ids.push_back(info.id.Id());
+        EXPECT_FALSE(info.name.empty()) << info.id.Id();
+        EXPECT_FALSE(info.help.empty()) << info.id.Id();
     }
-    StreamProtocol unchanged = StreamProtocol::Http;
-    EXPECT_FALSE(ParseProtocolId("smoke-signals", unchanged));
-    EXPECT_EQ(unchanged, StreamProtocol::Http);
+    EXPECT_EQ(ids, (std::vector<std::string>{"rtsp-tcp", "rtsp-udp", "udp", "http", "usb"}));
+    EXPECT_EQ(catalog->Find(StreamProtocol::Http)->discoveryPath, "/stream.ts");
+}
+
+TEST(StreamProtocolTest, UnknownIdsAreKeptAndNamedByTheirId) {
+    const StreamProtocol other("smoke-signals");
+    EXPECT_FALSE(BuiltInStreamProtocols::Catalog()->Has(other));
+    EXPECT_EQ(BuiltInStreamProtocols::Catalog()->NameOf(other), "smoke-signals");
+    EXPECT_TRUE(StreamProtocol::RtspUdp.IsRtsp());
+    EXPECT_FALSE(other.IsRtsp());
+}
+
+TEST(StreamProtocolTest, CatalogReplacesInPlace) {
+    StreamProtocolCatalog catalog;
+    catalog.Register({StreamProtocol::Udp, "UDP", "first"});
+    catalog.Register({StreamProtocol("srt"), "SRT", "added"});
+    catalog.Register({StreamProtocol::Udp, "UDP", "second"});
+    ASSERT_EQ(catalog.All().size(), 2u);
+    EXPECT_EQ(catalog.All()[0].help, "second");
+    EXPECT_EQ(catalog.All()[1].id, StreamProtocol("srt"));
 }
 
 TEST(FramePacketTest, HeaderRoundTripsBigEndian) {
@@ -126,7 +149,7 @@ protected:
 TEST_F(TsMuxerTest, KeyFramesComeAfterTheTablesAndCarryTheClock) {
     TsMuxer muxer;
     std::string ts;
-    muxer.Mux(VideoCodec::H264, keyFrame, 90000, true, ts);
+    muxer.Mux(BundledVideoCodecs::FormatOf(VideoCodec::H264), keyFrame, 90000, true, ts);
     ASSERT_EQ(ts.size() % TsMuxer::kPacketSize, 0u);
     ASSERT_GE(ts.size() / TsMuxer::kPacketSize, 8u);  // PAT, PMT, 6+ of video
     for (size_t at = 0; at < ts.size(); at += TsMuxer::kPacketSize) {
@@ -172,8 +195,9 @@ TEST_F(TsMuxerTest, KeyFramesComeAfterTheTablesAndCarryTheClock) {
 TEST_F(TsMuxerTest, OtherFramesSkipTheTablesAndCountOn) {
     TsMuxer muxer;
     std::string first, second;
-    muxer.Mux(VideoCodec::H264, keyFrame, 0, true, first);
-    muxer.Mux(VideoCodec::H264, std::string("\0\0\0\1\x41pp", 7), 3000, false, second);
+    muxer.Mux(BundledVideoCodecs::FormatOf(VideoCodec::H264), keyFrame, 0, true, first);
+    muxer.Mux(BundledVideoCodecs::FormatOf(VideoCodec::H264), std::string("\0\0\0\1\x41pp", 7),
+              3000, false, second);
     ASSERT_EQ(second.size(), TsMuxer::kPacketSize) << "a small frame fits one packet";
     EXPECT_EQ(Pid(second, 0), TsMuxer::kVideoPid);
     EXPECT_EQ(uint8_t(second[5]) & 0x40, 0) << "not a random access point";
@@ -188,7 +212,7 @@ TEST_F(TsMuxerTest, H265GetsItsStreamTypeAndDelimiter) {
     TsMuxer muxer;
     std::string ts;
     const std::string irap = std::string("\0\0\0\1\x26\x01", 6) + std::string(300, 'k');
-    muxer.Mux(VideoCodec::H265, irap, 0, true, ts);
+    muxer.Mux(BundledVideoCodecs::FormatOf(VideoCodec::H265), irap, 0, true, ts);
     EXPECT_EQ(uint8_t(ts[TsMuxer::kPacketSize + 5 + 12]), 0x24);
     EXPECT_EQ(PesPayload(ts, 2), std::string("\0\0\0\1\x46\x01\x50", 7) + irap);
 }
@@ -197,7 +221,7 @@ TEST_F(TsMuxerTest, KeepsADelimiterTheEncoderAlreadyPut) {
     TsMuxer muxer;
     std::string ts;
     const std::string withDelimiter = std::string("\0\0\0\1\x09\x10", 6) + keyFrame;
-    muxer.Mux(VideoCodec::H264, withDelimiter, 0, true, ts);
+    muxer.Mux(BundledVideoCodecs::FormatOf(VideoCodec::H264), withDelimiter, 0, true, ts);
     EXPECT_EQ(PesPayload(ts, 2), withDelimiter);
 }
 

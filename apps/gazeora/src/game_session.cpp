@@ -82,8 +82,8 @@ void GameSession::Run() {
     bool waitForGame = false;  // no process to watch yet: find it by name
     DWORD ignorePid = 0;
 
-    if (ThroughSteam()) {
-        if (!LaunchThroughSteam(m_spec.steamAppId, error)) {
+    if (m_spec.ThroughStore()) {
+        if (!m_spec.store->Launch(m_spec.storeAppId, error)) {
             SetState(State::Failed, error);
             return;
         }

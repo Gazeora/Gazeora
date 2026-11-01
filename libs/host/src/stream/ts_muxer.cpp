@@ -10,24 +10,13 @@ namespace gazeora {
 namespace {
 
 constexpr uint16_t kPatPid = 0x0000;
-constexpr uint8_t kStreamTypeH264 = 0x1B;
-constexpr uint8_t kStreamTypeH265 = 0x24;
+constexpr uint8_t kPmtVersionMask = 0x1F;  // five bits
 constexpr uint8_t kVideoStreamId = 0xE0;
 // The PTS runs this far ahead of the PCR: how long a player may hold a frame before showing
 // it. Small, for a live game.
 constexpr uint64_t kPtsDelay = 9000;  // 100 ms at 90 kHz
 
 enum Continuity { kPat, kPmt, kVideo };
-
-// Whether `annexB` starts with an access unit delimiter.
-bool StartsWithDelimiter(VideoCodec codec, const std::string& annexB) {
-    size_t at = annexB.find(std::string("\0\0\1", 3));
-    if (at == std::string::npos || at + 3 >= annexB.size()) {
-        return false;
-    }
-    uint8_t header = uint8_t(annexB[at + 3]);
-    return codec == VideoCodec::H265 ? ((header >> 1) & 0x3F) == 35 : (header & 0x1F) == 9;
-}
 
 void PutTimestamp(uint8_t prefix, uint64_t value, std::string& out) {
     out += char(prefix | ((value >> 29) & 0x0E) | 1);
@@ -50,8 +39,16 @@ uint32_t Crc32Mpeg2(const uint8_t* data, size_t size) {
     return crc;
 }
 
-void TsMuxer::Mux(VideoCodec codec, const std::string& annexB, uint32_t timestamp, bool keyFrame,
-                  std::string& out) {
+bool TsMuxer::StartsWithDelimiter(const VideoCodecFormat& format, const std::string& annexB) {
+    const size_t at = annexB.find(std::string("\0\0\1", 3));
+    if (at == std::string::npos || at + 3 >= annexB.size()) {
+        return false;
+    }
+    return format.IsAccessUnitDelimiter(annexB.substr(at + 3));
+}
+
+void TsMuxer::Mux(const VideoCodecFormat& format, const std::string& annexB, uint32_t timestamp,
+                  bool keyFrame, std::string& out) {
     if (m_started && timestamp < m_lastTimestamp && m_lastTimestamp - timestamp > 0x80000000u) {
         ++m_wraps;
     }
@@ -61,7 +58,7 @@ void TsMuxer::Mux(VideoCodec codec, const std::string& annexB, uint32_t timestam
     const uint64_t pts = (clock + kPtsDelay) & 0x1FFFFFFFFull;
 
     if (keyFrame) {
-        WriteTables(codec, out);
+        WriteTables(format, out);
     }
 
     m_pes.clear();
@@ -72,19 +69,21 @@ void TsMuxer::Mux(VideoCodec codec, const std::string& annexB, uint32_t timestam
                            5};             // header data length
     m_pes.append(header, sizeof(header));
     PutTimestamp(0x20, pts, m_pes);
-    if (!StartsWithDelimiter(codec, annexB)) {
-        static const std::string kH264Delimiter("\0\0\0\1\x09\xF0", 6);
-        static const std::string kH265Delimiter("\0\0\0\1\x46\x01\x50", 7);
-        m_pes += codec == VideoCodec::H265 ? kH265Delimiter : kH264Delimiter;
+    if (!StartsWithDelimiter(format, annexB)) {
+        m_pes += format.AccessUnitDelimiter();
     }
     m_pes += annexB;
     WritePes(m_pes, clock, keyFrame, out);
 }
 
-void TsMuxer::WriteTables(VideoCodec codec, std::string& out) {
+void TsMuxer::WriteTables(const VideoCodecFormat& format, std::string& out) {
     // The PMT's version changes with the codec, so a player that kept the old one rereads it.
-    const uint8_t version = codec == VideoCodec::H265 ? 1 : 0;
-    const uint8_t versionByte = uint8_t(0xC1 | (version << 1));
+    const uint8_t streamType = format.TsStreamType();
+    if (m_streamType != 0 && streamType != m_streamType) {
+        m_pmtVersion = uint8_t((m_pmtVersion + 1) & kPmtVersionMask);
+    }
+    m_streamType = streamType;
+    const uint8_t versionByte = uint8_t(0xC1 | (m_pmtVersion << 1));
 
     uint8_t pat[] = {
         0x00,  // table: program association
@@ -121,7 +120,7 @@ void TsMuxer::WriteTables(VideoCodec codec, std::string& out) {
         uint8_t(kVideoPid & 0xFF),  // PCR on the video
         0xF0,
         0x00,  // no program info
-        codec == VideoCodec::H265 ? kStreamTypeH265 : kStreamTypeH264,
+        streamType,
         uint8_t(0xE0 | (kVideoPid >> 8)),
         uint8_t(kVideoPid & 0xFF),
         0xF0,

@@ -17,7 +17,8 @@ namespace gazeora {
 // A low-latency H.264 / H.265 encoder taking NV12 frames, from memory or, when opened with a
 // device, as textures on that device's GPU. No B-frames, so frames come out in
 // the order they go in and players never have to reorder them. An interface, so the stream
-// doesn't depend on how frames are encoded: Media Foundation today (CreateVideoEncoder),
+// doesn't depend on how frames are encoded: Media Foundation today
+// (MediaFoundationEncoderProvider, through a VideoEncoderRegistry),
 // a vendor SDK or a test double tomorrow. Use one from a single thread.
 class VideoEncoder {
 public:
@@ -41,10 +42,6 @@ public:
     };
 
     virtual ~VideoEncoder() = default;
-
-    // Whether this PC has an encoder for `codec`, hardware or software. Always true for
-    // H.264. Cheap: it lists the registered encoders without starting any.
-    static bool Available(VideoCodec codec);
 
     virtual bool Open(const Settings& settings, std::wstring& error) = 0;
     virtual void Close() = 0;
@@ -79,9 +76,5 @@ public:
                Current().height == height && Current().device == device;
     }
 };
-
-// The encoder Gazeora uses: Media Foundation, with the GPU's encoder when there is one.
-// Needs COM (multithreaded) and MFStartup on the thread that uses it.
-std::unique_ptr<VideoEncoder> CreateVideoEncoder();
 
 }  // namespace gazeora

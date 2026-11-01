@@ -10,10 +10,13 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/host/encode/built_in_video_codecs.h"
+#include "gazeora/host/encode/built_in_video_encoders.h"
 #include "gazeora/host/encode/nv12_readback.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/rtp_video.h"
+#include "gazeora/host/stream/video_codec_format.h"
 
 namespace gazeora {
 
@@ -33,6 +36,7 @@ public:
         uint32_t timestamp;         // 90 kHz
         bool keyFrame;              // a player can start decoding from it
         VideoCodec codec;
+        const VideoCodecFormat& format;  // how to carry it
         uint32_t width;
         uint32_t height;
         uint32_t bitrate;  // the stream's, bits/s, for pacing its packets (PacingPlan)
@@ -49,7 +53,11 @@ public:
         size_t maxPacketSize = 1400;
     };
 
-    explicit VideoPipeline(EncoderFactory factory = CreateVideoEncoder);
+    // `codecs` gives each codec's format; it must have H.264's, which a new pipeline starts
+    // with. Throws std::invalid_argument if it hasn't.
+    explicit VideoPipeline(
+        EncoderFactory factory = BuiltInVideoEncoders::Factory(),
+        std::shared_ptr<const VideoCodecCatalog> codecs = BuiltInVideoCodecs::Catalog());
 
     // Opens (or reopens) the encoder when the codec, size, frame rate or device changed, and
     // applies a new bitrate. `device` is the one the pictures' textures are on, null for
@@ -78,10 +86,14 @@ private:
     // The picture as NV12 in m_nv12, for an encoder that takes it from memory.
     bool ToMemory(const Picture& picture, std::wstring& error);
 
+    // Null if `codecs` has no format for `codec`.
+    const VideoCodecFormat* FormatOf(const VideoCodec& codec) const;
+
     EncoderFactory m_factory;
+    std::shared_ptr<const VideoCodecCatalog> m_codecs;
     std::unique_ptr<VideoEncoder> m_encoder;
     Config m_config;
-    const RtpPayloadFormat* m_format;
+    const VideoCodecFormat* m_format;
     ParameterSetCache m_parameterSets;
     uint16_t m_seq;
     // Reused between frames, so steady streaming doesn't allocate.

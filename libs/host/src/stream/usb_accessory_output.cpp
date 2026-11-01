@@ -351,6 +351,13 @@ private:
 
 }  // namespace
 
+StreamProtocolInfo UsbAccessoryOutput::Info() {
+    return {StreamProtocol::Usb, "USB",
+            "USB: for the Gazeora app on a phone plugged into this PC. No Wi-Fi needed. Turn on "
+            "USB debugging on the phone, or install the USB driver below.",
+            "/", false};
+}
+
 UsbAccessoryOutput::UsbAccessoryOutput(StreamLog& log) : m_log(log) {}
 
 UsbAccessoryOutput::~UsbAccessoryOutput() { Stop(); }
@@ -727,7 +734,7 @@ void UsbAccessoryOutput::Close(const char* reason) {
     m_queuedBytes = 0;
 }
 
-void UsbAccessoryOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+void UsbAccessoryOutput::Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
                               uint64_t now) {
     if (!m_watching) {
         m_waitingForKeyFrame = true;
@@ -749,8 +756,7 @@ void UsbAccessoryOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateC
         m_waitingForKeyFrame = false;
         ++m_framesSent;
         FrameHeader header;
-        header.flags = uint8_t((frame.keyFrame ? kFrameFlagKey : 0) |
-                               (frame.codec == VideoCodec::H265 ? kFrameFlagH265 : 0));
+        header.flags = uint8_t((frame.keyFrame ? kFrameFlagKey : 0) | frame.format.FrameFlags());
         header.width = uint16_t(frame.width);
         header.height = uint16_t(frame.height);
         header.frameNumber = m_frameNumber++;
@@ -763,7 +769,7 @@ void UsbAccessoryOutput::Send(const VideoPipeline::EncodedFrame& frame, BitrateC
     }
     if (now - m_countedSinceMs >= 1000) {
         uint32_t frames = m_framesSent + m_framesSkipped;
-        bitrate.Report(0, frames ? float(m_framesSkipped) / float(frames) : 0.0f, now);
+        loss.Report(0, frames ? float(m_framesSkipped) / float(frames) : 0.0f, now);
         if (m_framesSkipped > 0) {
             m_log.Write("USB skipped %u of %u frames: the phone can't keep up", m_framesSkipped,
                         frames);

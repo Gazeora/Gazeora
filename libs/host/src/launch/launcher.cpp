@@ -3,17 +3,11 @@
 
 #include "gazeora/host/launch/launcher.h"
 
-#include <shellapi.h>
 #include <tlhelp32.h>
 
-#include <cwctype>
-#include <filesystem>
-#include <fstream>
-#include <sstream>
 #include <utility>
 #include <vector>
 
-#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/launch/injector.h"
 
 namespace gazeora {
@@ -32,25 +26,6 @@ std::wstring FolderOf(const std::wstring& path) {
 std::wstring FileName(const std::wstring& path) {
     size_t slash = path.find_last_of(L"\\/");
     return slash == std::wstring::npos ? path : path.substr(slash + 1);
-}
-
-// The quoted tokens of one line of a Steam .acf/.vdf file: "key"  "value".
-std::vector<std::string> QuotedTokens(const std::string& line) {
-    std::vector<std::string> tokens;
-    for (size_t i = 0; i < line.size(); ++i) {
-        if (line[i] != '"') {
-            continue;
-        }
-        std::string token;
-        for (++i; i < line.size() && line[i] != '"'; ++i) {
-            if (line[i] == '\\' && i + 1 < line.size()) {
-                ++i;  // \\ and \" escapes
-            }
-            token += line[i];
-        }
-        tokens.push_back(token);
-    }
-    return tokens;
 }
 
 bool HasGraphicsRuntime(DWORD pid) {
@@ -175,59 +150,6 @@ bool HandOffDetector::HandedOff() {
 
 std::wstring LaunchSpec::GameProcessName() const {
     return processName.empty() ? FileName(exePath) : processName;
-}
-
-std::wstring FindSteamAppId(const std::wstring& exePath) {
-    // ...\steamapps\common\<installdir>\...\game.exe
-    std::wstring lower = exePath;
-    for (wchar_t& c : lower) {
-        c = c == L'/' ? L'\\' : wchar_t(towlower(c));
-    }
-    const std::wstring marker = L"\\steamapps\\common\\";
-    size_t at = lower.find(marker);
-    if (at == std::wstring::npos) {
-        return {};
-    }
-    std::wstring steamapps = exePath.substr(0, at + wcslen(L"\\steamapps"));
-    size_t dirStart = at + marker.size();
-    size_t dirEnd = lower.find(L'\\', dirStart);
-    std::wstring installDir = exePath.substr(dirStart, dirEnd - dirStart);
-
-    WIN32_FIND_DATAW found;
-    HANDLE find = FindFirstFileW((steamapps + L"\\appmanifest_*.acf").c_str(), &found);
-    if (find == INVALID_HANDLE_VALUE) {
-        return {};
-    }
-    std::wstring result;
-    do {
-        std::ifstream file(std::filesystem::path(steamapps + L"\\" + found.cFileName));
-        std::string line, appId, dir;
-        while (std::getline(file, line)) {
-            std::vector<std::string> tokens = QuotedTokens(line);
-            if (tokens.size() == 2 && tokens[0] == "appid") {
-                appId = tokens[1];
-            } else if (tokens.size() == 2 && tokens[0] == "installdir") {
-                dir = tokens[1];
-            }
-        }
-        if (!appId.empty() && _wcsicmp(Utf8::ToWide(dir).c_str(), installDir.c_str()) == 0) {
-            result = Utf8::ToWide(appId);
-        }
-    } while (result.empty() && FindNextFileW(find, &found));
-    FindClose(find);
-    return result;
-}
-
-bool LaunchThroughSteam(const std::wstring& appId, std::wstring& error) {
-    std::wstring uri = L"steam://rungameid/" + appId;
-    auto result = reinterpret_cast<INT_PTR>(
-        ShellExecuteW(nullptr, L"open", uri.c_str(), nullptr, nullptr, SW_SHOWNORMAL));
-    if (result <= 32) {
-        error = L"could not start the game through Steam (is Steam installed?), error " +
-                std::to_wstring(result);
-        return false;
-    }
-    return true;
 }
 
 bool WaitForGameProcess(const std::wstring& exeName, DWORD ignorePid, DWORD timeoutMs,

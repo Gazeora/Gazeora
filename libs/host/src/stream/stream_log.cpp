@@ -12,7 +12,8 @@ namespace gazeora {
 
 namespace {
 constexpr long kMaxLogBytes = 4 << 20;
-}
+constexpr size_t kMaxLineChars = 512;
+}  // namespace
 
 void StreamLog::Open(const std::wstring& path) {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -26,18 +27,28 @@ void StreamLog::Open(const std::wstring& path) {
     }
 }
 
+bool StreamLog::Writing() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_file && m_bytes <= kMaxLogBytes;
+}
+
 void StreamLog::Write(const char* format, ...) {
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        if (!m_file || m_bytes > kMaxLogBytes) {
-            return;  // don't format what nobody will read
-        }
+    if (!m_forward && !Writing()) {
+        return;  // don't format what nobody will read
     }
-    char text[512];
+    char text[kMaxLineChars];
     va_list args;
     va_start(args, format);
     vsnprintf(text, sizeof(text), format, args);
     va_end(args);
+    if (m_forward) {
+        m_forward(text);
+    } else {
+        Append(text);
+    }
+}
+
+void StreamLog::Append(const char* text) {
     SYSTEMTIME time;
     GetLocalTime(&time);
     std::lock_guard<std::mutex> lock(m_mutex);

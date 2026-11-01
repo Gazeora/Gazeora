@@ -34,6 +34,8 @@ public:
     static constexpr size_t kMaxChallenges = 256;
 
     explicit UdpFrameOutput(StreamLog& log) : m_log(log) {}
+    // The protocol it is, for the catalog.
+    static StreamProtocolInfo Info();
     ~UdpFrameOutput() override { Stop(); }
 
     bool Start(in_addr address, uint16_t port, std::wstring& error) override;
@@ -41,7 +43,7 @@ public:
     uint16_t Port() const override { return m_port; }
     int Viewers() const override { return m_viewers; }
     bool TakeKeyFrameRequest() override { return m_keyFrameWanted.exchange(false); }
-    void Send(const VideoPipeline::EncodedFrame& frame, BitrateController& bitrate,
+    void Send(const VideoPipeline::EncodedFrame& frame, LossReportSink& loss,
               uint64_t now) override;
     std::wstring Url(const std::wstring& host) const override;
     bool Watching(const in_addr& address) override;

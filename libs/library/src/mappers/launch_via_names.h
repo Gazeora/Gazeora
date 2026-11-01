@@ -9,14 +9,15 @@
 
 namespace gazeora {
 
-// LaunchVia as stored in library.json: "auto", "direct" or "steam".
+// A game's launchVia as stored in library.json: "auto", "direct", or a store's id such as
+// "steam" for LaunchVia::Store.
 class LaunchViaNames final {
 public:
     LaunchViaNames() = delete;
 
-    static const char* NameOf(LaunchVia via);
-    // Unknown names read as Auto.
-    static LaunchVia FromName(const std::string& name);
+    static std::string NameOf(const Game& game);
+    // Sets launchVia and storeId from a stored name. Empty reads as Auto.
+    static void Apply(const std::string& name, Game& game);
 };
 
 }  // namespace gazeora
