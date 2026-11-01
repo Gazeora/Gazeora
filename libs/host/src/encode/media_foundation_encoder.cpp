@@ -5,7 +5,8 @@
 // one, a software encoder otherwise (Microsoft's for H.264; for H.265 only if one is
 // installed, such as the HEVC Video Extensions). Opened with a device, only a GPU encoder that
 // takes that device's textures will do.
-#include "gazeora/host/encode/video_encoder.h"
+// MediaFoundationEncoderProvider is defined here, beside the encoder it makes.
+#include "gazeora/host/encode/media_foundation_encoder_provider.h"
 
 #include <windows.h>
 #include <mfapi.h>
@@ -59,7 +60,13 @@ std::wstring HrText(const wchar_t* what, HRESULT hr) {
     return text;
 }
 
-const GUID& Subtype(VideoCodec codec) {
+// Whether Media Foundation has a format for `codec`: it encodes H.264 and H.265 only.
+bool HasSubtype(const VideoCodec& codec) {
+    return codec == VideoCodec::H264 || codec == VideoCodec::H265;
+}
+
+// Its Media Foundation format; for one HasSubtype accepts.
+const GUID& Subtype(const VideoCodec& codec) {
     return codec == VideoCodec::H265 ? MFVideoFormat_HEVC : MFVideoFormat_H264;
 }
 
@@ -135,13 +142,16 @@ private:
 
 }  // namespace
 
-std::unique_ptr<VideoEncoder> CreateVideoEncoder() {
+std::unique_ptr<VideoEncoder> MediaFoundationEncoderProvider::Create() const {
     return std::make_unique<MediaFoundationEncoder>();
 }
 
-bool VideoEncoder::Available(VideoCodec codec) {
+bool MediaFoundationEncoderProvider::Supports(VideoCodec codec) const {
     if (codec == VideoCodec::H264) {
         return true;  // Microsoft's software encoder ships with Windows
+    }
+    if (!HasSubtype(codec)) {
+        return false;
     }
     IMFActivate** activates = nullptr;
     UINT32 count = FindEncoders(
@@ -165,6 +175,10 @@ bool MediaFoundationEncoder::Open(const Settings& settings, std::wstring& error)
     m_frameDuration = 10000000 / std::max(1u, fps);
     if (m_width < 16 || m_height < 16) {
         error = L"frame too small to encode";
+        return false;
+    }
+    if (!HasSubtype(codec)) {
+        error = L"Media Foundation doesn't encode this codec";
         return false;
     }
     if (settings.device) {

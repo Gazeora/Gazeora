@@ -20,8 +20,10 @@
 #include <vector>
 
 #include "gazeora/common/text/utf8.h"
+#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/color_convert.h"
 #include "gazeora/host/encode/gpu_nv12_converter.h"
+#include "gazeora/host/encode/media_foundation_encoder_provider.h"
 #include "gazeora/host/encode/video_encoder.h"
 #include "gazeora/host/stream/rtp_video.h"
 
@@ -231,10 +233,10 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     const VideoCodec codec = std::get<0>(GetParam());
     const bool hardware = std::get<1>(GetParam());
     const bool hevc = codec == VideoCodec::H265;
-    std::unique_ptr<VideoEncoder> encoderPtr = CreateVideoEncoder();
+    std::unique_ptr<VideoEncoder> encoderPtr = MediaFoundationEncoderProvider().Create();
     VideoEncoder& encoder = *encoderPtr;
     std::wstring error;
-    if (hevc && !VideoEncoder::Available(codec)) {
+    if (hevc && !MediaFoundationEncoderProvider().Supports(codec)) {
         GTEST_SKIP() << "no H.265 encoder on this machine";
     }
     VideoEncoder::Settings settings;
@@ -249,8 +251,8 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     }
     ASSERT_TRUE(opened) << Utf8::FromWide(error);
     if (hardware != encoder.IsHardware()) {
-        GTEST_SKIP() << "no " << (hardware ? "hardware " : "software ") << CodecName(codec)
-                     << " encoder on this machine";
+        GTEST_SKIP() << "no " << (hardware ? "hardware " : "software ")
+                     << BundledVideoCodecs::NameOf(codec) << " encoder on this machine";
     }
     EXPECT_EQ(encoder.Current().codec, codec);
 
@@ -270,12 +272,12 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     SplitAnnexB(frames[0].annexB, nals);
     bool vps = !hevc, sps = false, pps = false, idr = false;
     for (const std::string& nal : nals) {
-        uint8_t type = hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal)
-                            : RtpPayloadFormat::For(VideoCodec::H264).NalType(nal);
+        uint8_t type =
+            hevc ? RtpPayloadFormat::H265().NalType(nal) : RtpPayloadFormat::H264().NalType(nal);
         vps |= hevc && type == kHevcVps;
         sps |= type == (hevc ? uint8_t(kHevcSps) : uint8_t(kNalSps));
         pps |= type == (hevc ? uint8_t(kHevcPps) : uint8_t(kNalPps));
-        idr |= RtpPayloadFormat::For(codec).IsKeyFrame(nal);
+        idr |= BundledVideoCodecs::FormatOf(codec).Rtp().IsKeyFrame(nal);
     }
     EXPECT_TRUE(vps && sps && pps && idr) << "the first frame must be decodable on its own";
     // Slicing, so a lost packet costs a strip rather than the frame. Checked where it's known
@@ -283,9 +285,9 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     if (encoder.Name().find(L"NVIDIA") != std::wstring::npos) {
         int slices = 0;
         for (const std::string& nal : nals) {
-            slices += hevc ? RtpPayloadFormat::For(VideoCodec::H265).NalType(nal) < kHevcVps
-                           : (RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalSlice ||
-                              RtpPayloadFormat::For(VideoCodec::H264).NalType(nal) == kNalIdrSlice);
+            slices += hevc ? RtpPayloadFormat::H265().NalType(nal) < kHevcVps
+                           : (RtpPayloadFormat::H264().NalType(nal) == kNalSlice ||
+                              RtpPayloadFormat::H264().NalType(nal) == kNalIdrSlice);
         }
         EXPECT_GE(slices, 8);
     }
@@ -299,8 +301,8 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     for (const VideoEncoder::Frame& frame : frames) {
         SplitAnnexB(frame.annexB, nals);
         std::vector<std::string> packets;
-        RtpPayloadFormat::For(codec).Packetize(nals, 0, 0, 1400, seq, packets);
-        RtpVideoDepacketizer depacketizer(codec);
+        BundledVideoCodecs::FormatOf(codec).Rtp().Packetize(nals, 0, 0, 1400, seq, packets);
+        RtpVideoDepacketizer depacketizer(BundledVideoCodecs::FormatOf(codec).Rtp());
         std::string annexB;
         for (const std::string& packet : packets) {
             ASSERT_TRUE(depacketizer.Add(reinterpret_cast<const uint8_t*>(packet.data()) + 12,
@@ -310,7 +312,8 @@ TEST_P(VideoEncoderTest, EncodesFramesThatSurviveRtpAndDecode) {
     }
     ComPtr<IMFTransform> decoder = CreateDecoder(codec);
     if (!decoder) {
-        GTEST_SKIP() << "encoded and packetized, but there's no " << CodecName(codec)
+        GTEST_SKIP() << "encoded and packetized, but there's no "
+                     << BundledVideoCodecs::NameOf(codec)
                      << " decoder on this machine to check the picture";
     }
     std::vector<double> luma = DecodeAverageLuma(decoder, codec, accessUnits);
@@ -355,7 +358,7 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
     if (!device) {
         GTEST_SKIP() << "no hardware D3D11 device";
     }
-    std::unique_ptr<VideoEncoder> encoder = CreateVideoEncoder();
+    std::unique_ptr<VideoEncoder> encoder = MediaFoundationEncoderProvider().Create();
     VideoEncoder::Settings settings;
     settings.codec = codec;
     settings.width = 320;
@@ -364,7 +367,7 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
     settings.device = device.Get();
     std::wstring error;
     if (!encoder->Open(settings, error)) {
-        GTEST_SKIP() << "no GPU " << CodecName(codec)
+        GTEST_SKIP() << "no GPU " << BundledVideoCodecs::NameOf(codec)
                      << " encoder takes textures here: " << Utf8::FromWide(error);
     }
     EXPECT_TRUE(encoder->IsHardware());
@@ -397,7 +400,8 @@ TEST_P(VideoEncoderTextureTest, EncodesNv12TexturesFromTheGpu) {
 
     ComPtr<IMFTransform> decoder = CreateDecoder(codec);
     if (!decoder) {
-        GTEST_SKIP() << "encoded, but there's no " << CodecName(codec) << " decoder to check it";
+        GTEST_SKIP() << "encoded, but there's no " << BundledVideoCodecs::NameOf(codec)
+                     << " decoder to check it";
     }
     std::vector<std::string> accessUnits;
     for (const VideoEncoder::Frame& frame : frames) accessUnits.push_back(frame.annexB);

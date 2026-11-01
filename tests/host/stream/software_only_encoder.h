@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/host/encode/media_foundation_encoder_provider.h"
 #include "gazeora/host/encode/video_encoder.h"
 
 namespace gazeora {
@@ -19,7 +20,7 @@ public:
     explicit SoftwareOnlyEncoder(std::unique_ptr<VideoEncoder> inner) : m_inner(std::move(inner)) {}
 
     static std::unique_ptr<VideoEncoder> Create() {
-        return std::make_unique<SoftwareOnlyEncoder>(CreateVideoEncoder());
+        return std::make_unique<SoftwareOnlyEncoder>(MediaFoundationEncoderProvider().Create());
     }
 
     bool Open(const Settings& settings, std::wstring& error) override {
