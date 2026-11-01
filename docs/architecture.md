@@ -13,22 +13,23 @@ layout. For building and testing, see [Development](development.md).
 | `libs/library` | `gazeora_library` | The game library (`library.json`), shared by both front ends |
 | `libs/plugin_api` | header only | The C interface plugin DLLs are built against (MIT). See [Plugins](plugins.md) |
 | `libs/plugin_ui` | `gazeora_plugin_ui` | Plugins' cards: their XML layouts read with pugixml, and the keys they bind to. Drawn by `Gazeora.exe` (`apps/gazeora/src/plugin_ui`) |
-| `libs/plugin_kit` | `gazeora_plugin_kit` | Between the plugin interface and Gazeora's C++ codecs, outputs and game controller drivers, both ways |
+| `libs/plugin_kit` | `gazeora_plugin_kit` | Between the plugin interface and Gazeora's C++ codecs, outputs, game controller drivers and cards, both ways; and what the bundled plugins share (`bundled/`) |
 | `libs/plugins` | `gazeora_plugins` | Loads plugin DLLs and adds their game stores, encoders, codecs, protocols, game controller drivers and cards to the registries |
-| `libs/plugin_manager` | `gazeora_plugin_manager` | The Plugins page's work: the plugin list on gazeora.github.io, and installing and removing plugin DLLs |
-| `libs/input` | `gazeora_input`, `gazeora_sdl_input` | Game controllers: the controller models and the polling session (`gazeora_input`), and the SDL driver, linked only into the Game Controller plugin (`gazeora_sdl_input`) |
+| `libs/input` | `gazeora_input` | Game controllers: the controller models and the polling session. The controllers are read by a plugin's driver |
+| `libs/bundled_parts` | `gazeora_bundled_parts` | The bundled plugins' protocols and codec in-process, without their DLLs, for tests, tools and benchmarks (`BundledProtocols`, `BundledVideoCodecs`) |
 | `libs/update` | `gazeora_update` | [Updates](installer.md#updating): the website's release feed, the MSI download and its SHA-256 check, and starting the installer |
-| `apps/gazeora` | `Gazeora.exe` | The launcher UI (Dear ImGui on Direct3D 11), settings, head tracking, and the stream |
+| `apps/gazeora` | `Gazeora.exe`, `gazeora_plugin_manager` | The launcher UI (Dear ImGui on Direct3D 11), settings, head tracking, and the stream. `src/plugin_manager` is the Plugins page's work (the plugin list on gazeora.github.io, installing and removing plugin DLLs), a library of its own for its tests |
 | `apps/cli` | `GazeoraCLI.exe` | Command-line front end for the library and capture |
-| `plugins/` | `bundled-plugins\gazeora-*.dll` | The [bundled plugins](plugins.md#bundled-plugins): the UDP, HTTP and USB protocols, the H.265 codec and game controllers |
+| `plugins/<name>` | `gazeora_<name>`, `bundled-plugins\gazeora-<name>.dll` | The [bundled plugins](plugins.md#bundled-plugins), one folder each with only that plugin's code: `udp`, `http` (with the MPEG-TS muxer), `usb` (with libusb), `h265` (its format and RTP payload) and `controller` (SDL, its switch and card). Each builds a static library of its code, which the tests, tools and benchmarks use too, and its DLL |
 | `tools/` | `gazeora_testapp.exe`, `gazeora_stream_probe.exe` | [Developer tools](tools.md) |
 | `installer/` | MSI | [Installer](installer.md) |
 
 Dependencies point downward: the apps use `host`, `library`, `plugins` and `input`, and
 `Gazeora.exe` also `update` and `plugin_ui`; `plugins` uses `host`, `input`, `plugin_ui`,
 `plugin_api` and `plugin_kit`; the bundled plugins use `plugin_kit`, which uses `host`, `input`,
-`plugin_ui` and `plugin_api`, and the Game Controller plugin also `gazeora_sdl_input`; `host`, `hook` and `update` use `common`; `hook` does
-not depend on `host`.
+`plugin_ui` and `plugin_api`; `bundled_parts` uses the bundled plugins' libraries; `host`, `hook`
+and `update` use `common`; `hook` does not depend on `host`, and nothing under `libs/` but
+`bundled_parts` depends on a plugin.
 
 ## Capture to stream
 
@@ -115,9 +116,9 @@ there also needs a flag defined in [Stream format](stream-format.md) and support
 app.
 `BuiltInStreamProtocols` (RTSP over TCP and over UDP) and `BuiltInVideoCodecs` (H.264) fill
 them with what `Gazeora.exe` has itself, `PluginServices` adds what the plugins offer, and hands
-them to the stream server and the settings page. `BundledProtocols` and `BundledVideoCodecs`
-have what the bundled plugins add, for the tests, tools and benchmarks, which run without
-plugins.
+them to the stream server and the settings page. `FrameStreamServer` defaults to those built-in
+ones alone. `BundledProtocols` and `BundledVideoCodecs` (`libs/bundled_parts`) have what the
+bundled plugins add, for the tests, tools and benchmarks, which run without plugins.
 
 Three parts are chosen from a registry instead of being hard-coded. Each registry is filled at
 start-up and passed in through a constructor, so tests can pass their own. The built-in
@@ -221,18 +222,22 @@ libs/                 Libraries, in dependency order
   library/              The game library
   plugin_api/           The C header plugins build against (MIT)
   plugin_ui/            Plugins' cards: XML layouts, their elements, and bindings
-  plugin_kit/           The plugin interface and Gazeora's C++ codecs, outputs, drivers and cards
+  plugin_kit/           The plugin interface and Gazeora's C++ codecs, outputs, drivers and cards;
+                        bundled/: what the bundled plugins share
   plugins/              gazeora_plugins: loading plugin DLLs, adapters to the registries
-  plugin_manager/       The plugin list, downloads, and changes to the plugins folder
-  input/                Game controllers: models, the polling session, and the SDL driver
+  input/                Game controllers: models and the polling session
+  bundled_parts/        The bundled plugins' code in-process, for tests, tools and benchmarks
   update/               Finding, downloading and starting updates (WinHTTP, CNG, msiexec)
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/, ui/, platform/, gamepad/, keyboard/, head/,
-                          plugins/, plugin_ui/, remote/, settings/, update/ and config/
+                          plugins/, plugin_ui/, plugin_manager/, remote/, settings/, update/
+                          and config/
     resources/            Icon and resource script
   cli/                  GazeoraCLI.exe
-plugins/              The bundled plugins: udp/, http/, usb/, h265/, controller/, and common/
+plugins/              The bundled plugins, one folder each: udp/, http/, usb/, h265/, controller/
+  <name>/               include/gazeora/bundled/<name>/ and src/: only that plugin's code;
+                        CMakeLists.txt: its library and DLL (cmake/BundledPlugins.cmake)
 tools/                The test app, the stream probe, and license_headers.py
 tests/                GoogleTest suites, mirroring the code they test
 bench/                gazeora_bench, the benchmarks
@@ -243,4 +248,6 @@ cmake/                Compiler settings, dependency fetching, formatting, signin
 Headers live under each library's `include/gazeora/<module>/`, sources under `src/`, with the
 same subfolders. For example, `libs/host/src/stream/frame_stream.cpp` implements
 `libs/host/include/gazeora/host/stream/frame_stream.h`, included as
-`"gazeora/host/stream/frame_stream.h"`.
+`"gazeora/host/stream/frame_stream.h"`. A bundled plugin's headers are under `plugins/<name>/include/gazeora/bundled/<name>/`, as
+`"gazeora/bundled/udp/udp_frame_output.h"`. Gazeora.exe's own sources, the plugin manager's
+too, are included from `apps/gazeora/src`, as `"plugin_manager/models/plugin_entry.h"`.

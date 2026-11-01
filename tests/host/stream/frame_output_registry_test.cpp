@@ -9,8 +9,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "gazeora/bundled_parts/bundled_protocols.h"
 #include "gazeora/host/stream/built_in_stream_protocols.h"
-#include "gazeora/host/stream/bundled_protocols.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "host/stream/software_only_encoder_provider.h"
 
@@ -107,7 +107,7 @@ TEST(FrameOutputRegistryTest, ServerStreamsThroughAnInjectedOutput) {
 
 TEST(FrameOutputRegistryTest, ServerRefusesAProtocolWithNoOutput) {
     FrameStreamServer server{SoftwareOnlyEncoderProvider::Registry(),
-                             std::make_shared<FrameOutputRegistry>()};
+                             std::make_shared<FrameOutputRegistry>(), BundledProtocols::Catalog()};
     server.SetProtocol(StreamProtocol::Http);
     server.SetDiscoveryPort(0);
     std::wstring error;

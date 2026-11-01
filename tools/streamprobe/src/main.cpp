@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-#include "gazeora/host/encode/bundled_video_codecs.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 
 #include "gazeora/host/stream/rtp_video.h"
 

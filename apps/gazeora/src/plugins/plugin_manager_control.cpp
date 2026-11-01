@@ -9,8 +9,8 @@
 #include <system_error>
 
 #include "gazeora/common/text/utf8.h"
-#include "gazeora/plugin_manager/models/plugin_id.h"
-#include "gazeora/plugin_manager/services/plugin_directory.h"
+#include "plugin_manager/models/plugin_id.h"
+#include "plugin_manager/services/plugin_directory.h"
 
 namespace gazeora::app {
 

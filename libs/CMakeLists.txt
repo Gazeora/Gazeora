@@ -13,4 +13,3 @@ add_subdirectory(plugin_api)  # gazeora_plugin_api: the C header plugin DLLs bui
 add_subdirectory(plugin_kit)  # gazeora_plugin_kit: the plugin interface and Gazeora's C++, both ways
 add_subdirectory(plugins)  # gazeora_plugins: loads plugin DLLs into the host's registries
 add_subdirectory(update)   # gazeora_update: finding, downloading and starting updates
-add_subdirectory(plugin_manager)  # gazeora_plugin_manager: the plugin list, installs, removals

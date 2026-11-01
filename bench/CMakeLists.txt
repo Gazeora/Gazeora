@@ -15,7 +15,7 @@ add_executable(gazeora_bench
     src/library_bench.cpp
     src/protocol_bench.cpp
     src/stream_bench.cpp)
-target_link_libraries(gazeora_bench PRIVATE gazeora_hook_core gazeora_host_lib gazeora_library
+target_link_libraries(gazeora_bench PRIVATE gazeora_hook_core gazeora_host_lib gazeora_bundled_parts gazeora_library
     GTest::gtest)
 # Capture.RealHookPerGraphicsApi runs the hook in the test app, both from the same bin folder.
 add_dependencies(gazeora_bench gazeora_hook gazeora_testapp)

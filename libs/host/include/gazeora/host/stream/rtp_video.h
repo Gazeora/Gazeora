@@ -13,10 +13,11 @@
 
 namespace gazeora {
 
-// Video over RTP, one class per codec: H.264 (RFC 6184, packetization mode 1) and H.265
-// (RFC 7798). A NAL unit that fits goes in a packet of its own, a larger one is cut into
-// fragmentation units. Everything that differs between the codecs lives behind
-// RtpPayloadFormat; a codec's VideoCodecFormat (video_codec_format.h) says which one it uses.
+// Video over RTP, one class per codec: H.264 here (RFC 6184, packetization mode 1), others in
+// their plugins, such as H.265 (plugins/h265). A NAL unit that fits goes in a packet of its own,
+// a larger one is cut into fragmentation units. Everything that differs between the codecs lives
+// behind RtpPayloadFormat; a codec's VideoCodecFormat (video_codec_format.h) says which one it
+// uses.
 
 constexpr uint8_t kRtpVideoPayloadType = 96;  // dynamic, declared in the SDP
 
@@ -30,21 +31,6 @@ enum H264NalType : uint8_t {
     kNalFuA = 28,
 };
 
-// H.265 NAL unit types (bits 1-6 of the two-byte header).
-enum H265NalType : uint8_t {
-    kHevcTrailR = 1,
-    kHevcIrapFirst = 16,  // 16-21: BLA, IDR and CRA pictures, where decoding can start
-    kHevcIdrWRadl = 19,
-    kHevcIdrNLp = 20,
-    kHevcCra = 21,
-    kHevcIrapLast = 21,
-    kHevcVps = 32,
-    kHevcSps = 33,
-    kHevcPps = 34,
-    kHevcAp = 48,
-    kHevcFu = 49,
-};
-
 // Which parameter set a NAL unit is, if any. H.264 has no VPS.
 enum class ParameterSet { None, Vps, Sps, Pps };
 
@@ -52,9 +38,8 @@ class RtpPayloadFormat {
 public:
     virtual ~RtpPayloadFormat() = default;
 
-    // The built-in formats. Stateless and shared: one instance each for the program.
+    // The built-in format. Stateless and shared: one instance for the program.
     static const RtpPayloadFormat& H264();
-    static const RtpPayloadFormat& H265();
 
     virtual VideoCodec Codec() const = 0;
     // The SDP encoding name, as in "a=rtpmap:96 H264/90000".
@@ -85,6 +70,22 @@ public:
     // the payload header that replaces the NAL header, and the fragment header's type bits.
     virtual size_t NalHeaderSize() const = 0;
     virtual std::string FragmentPayloadHeader(const std::string& nal) const = 0;
+
+protected:
+    // What the formats share, for theirs and the plugins' codecs.
+    static std::string Base64(const std::string& data);
+    // A whole NAL unit in one payload: appended with its start code.
+    static void AppendNal(const uint8_t* payload, size_t size, std::string& annexB);
+    // Aggregation packets (H.264 STAP-A, H.265 AP): after the `headerSize`-byte payload
+    // header, NAL units each with a 16-bit size. False if one runs past the end.
+    static bool UnpackAggregate(const uint8_t* payload, size_t size, size_t headerSize,
+                                std::string& annexB);
+    // Fragmentation units: the start fragment rebuilds the NAL header from `header` (its
+    // `headerSize` bytes), every fragment adds its data after `dataAt`. False for a fragment
+    // whose start was lost.
+    static bool AddFragment(const uint8_t* payload, size_t size, size_t dataAt,
+                            uint8_t fragmentHeader, const char* header, size_t headerSize,
+                            bool& inFragment, std::string& annexB);
 };
 
 // Splits an Annex B byte stream (00 00 01 / 00 00 00 01 start codes) into NAL units,

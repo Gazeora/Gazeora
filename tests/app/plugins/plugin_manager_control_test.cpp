@@ -16,8 +16,8 @@
 #include "app/plugins/plugin_manager_fakes.h"
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/plugin_api/gazeora_plugin.h"
-#include "gazeora/plugin_manager/exceptions/plugin_manager_error.h"
 #include "gazeora/update/platform/bcrypt_file_hasher.h"
+#include "plugin_manager/exceptions/plugin_manager_error.h"
 
 namespace gazeora::app {
 namespace {

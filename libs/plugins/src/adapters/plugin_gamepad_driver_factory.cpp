@@ -4,6 +4,7 @@
 #include "adapters/plugin_gamepad_driver_factory.h"
 
 #include "adapters/plugin_gamepad_driver.h"
+#include "adapters/plugin_object_guard.h"
 #include "gazeora/input/exceptions/input_error.h"
 #include "gazeora/plugin_kit/utils/plugin_text.h"
 
@@ -23,13 +24,13 @@ std::unique_ptr<input::IGamepadDriver> PluginGamepadDriverFactory::Create() {
         throw input::InputError(why.empty() ? L"Game controllers can't be read through " + m_name
                                             : why);
     }
+    PluginObjectGuard<GazeoraGamepadDriverV3> guard(driver);
     if (!PluginGamepadDriver::Valid(driver)) {
-        if (driver.destroy) {
-            driver.destroy(driver.self);
-        }
         throw input::InputError(m_name + L" made an incomplete game controller driver");
     }
-    return std::make_unique<PluginGamepadDriver>(m_module, driver);
+    auto adapted = std::make_unique<PluginGamepadDriver>(m_module, driver);
+    guard.Release();
+    return adapted;
 }
 
 bool PluginGamepadDriverFactory::Enabled() const {

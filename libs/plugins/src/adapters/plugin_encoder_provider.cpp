@@ -4,6 +4,7 @@
 #include "adapters/plugin_encoder_provider.h"
 
 #include "adapters/plugin_codec.h"
+#include "adapters/plugin_object_guard.h"
 #include "adapters/plugin_video_encoder.h"
 #include "adapters/refused_video_encoder.h"
 #include "gazeora/plugin_kit/utils/plugin_text.h"
@@ -30,14 +31,14 @@ std::unique_ptr<VideoEncoder> PluginEncoderProvider::Create() const {
     if (m_provider.v1.create(m_provider.v1.self, &encoder) != GAZEORA_TRUE) {
         return std::make_unique<RefusedVideoEncoder>(m_name, L"could not create an encoder");
     }
+    PluginObjectGuard<GazeoraEncoderV1> guard(encoder);
     if (!PluginVideoEncoder::Valid(encoder)) {
-        if (encoder.destroy) {
-            encoder.destroy(encoder.self);
-        }
         return std::make_unique<RefusedVideoEncoder>(m_name, L"made an incomplete encoder");
     }
-    return std::make_unique<PluginVideoEncoder>(m_module, m_name, encoder,
-                                                m_provider.supports_id != nullptr);
+    auto adapted = std::make_unique<PluginVideoEncoder>(m_module, m_name, encoder,
+                                                        m_provider.supports_id != nullptr);
+    guard.Release();
+    return adapted;
 }
 
 }  // namespace gazeora

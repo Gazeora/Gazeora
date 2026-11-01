@@ -23,11 +23,13 @@ public:
 
     char* Data() { return m_buffer.data(); }
     size_t Capacity() const { return m_buffer.size(); }
-    std::wstring Wide() const {
+    // What the plugin wrote, as it wrote it (UTF-8).
+    std::string Utf8Text() const {
         const void* end = std::memchr(m_buffer.data(), '\0', m_buffer.size());
         size_t length = end ? static_cast<const char*>(end) - m_buffer.data() : m_buffer.size();
-        return Utf8::ToWide(std::string(m_buffer.data(), length));
+        return std::string(m_buffer.data(), length);
     }
+    std::wstring Wide() const { return Utf8::ToWide(Utf8Text()); }
 
     // A string a plugin hands over; empty for null.
     static std::string Narrow(const char* text) { return text ? std::string(text) : std::string(); }

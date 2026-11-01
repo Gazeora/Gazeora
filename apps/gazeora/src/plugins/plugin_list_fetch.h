@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "gazeora/plugin_manager/interfaces/plugin_index.h"
+#include "plugin_manager/interfaces/plugin_index.h"
 
 namespace gazeora::app {
 

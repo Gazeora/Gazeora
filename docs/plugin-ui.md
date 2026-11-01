@@ -134,11 +134,11 @@ no settings folder, as in the tests; then keep nothing.
 ## Example: the Game Controller plugin
 
 The bundled Game Controller plugin's card on the **Controls** page is
-[`plugins/controller/controller_panel.xml`](../plugins/controller/controller_panel.xml). Its
+[`plugins/controller/ui/controller_panel.xml`](../plugins/controller/ui/controller_panel.xml). Its
 `enabled` is the plugin's own switch, saved in `controls.ini`
 ([`[game_controller]`](configuration.md#game_controller)); the rest are Gazeora's values. The
 build turns the XML file into a string in the DLL (`gazeora_embed_text` in
-[`plugins/CMakeLists.txt`](../plugins/CMakeLists.txt)).
+[`cmake/BundledPlugins.cmake`](../cmake/BundledPlugins.cmake)).
 
 ## Limitations
 

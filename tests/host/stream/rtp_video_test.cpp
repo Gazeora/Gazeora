@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/bundled/h265/h265_payload_format.h"
 #include "gazeora/host/stream/rtp_video.h"
 
 namespace gazeora {
@@ -127,6 +128,25 @@ TEST(RtpH264Test, AFragmentWithoutItsStartIsRejected) {
     EXPECT_TRUE(annexB.empty());
 }
 
+// Packetize writes over the packets of the frame before; a smaller frame leaves none of the
+// bigger one's behind.
+TEST(RtpH264Test, ReusesTheLastFramesPacketsForTheNext) {
+    std::vector<std::string> packets;
+    uint16_t seq = 0;
+    RtpPayloadFormat::H264().Packetize({Nal(0x65, 4000)}, 0, 0, 1400, seq, packets);
+    ASSERT_EQ(packets.size(), 3u);
+    const char* reused = packets[0].data();
+    RtpPayloadFormat::H264().Packetize({Nal(0x41, 50)}, 0, 0, 1400, seq, packets);
+    ASSERT_EQ(packets.size(), 1u);
+    EXPECT_EQ(packets[0].data(), reused);  // the same buffer
+    EXPECT_EQ(packets[0].size(), 12u + 50u);
+    RtpVideoDepacketizer depacketizer;
+    std::string annexB;
+    ASSERT_TRUE(depacketizer.Add(reinterpret_cast<const uint8_t*>(packets[0].data()) + 12,
+                                 packets[0].size() - 12, annexB));
+    EXPECT_EQ(annexB, std::string("\0\0\0\1", 4) + Nal(0x41, 50));
+}
+
 TEST(RtpH264Test, FmtpCarriesProfileAndParameterSets) {
     std::string sps = "\x67\x42\xC0\x28";  // Constrained Baseline, level 4.0
     std::string pps = "\x68\xCE";
@@ -146,7 +166,7 @@ TEST(RtpH265Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
                                      HevcNal(kHevcPps, 8), HevcNal(kHevcIdrWRadl, 3000, 'y')};
     uint16_t seq = 7;
     std::vector<std::string> packets;
-    RtpPayloadFormat::H265().Packetize(nals, 1234, 0xCAFEF00D, 1400, seq, packets);
+    H265PayloadFormat::Shared().Packetize(nals, 1234, 0xCAFEF00D, 1400, seq, packets);
     // 3 single NAL packets, then 2998 bytes after the header in fragments of up to 1385.
     ASSERT_EQ(packets.size(), 6u);
     EXPECT_EQ(seq, 13);
@@ -164,7 +184,7 @@ TEST(RtpH265Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
         EXPECT_EQ((uint8_t(packets[i][1]) & 0x80) != 0, i + 1 == packets.size());
     }
 
-    RtpVideoDepacketizer depacketizer(RtpPayloadFormat::H265());
+    RtpVideoDepacketizer depacketizer(H265PayloadFormat::Shared());
     std::string annexB;
     for (const std::string& packet : packets) {
         ASSERT_TRUE(depacketizer.Add(reinterpret_cast<const uint8_t*>(packet.data()) + 12,
@@ -173,8 +193,8 @@ TEST(RtpH265Test, SmallNalUnitsGoAloneAndLargeOnesAsFragments) {
     std::vector<std::string> rebuilt;
     SplitAnnexB(annexB, rebuilt);
     EXPECT_EQ(rebuilt, nals);
-    EXPECT_TRUE(RtpPayloadFormat::H265().IsKeyFrame(rebuilt[3]));
-    EXPECT_FALSE(RtpPayloadFormat::H265().IsKeyFrame(HevcNal(kHevcTrailR, 10)));
+    EXPECT_TRUE(H265PayloadFormat::Shared().IsKeyFrame(rebuilt[3]));
+    EXPECT_FALSE(H265PayloadFormat::Shared().IsKeyFrame(HevcNal(kHevcTrailR, 10)));
 }
 
 TEST(RtpH265Test, UnpacksAggregationPackets) {
@@ -186,7 +206,7 @@ TEST(RtpH265Test, UnpacksAggregationPackets) {
         ap += char(nal->size());
         ap += *nal;
     }
-    RtpVideoDepacketizer depacketizer(RtpPayloadFormat::H265());
+    RtpVideoDepacketizer depacketizer(H265PayloadFormat::Shared());
     std::string annexB;
     ASSERT_TRUE(depacketizer.Add(reinterpret_cast<const uint8_t*>(ap.data()), ap.size(), annexB));
     std::vector<std::string> nals;
@@ -197,9 +217,9 @@ TEST(RtpH265Test, UnpacksAggregationPackets) {
 TEST(RtpH265Test, AFragmentWithoutItsStartIsRejected) {
     std::vector<std::string> packets;
     uint16_t seq = 0;
-    RtpPayloadFormat::H265().Packetize({HevcNal(kHevcTrailR, 4000)}, 0, 0, 1400, seq, packets);
+    H265PayloadFormat::Shared().Packetize({HevcNal(kHevcTrailR, 4000)}, 0, 0, 1400, seq, packets);
     ASSERT_EQ(packets.size(), 3u);
-    RtpVideoDepacketizer depacketizer(RtpPayloadFormat::H265());
+    RtpVideoDepacketizer depacketizer(H265PayloadFormat::Shared());
     std::string annexB;
     EXPECT_FALSE(depacketizer.Add(reinterpret_cast<const uint8_t*>(packets[1].data()) + 12,
                                   packets[1].size() - 12, annexB));
@@ -207,7 +227,7 @@ TEST(RtpH265Test, AFragmentWithoutItsStartIsRejected) {
 }
 
 TEST(RtpH265Test, FmtpCarriesTheThreeParameterSets) {
-    const RtpPayloadFormat& h265 = RtpPayloadFormat::H265();
+    const RtpPayloadFormat& h265 = H265PayloadFormat::Shared();
     const std::string all[4] = {"", "\x40\x01", "\x42\x01", "\x44\x01"};  // by ParameterSet
     EXPECT_EQ(h265.Fmtp(all), "sprop-vps=QAE=;sprop-sps=QgE=;sprop-pps=RAE=");
     const std::string noVps[4] = {"", "", "\x42\x01", "\x44\x01"};

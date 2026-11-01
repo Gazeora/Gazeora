@@ -10,10 +10,10 @@
 #include <string>
 #include <vector>
 
-#include "gazeora/plugin_manager/interfaces/plugin_index.h"
-#include "gazeora/plugin_manager/models/plugin_entry.h"
 #include "gazeora/update/interfaces/file_hasher.h"
 #include "gazeora/update/services/installer_downloader.h"
+#include "plugin_manager/interfaces/plugin_index.h"
+#include "plugin_manager/models/plugin_entry.h"
 #include "plugins/plugin_installer.h"
 #include "plugins/plugin_list_fetch.h"
 

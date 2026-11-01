@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
 
 #include "gazeora/host/stream/frame_stream.h"
+#include "gazeora/bundled/h265/h265_payload_format.h"
+#include "gazeora/bundled/http/ts_muxer.h"
+#include "gazeora/bundled_parts/bundled_protocols.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/common/text/utf8.h"
 #include "gazeora/host/stream/frame_packet.h"
 #include "gazeora/host/stream/rtp_video.h"
-#include "gazeora/host/stream/ts_muxer.h"
 #include "host/stream/software_only_encoder_provider.h"
 
 #include <gtest/gtest.h>
@@ -221,7 +224,9 @@ protected:
         return bgra;
     }
 
-    FrameStreamServer server{SoftwareOnlyEncoderProvider::Registry()};
+    // With the bundled plugins' protocols and codec, which these tests stream over too.
+    FrameStreamServer server{SoftwareOnlyEncoderProvider::Registry(), BundledProtocols::Outputs(),
+                             BundledProtocols::Catalog(), BundledVideoCodecs::Catalog()};
     std::string base;
     SOCKET rtsp = INVALID_SOCKET;
     SOCKET rtp = INVALID_SOCKET;
@@ -583,7 +588,7 @@ TEST_F(FrameStreamTest, StreamsH265WhenChosenAndAvailable) {
     std::vector<uint8_t> frame = Solid(320, 240, 0x80);
     server.PushFrame(320, 240, frame);
     char packet[2048];
-    RtpVideoDepacketizer depacketizer(RtpPayloadFormat::H265());
+    RtpVideoDepacketizer depacketizer(H265PayloadFormat::Shared());
     std::string annexB;
     for (int i = 0; i < 10000; ++i) {
         int got = recv(rtp, packet, sizeof(packet), 0);
@@ -596,10 +601,10 @@ TEST_F(FrameStreamTest, StreamsH265WhenChosenAndAvailable) {
     SplitAnnexB(annexB, nals);
     bool vps = false, sps = false, pps = false, key = false;
     for (const std::string& nal : nals) {
-        vps |= RtpPayloadFormat::H265().NalType(nal) == kHevcVps;
-        sps |= RtpPayloadFormat::H265().NalType(nal) == kHevcSps;
-        pps |= RtpPayloadFormat::H265().NalType(nal) == kHevcPps;
-        key |= RtpPayloadFormat::H265().IsKeyFrame(nal);
+        vps |= H265PayloadFormat::Shared().NalType(nal) == kHevcVps;
+        sps |= H265PayloadFormat::Shared().NalType(nal) == kHevcSps;
+        pps |= H265PayloadFormat::Shared().NalType(nal) == kHevcPps;
+        key |= H265PayloadFormat::Shared().IsKeyFrame(nal);
     }
     EXPECT_TRUE(vps && sps && pps && key);
     // Players that join later get the parameter sets in the SDP as well.

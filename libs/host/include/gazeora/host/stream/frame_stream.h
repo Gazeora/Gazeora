@@ -18,13 +18,13 @@
 #include <vector>
 
 #include "gazeora/host/capture/vr_layout.h"
+#include "gazeora/host/encode/built_in_video_codecs.h"
 #include "gazeora/host/encode/built_in_video_encoders.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/encode/video_codec.h"
 #include "gazeora/host/encode/video_codec_catalog.h"
 #include "gazeora/host/encode/video_encoder_registry.h"
 #include "gazeora/host/stream/bitrate_controller.h"
-#include "gazeora/host/stream/bundled_protocols.h"
+#include "gazeora/host/stream/built_in_stream_protocols.h"
 #include "gazeora/host/stream/camera_status_monitor.h"
 #include "gazeora/host/stream/discovery.h"
 #include "gazeora/host/stream/frame_mailbox.h"
@@ -76,13 +76,15 @@ public:
 
     // `encoders` supplies the video encoders, `outputs` the protocols other than RTSP,
     // `protocols` and `codecs` their names and what the discovery reply says of them. The
-    // defaults are the built-in ones and the bundled plugins' (for tests and tools); Gazeora.exe
-    // passes what its plugins add. Throws std::invalid_argument for a null one.
+    // defaults are only what Gazeora has without plugins: RTSP and H.264. Gazeora.exe passes what
+    // its plugins add; tests and tools that need the bundled plugins' pass BundledProtocols and
+    // BundledVideoCodecs (libs/bundled_parts). Throws std::invalid_argument for a null one.
     explicit FrameStreamServer(
         std::shared_ptr<const VideoEncoderRegistry> encoders = BuiltInVideoEncoders::Registry(),
-        std::shared_ptr<const FrameOutputRegistry> outputs = BundledProtocols::Outputs(),
-        std::shared_ptr<const StreamProtocolCatalog> protocols = BundledProtocols::Catalog(),
-        std::shared_ptr<const VideoCodecCatalog> codecs = BundledVideoCodecs::Catalog());
+        std::shared_ptr<const FrameOutputRegistry> outputs =
+            std::make_shared<const FrameOutputRegistry>(),
+        std::shared_ptr<const StreamProtocolCatalog> protocols = BuiltInStreamProtocols::Catalog(),
+        std::shared_ptr<const VideoCodecCatalog> codecs = BuiltInVideoCodecs::Catalog());
     FrameStreamServer(const FrameStreamServer&) = delete;
     FrameStreamServer& operator=(const FrameStreamServer&) = delete;
     ~FrameStreamServer() override;

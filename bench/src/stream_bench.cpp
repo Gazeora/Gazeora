@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "bench_util.h"
-#include "gazeora/host/encode/bundled_video_codecs.h"
+#include "gazeora/bundled_parts/bundled_video_codecs.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/host/stream/net.h"
@@ -214,7 +214,9 @@ void BenchServer(VideoCodec codec, uint32_t fps) {
     // other while the GPU encoder opens (over a second), then comes the key frame.
     constexpr int kSkip = 10;
     constexpr int kMaxUncounted = 600;
-    FrameStreamServer server;
+    FrameStreamServer server{BuiltInVideoEncoders::Registry(),
+                             std::make_shared<const FrameOutputRegistry>(),
+                             BuiltInStreamProtocols::Catalog(), BundledVideoCodecs::Catalog()};
     server.SetProtocol(StreamProtocol::RtspUdp);  // the player sets up RTP over UDP
     server.SetDiscoveryPort(0);                   // any free port, beside a running Gazeora
     std::wstring error;

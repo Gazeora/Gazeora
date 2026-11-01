@@ -13,10 +13,10 @@
 #include <vector>
 
 #include "gazeora/common/text/utf8.h"
-#include "gazeora/plugin_manager/services/plugin_folder_editor.h"
 #include "gazeora/plugins/platform/plugin_folder.h"
 #include "gazeora/update/platform/bcrypt_file_hasher.h"
 #include "platform/elevated_run.h"
+#include "plugin_manager/services/plugin_folder_editor.h"
 
 namespace gazeora::app {
 

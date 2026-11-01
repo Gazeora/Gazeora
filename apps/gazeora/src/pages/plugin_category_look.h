@@ -5,7 +5,7 @@
 
 #include <array>
 
-#include "gazeora/plugin_manager/models/plugin_category.h"
+#include "plugin_manager/models/plugin_category.h"
 
 namespace gazeora::app {
 
