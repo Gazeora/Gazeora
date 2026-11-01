@@ -24,7 +24,8 @@ public:
 
     VrLayout LoadVrLayout() const;
     void SaveVrLayout(const VrLayout& vr) const;
-    // "h264" (the default) or "h265".
+    // The saved codec's id, in lowercase: "h264" (the default), "h265" or another one, which
+    // this build may not have.
     VideoCodec LoadCodec() const;
     // The bitrate at full quality for H.264, bits/s (FrameStreamServer::SetMaxBitrate).
     uint32_t LoadMaxBitrate() const;
@@ -32,10 +33,11 @@ public:
     // Frames a second (FrameStreamServer::SetFrameRate); 60 unless saved otherwise.
     uint32_t LoadFrameRate() const;
     void SaveFrameRate(uint32_t fps) const;
-    void SaveCodec(VideoCodec codec) const;
-    // A stream_protocol.h id; RTSP over TCP by default.
+    void SaveCodec(const VideoCodec& codec) const;
+    // The saved protocol's id, in lowercase; RTSP over TCP by default. It may be one this
+    // build doesn't have.
     StreamProtocol LoadProtocol() const;
-    void SaveProtocol(StreamProtocol protocol) const;
+    void SaveProtocol(const StreamProtocol& protocol) const;
     // Off, with the usual details, unless saved otherwise.
     OverlaySettings LoadOverlay() const;
     void SaveOverlay(const OverlaySettings& overlay) const;
@@ -48,6 +50,11 @@ private:
     float Read(const wchar_t* key, float fallback) const;
     void Write(const wchar_t* key, float value) const;
     void EnsureFolder() const;
+    // An id saved under `key` in [stream], in lowercase; empty if none.
+    std::string LoadId(const wchar_t* key) const;
+    void SaveId(const wchar_t* key, const std::string& id) const;
+
+    static constexpr int kMaxIdChars = 65;  // an id of up to 64 characters, and the NUL
 
     std::wstring m_path;
 };

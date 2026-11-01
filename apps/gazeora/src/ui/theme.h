@@ -15,6 +15,7 @@ inline const ImU32 kAccent = IM_COL32(124, 92, 255, 255);
 inline const ImU32 kAccentHover = IM_COL32(146, 120, 255, 255);
 inline const ImU32 kAccentEnd = IM_COL32(56, 189, 248, 255);  // far end of the accent gradient
 inline const ImU32 kOnAccent = IM_COL32(255, 255, 255, 255);
+inline const ImU32 kAccentSoft = IM_COL32(124, 92, 255, 46);  // badges on cards
 inline const ImU32 kWindowBg = IM_COL32(18, 20, 30, 255);
 inline const ImU32 kSidebarBg = IM_COL32(13, 14, 22, 255);
 inline const ImU32 kCardBg = IM_COL32(27, 30, 44, 255);
@@ -52,12 +53,17 @@ inline const ImU32 kSuccess = IM_COL32(74, 222, 128, 255);
 #define ICON_CHECK u8""
 #define ICON_WARNING u8""
 #define ICON_EDIT u8""
-#define ICON_HAND u8""  // TouchPointer
+#define ICON_HAND u8""       // TouchPointer
+#define ICON_PLUGIN u8"\uEA86"  // Puzzle
+#define ICON_GLOBE u8"\uE774"   // Globe
+#define ICON_SHOP u8"\uE719"    // Shop
+#define ICON_CHIP u8"\uE950"    // Processing
 
 // Every glyph above, for building the font atlas.
 inline const char kAllIcons[] = ICON_HOME ICON_LIBRARY ICON_SETTINGS ICON_ADD ICON_PLAY ICON_BACK
     ICON_DELETE ICON_FOLDER ICON_PICTURE ICON_CAMERA ICON_SEARCH ICON_GAME ICON_REFRESH ICON_CAPTURE
-        ICON_CLOCK ICON_INFO ICON_CHECK ICON_WARNING ICON_EDIT ICON_HAND;
+        ICON_CLOCK ICON_INFO ICON_CHECK ICON_WARNING ICON_EDIT ICON_HAND ICON_PLUGIN ICON_GLOBE
+            ICON_SHOP ICON_CHIP;
 
 ImU32 WithAlpha(ImU32 color, float alpha);
 ImU32 Shade(const float rgb[3], float brightness, float alpha = 1.0f);

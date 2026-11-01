@@ -29,12 +29,14 @@
 #include <string>
 #include <vector>
 
+#include "gazeora/common/text/utf8.h"
 #include "gazeora/host/capture/capture_client.h"
 #include "gazeora/host/capture/frame_dump.h"
 #include "gazeora/host/launch/injector.h"
 #include "gazeora/host/launch/launcher.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "gazeora/plugins/plugin_services.h"
 
 namespace {
 
@@ -49,13 +51,14 @@ void PrintUsage(const wchar_t* exe) {
     fwprintf(stderr,
              L"usage:\n"
              L"  %ls list\n"
+             L"  %ls plugins\n"
              L"  %ls add <game.exe | shortcut.lnk> [--name N] [--args A] [--workdir D] "
              L"[--capture]\n"
              L"  %ls remove <id | name>\n"
              L"  %ls launch <id | name> [--capture]\n"
              L"  %ls attach <pid | process.exe> [--depth] [--save-after SECONDS]\n"
              L"  %ls run <game.exe> [--args A] [--depth] [--save-after SECONDS]\n",
-             exe, exe, exe, exe, exe, exe);
+             exe, exe, exe, exe, exe, exe, exe);
 }
 
 bool IsNumber(const std::wstring& text) {
@@ -292,8 +295,31 @@ bool SaveLibraryOrReport(gazeora::GameLibrary& library) {
     return true;
 }
 
+int CmdPlugins() {
+    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed());
+    wprintf(L"Plugins load from %ls\n", plugins.FolderPath().c_str());
+    if (plugins.Plugins().empty()) {
+        wprintf(L"No plugins.\n");
+    }
+    for (const gazeora::PluginStatus& plugin : plugins.Plugins()) {
+        wprintf(L"%ls %ls: %ls", plugin.name.c_str(), plugin.version.c_str(),
+                plugin.loaded ? L"loaded" : L"not loaded");
+        if (plugin.loaded) {
+            wprintf(L", %d game stores, %d encoders, %d codecs, %d protocols", plugin.gameStores,
+                    plugin.encoders, plugin.codecs, plugin.protocols);
+        }
+        if (!plugin.error.empty()) {
+            wprintf(L" (%ls)", plugin.error.c_str());
+        }
+        wprintf(L"\n");
+    }
+    return 0;
+}
+
 int CmdList() {
-    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath());
+    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed());
+    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath(),
+                                          plugins.Stores());
     gazeora::GameLibrary& library = services.Library();
     if (!LoadLibraryOrReport(library)) {
         return 1;
@@ -306,7 +332,9 @@ int CmdList() {
             L"LAUNCH", L"PATH");
     for (const gazeora::Game& game : library.Games()) {
         gazeora::LaunchSpec spec = services.LaunchSpecs().Create(game);
-        std::wstring via = spec.steamAppId.empty() ? L"exe" : L"steam " + spec.steamAppId;
+        std::wstring via = spec.ThroughStore()
+                               ? gazeora::Utf8::ToWide(spec.store->Id()) + L" " + spec.storeAppId
+                               : L"exe";
         wprintf(L"%4u  %-32ls  %-9ls  %-8ls  %-14ls  %ls\n", game.id, game.name.c_str(),
                 FormatPlaytime(game.playtimeSeconds).c_str(), game.captureOnLaunch ? L"on" : L"off",
                 via.c_str(), game.exePath.c_str());
@@ -388,8 +416,15 @@ int CmdRemove(const std::wstring& key) {
     return 0;
 }
 
+void PrintStartedThroughStore(const std::wstring& name, const gazeora::LaunchSpec& spec) {
+    wprintf(L"Started %ls through %ls (app %ls)\n", name.c_str(), spec.store->Name().c_str(),
+            spec.storeAppId.c_str());
+}
+
 int CmdLaunch(const std::wstring& key, bool forceCapture) {
-    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath());
+    gazeora::PluginServices plugins(gazeora::PluginFolder::Installed());
+    gazeora::GameLibraryServices services(gazeora::LibraryLocation::DefaultPath(),
+                                          plugins.Stores());
     gazeora::GameLibrary& library = services.Library();
     if (!LoadLibraryOrReport(library)) {
         return 1;
@@ -403,7 +438,7 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
     bool capture = forceCapture || game->captureOnLaunch;
     uint32_t id = game->id;
     std::wstring name = game->name;
-    bool throughSteam = !spec.steamAppId.empty();
+    const bool throughStore = spec.ThroughStore();
 
     game->lastPlayed = services.Clock().NowUnixSeconds();
     SaveLibraryOrReport(library);
@@ -412,15 +447,14 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
     gazeora::LaunchedGame launched;
     if (!capture) {
         // Nothing to watch: launchers that restart the game carry on by themselves.
-        bool ok = throughSteam ? gazeora::LaunchThroughSteam(spec.steamAppId, error)
+        bool ok = throughStore ? spec.store->Launch(spec.storeAppId, error)
                                : gazeora::LaunchGame(spec, launched, error);
         if (!ok) {
             fwprintf(stderr, L"launch failed: %ls\n", error.c_str());
             return 1;
         }
-        if (throughSteam) {
-            wprintf(L"Started %ls through Steam (app %ls)\n", name.c_str(),
-                    spec.steamAppId.c_str());
+        if (throughStore) {
+            PrintStartedThroughStore(name, spec);
         } else {
             wprintf(L"Launched %ls (PID %lu)\n", name.c_str(), launched.pid);
         }
@@ -432,12 +466,12 @@ int CmdLaunch(const std::wstring& key, bool forceCapture) {
     auto client = std::make_unique<gazeora::CaptureClient>();
     bool waitForGame = false;  // no process yet: find the game by name, then attach
     DWORD ignorePid = 0;
-    if (throughSteam) {
-        if (!gazeora::LaunchThroughSteam(spec.steamAppId, error)) {
+    if (throughStore) {
+        if (!spec.store->Launch(spec.storeAppId, error)) {
             fwprintf(stderr, L"launch failed: %ls\n", error.c_str());
             return 1;
         }
-        wprintf(L"Started %ls through Steam (app %ls)\n", name.c_str(), spec.steamAppId.c_str());
+        PrintStartedThroughStore(name, spec);
         waitForGame = true;
     } else {
         if (!gazeora::LaunchGameWithHook(spec, dllPath, *client, launched, error)) {
@@ -507,6 +541,8 @@ int wmain(int argc, wchar_t** argv) {
     std::vector<std::wstring> args(argv + 2, argv + argc);
     if (command == L"list") {
         return CmdList();
+    } else if (command == L"plugins") {
+        return CmdPlugins();
     } else if (command == L"add") {
         return CmdAdd(args);
     } else if (command == L"remove" && args.size() == 1) {

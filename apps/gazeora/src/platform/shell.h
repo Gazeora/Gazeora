@@ -17,7 +17,7 @@ void ShowInExplorer(const std::wstring& path);
 // Opens `url` in the default browser.
 void OpenUrl(const std::string& url);
 
-enum class PickKind { Games, Image, Folder };
+enum class PickKind { Games, Image, Folder, Plugin };
 // The paths the user picked; empty if cancelled.
 std::vector<std::wstring> PickFiles(HWND owner, PickKind kind);
 

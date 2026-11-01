@@ -11,6 +11,7 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,8 @@
 #include "gazeora/input/gamepad_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "gazeora/plugin_manager/plugin_manager_services.h"
+#include "gazeora/plugins/plugin_services.h"
 #include "gazeora/update/update_services.h"
 #include "head/controller_look_driver.h"
 #include "head/device_switching_driver.h"
@@ -42,7 +45,11 @@
 #include "pages/controls_page.h"
 #include "pages/gamepad_card.h"
 #include "pages/head_tracking_card.h"
+#include "pages/launch_via_choices.h"
+#include "pages/plugins_page.h"
 #include "pages/update_card.h"
+#include "plugins/elevated_plugin_installer.h"
+#include "plugins/plugin_manager_control.h"
 #include "remote/imgui_pointer_input.h"
 #include "remote/pointer_event_queue.h"
 #include "settings/controls_settings.h"
@@ -98,7 +105,7 @@ public:
     void OnRawInput(HRAWINPUT input) { m_keyboardMouse.OnRawInput(input); }
 
 private:
-    enum class Page { Home, Library, Details, Controls, Settings };
+    enum class Page { Home, Library, Details, Controls, Plugins, Settings };
     enum class Sort { RecentlyPlayed, Name, RecentlyAdded };
 
     // A sidebar entry, in the order the sidebar shows them.
@@ -192,7 +199,9 @@ private:
     float m_scale;
     Microsoft::WRL::ComPtr<ID3D11Device> m_device;
     TextureCache m_textures;
-    GameLibraryServices m_libraryServices{LibraryLocation::DefaultPath()};
+    // Loaded first: the library and the stream use the stores and encoders they add.
+    PluginServices m_plugins{PluginFolder::Installed()};
+    GameLibraryServices m_libraryServices{LibraryLocation::DefaultPath(), m_plugins.Stores()};
     GameLibrary& m_library = m_libraryServices.Library();
     // The phone's touches on a flat picture, and its hand pointing at this window in a VR
     // viewer. Declared before m_stream,
@@ -211,7 +220,9 @@ private:
     DeviceSwitchingDriver m_cameraDriver{m_mouseLook, m_controllerLook, m_lastUsedDevice};
     ForegroundGameFocus m_gameFocus;
     HeadLook m_headLook{m_cameraDriver, m_gameFocus};
-    FrameStreamServer m_stream;  // declared before m_sessions: they push frames into it
+    // Declared before m_sessions: they push frames into it.
+    FrameStreamServer m_stream{m_plugins.Encoders(), m_plugins.Outputs(), m_plugins.Protocols(),
+                               m_plugins.Codecs()};
     std::wstring m_streamError;  // why it isn't running
     StreamSettings m_settings;   // stream.ini: codec, protocol and VR layout
     VrLayout m_vr;
@@ -238,7 +249,7 @@ private:
     // Edit buffers for the details page, refreshed when it shows another game.
     uint32_t m_editId = 0;
     std::string m_editName, m_editArgs, m_editWorkDir, m_editProcess;
-    std::wstring m_editSteamAppId;  // detected from the exe's Steam library, if any
+    std::optional<LaunchViaChoices> m_editLaunchVia;
 
     // The USB driver being installed or taken off phones, as an administrator: what went
     // wrong, empty if nothing; and what to say when it's done.
@@ -285,6 +296,16 @@ private:
     UpdateControl m_updates{m_updateServices.Checker(), m_updateServices.Downloader(),
                             m_updateServices.Runner(), m_updateSettings, MakeUpdateEvents()};
     UpdateCard m_updateCard{m_updates, m_scale};
+    // The Plugins page: the plugin list, and installing and removing as an administrator.
+    PluginManagerServices m_pluginManagerServices{BuildVersion(), BuildArch()};
+    ElevatedPluginInstaller m_pluginInstaller{m_hwnd};
+    PluginManagerControl m_pluginManager{m_plugins.Plugins(),
+                                         m_pluginManagerServices.Index(),
+                                         m_pluginManagerServices.Bundled(),
+                                         m_pluginManagerServices.Downloader(),
+                                         m_pluginManagerServices.Hasher(),
+                                         m_pluginInstaller};
+    PluginsPage m_pluginsPage{m_pluginManager, m_plugins.FolderPath(), m_hwnd, m_scale};
 };
 
 }  // namespace gazeora::app

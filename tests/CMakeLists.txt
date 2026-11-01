@@ -8,6 +8,8 @@
 #  - gazeora_host_tests:      host library and the shared protocol header
 #  - gazeora_transport_tests: real hook and host talking to each other in one process
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
+#  - gazeora_plugin_tests:    loading plugin DLLs, with a sample plugin and the bundled ones
+#  - gazeora_plugin_manager_tests: the plugin list, and installing and removing plugins
 #  - gazeora_input_tests:     game controllers
 #  - gazeora_update_tests:    finding and downloading updates, on a fake web server
 #  - gazeora_app_tests:       the launcher's game controller support, on-screen keyboard,
@@ -49,10 +51,12 @@ gazeora_add_test(gazeora_host_tests
         host/capture/controller_turn_channel_test.cpp
         host/capture/frame_dump_test.cpp
         host/encode/gpu_nv12_converter_test.cpp
+        host/encode/video_encoder_registry_test.cpp
         host/encode/video_encoder_test.cpp
         host/stream/bitrate_controller_test.cpp
         host/stream/camera_status_monitor_test.cpp
         host/stream/frame_mailbox_test.cpp
+        host/stream/frame_output_registry_test.cpp
         host/stream/frame_stream_test.cpp
         host/stream/head_angles_test.cpp
         host/stream/head_pose_monitor_test.cpp
@@ -66,6 +70,7 @@ gazeora_add_test(gazeora_host_tests
         host/stream/stream_frame_sender_test.cpp
         host/stream/stream_overlay_test.cpp
         host/stream/stream_view_info_test.cpp
+        host/stream/video_codec_format_test.cpp
         host/stream/video_pipeline_test.cpp
     LIBS gazeora_host_lib)
 # The capture test launches the test app with the hook, both from this build.
@@ -77,8 +82,55 @@ endif()
 
 gazeora_add_test(gazeora_library_tests
     SOURCES library/game_library_test.cpp
+            library/launch_spec_factory_test.cpp
             library/missing_game_pruner_test.cpp
     LIBS gazeora_library)
+
+# The sample plugin, three times: for plugin API version 2, for version 1, and for a version
+# Gazeora doesn't have (sample_plugin.cpp). In a folder of their own, so the Gazeora.exe in
+# bin\ doesn't load them.
+set(GAZEORA_TEST_PLUGIN_DIR ${CMAKE_BINARY_DIR}/test_plugins)
+foreach(plugin gazeora_test_plugin gazeora_test_plugin_v1 gazeora_test_plugin_v99)
+    add_library(${plugin} SHARED
+        plugins/sample_plugin/sample_codec.cpp
+        plugins/sample_plugin/sample_encoder.cpp
+        plugins/sample_plugin/sample_output.cpp
+        plugins/sample_plugin/sample_plugin.cpp
+        plugins/sample_plugin/sample_store.cpp)
+    target_link_libraries(${plugin} PRIVATE gazeora_plugin_api)
+    set_target_properties(${plugin} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${GAZEORA_TEST_PLUGIN_DIR}
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG ${GAZEORA_TEST_PLUGIN_DIR}
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE ${GAZEORA_TEST_PLUGIN_DIR}
+        PREFIX "")
+endforeach()
+target_compile_definitions(gazeora_test_plugin_v1 PRIVATE SAMPLE_PLUGIN_API_VERSION=1u)
+target_compile_definitions(gazeora_test_plugin_v99 PRIVATE SAMPLE_PLUGIN_API_VERSION=99u)
+
+gazeora_add_test(gazeora_plugin_tests
+    SOURCES plugins/bundled_plugins_test.cpp
+            plugins/exported_output_test.cpp
+            plugins/plugin_dll_test.cpp
+            plugins/plugin_loader_test.cpp
+    LIBS gazeora_plugins gazeora_plugin_kit gazeora_plugin_api)
+# The bundled plugins are tested where the build puts them, as an install has them.
+target_compile_definitions(gazeora_plugin_tests PRIVATE
+    GAZEORA_TEST_PLUGIN_DIR="${GAZEORA_TEST_PLUGIN_DIR}"
+    GAZEORA_BUNDLED_PLUGIN_DIR="${GAZEORA_BUNDLED_PLUGIN_DIR}")
+add_dependencies(gazeora_plugin_tests gazeora_test_plugin gazeora_test_plugin_v1
+    gazeora_test_plugin_v99 ${GAZEORA_BUNDLED_PLUGINS})
+
+gazeora_add_test(gazeora_plugin_manager_tests
+    SOURCES plugin_manager/bundled_plugin_index_test.cpp
+            plugin_manager/plugin_category_test.cpp
+            plugin_manager/plugin_directory_test.cpp
+            plugin_manager/plugin_folder_editor_test.cpp
+            plugin_manager/plugin_index_test.cpp
+    LIBS gazeora_plugin_manager gazeora_plugin_api)
+target_compile_definitions(gazeora_plugin_manager_tests PRIVATE
+    GAZEORA_TEST_PLUGIN_DIR="${GAZEORA_TEST_PLUGIN_DIR}"
+    GAZEORA_BUNDLED_PLUGIN_DIR="${GAZEORA_BUNDLED_PLUGIN_DIR}")
+add_dependencies(gazeora_plugin_manager_tests gazeora_test_plugin ${GAZEORA_BUNDLED_PLUGINS})
 
 gazeora_add_test(gazeora_installer_tests
     SOURCES installer/user_data_removal_test.cpp
@@ -121,7 +173,11 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/head/mouse_look_driver.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/keyboard_layout.cpp
         ${GAZEORA_APP_SOURCE_DIR}/keyboard/on_screen_keyboard.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/pages/launch_via_choices.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/pages/plugin_card_text.cpp
         ${GAZEORA_APP_SOURCE_DIR}/platform/shell.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_list_fetch.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_manager_control.cpp
         ${GAZEORA_APP_SOURCE_DIR}/report/issue_link.cpp
         ${GAZEORA_APP_SOURCE_DIR}/report/windows_description.cpp
         ${GAZEORA_APP_SOURCE_DIR}/settings/controls_settings.cpp
@@ -139,9 +195,13 @@ gazeora_add_test(gazeora_app_tests
         app/head/mouse_look_driver_test.cpp
         app/keyboard/keyboard_layout_test.cpp
         app/keyboard/on_screen_keyboard_test.cpp
+        app/pages/launch_via_choices_test.cpp
+        app/pages/plugin_card_text_test.cpp
+        app/plugins/plugin_manager_control_test.cpp
         app/report/issue_link_test.cpp
         app/report/windows_description_test.cpp
         app/update/update_control_test.cpp
-    LIBS gazeora_input gazeora_library gazeora_host_lib gazeora_update imgui shell32 ole32 uuid)
+    LIBS gazeora_input gazeora_library gazeora_host_lib gazeora_update gazeora_plugin_manager
+         gazeora_plugin_api imgui shell32 ole32 uuid)
 target_include_directories(gazeora_app_tests PRIVATE
     ${GAZEORA_APP_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/input)

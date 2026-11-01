@@ -22,6 +22,7 @@
 #include "app.h"
 #include "platform/game_open_request.h"
 #include "platform/usb_driver.h"
+#include "plugins/plugin_command.h"
 #include "ui/ui_scale.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam,
@@ -174,6 +175,11 @@ void StyleTitleBar(HWND hwnd) {
 }  // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand) {
+    // Run as an administrator from the Plugins page to change the plugins folder: just that.
+    int pluginExit = gazeora::app::PluginCommand::Run();
+    if (pluginExit >= 0) {
+        return pluginExit;
+    }
     // Run as an administrator from Settings to install the USB driver: just that, no window.
     int driverExit = gazeora::app::RunUsbDriverCommand();
     if (driverExit >= 0) {

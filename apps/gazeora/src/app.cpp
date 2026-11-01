@@ -66,7 +66,9 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_stream.SetCodec(m_settings.LoadCodec());
     m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());
     m_stream.SetFrameRate(m_settings.LoadFrameRate());
-    m_stream.SetProtocol(m_settings.LoadProtocol());
+    // A protocol this build doesn't have (saved by another version) falls back to the default.
+    const StreamProtocol protocol = m_settings.LoadProtocol();
+    m_stream.SetProtocol(m_plugins.Protocols()->Has(protocol) ? protocol : StreamProtocol::RtspTcp);
     m_stream.SetPointerSink(&m_remoteTouches);
     m_stream.SetHeadPoseSink(&m_headLook);
     m_keyboardMouse.Register(m_hwnd);
@@ -238,6 +240,7 @@ void App::Tick() {
         }
     }
     m_updates.Tick();
+    m_pluginManager.Tick();
     for (auto it = m_sessions.begin(); it != m_sessions.end();) {
         GameSession& session = **it;
         if (!session.Finished()) {
@@ -385,6 +388,9 @@ void App::Draw() {
             break;
         case Page::Controls:
             m_controls.Draw({m_fonts.title, m_fonts.heading, m_fonts.caption});
+            break;
+        case Page::Plugins:
+            m_pluginsPage.Draw({m_fonts.title, m_fonts.heading, m_fonts.caption, m_fonts.bold});
             break;
         case Page::Settings:
             DrawSettings();
