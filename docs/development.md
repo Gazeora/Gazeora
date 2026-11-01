@@ -82,6 +82,7 @@ run without the Visual C++ Redistributable. If it is not found, configuring warn
 | `Gazeora.exe` | The launcher and stream server |
 | `GazeoraCLI.exe` | [Command-line](command-line.md) front end |
 | `gazeora_hook.dll` | The capture hook, injected into games |
+| `..\bundled-plugins` | The [bundled plugins](plugins.md#bundled-plugins) and `bundled.json`, built with `Gazeora.exe`. Plugins installed from the Plugins page go in `..\plugins` |
 | `gazeora_testapp.exe` | [Test app](tools.md#test-app) |
 | `gazeora_stream_probe.exe` | [Stream probe](tools.md#stream-probe) |
 | `gazeora_*_tests.exe` | Unit tests |
@@ -90,8 +91,9 @@ run without the Visual C++ Redistributable. If it is not found, configuring warn
 ### Installing a build
 
 `cmake --install` copies what Gazeora needs to run into `bin\` under the install prefix:
-`Gazeora.exe`, `GazeoraCLI.exe`, `gazeora_hook.dll` and, with MSVC, `vcomp140.dll`. The README and
-the license files go into `share\doc\Gazeora`, and the guides into `share\doc\Gazeora\docs`,
+`Gazeora.exe`, `GazeoraCLI.exe`, `gazeora_hook.dll` and, with MSVC, `vcomp140.dll`, and the
+bundled plugins and `bundled.json` into `bundled-plugins\`, beside `bin\`. The README and the
+license files go into `share\doc\Gazeora`, and the guides into `share\doc\Gazeora\docs`,
 so the README's links to them work in the installed copy. The test app and the
 stream probe are in the `Tools` component, installed only when asked for. Tests and benchmarks
 are never installed.
@@ -126,11 +128,13 @@ each attach to a per-process shared memory block:
 | `gazeora_hook_tests` | Hook core against a fake host; head turns as a controller's right stick; controller reports |
 | `gazeora_host_tests` | Capture client, injector, launcher, the test app captured end to end with the real hook, frame read-back, GPU scaling and the VR pass, NV12 conversion, H.264 and H.265 encoding, RTP round trips, the RTSP server, pointer and head pose input |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
-| `gazeora_library_tests` | The game library |
+| `gazeora_library_tests` | The game library, store resolution |
+| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output exported and loaded back, and the bundled plugins streaming over UDP and HTTP |
+| `gazeora_plugin_manager_tests` | Reading the plugin list, matching it with installed plugins, and installing, replacing and removing DLLs in a temporary plugins folder, including a loaded one |
 | `gazeora_installer_tests` | The MSI's custom actions, against a fake installer session |
 | `gazeora_input_tests` | Game controllers: stick filtering, the polling session, SDL without a window |
 | `gazeora_update_tests` | Release versions and channels, the release feed, and the MSI download's size and SHA-256 checks, against a fake web server |
-| `gazeora_app_tests` | The launcher's controller navigation and on-screen keyboard on a headless ImGui, `controls.ini`, head tracking, and the update steps |
+| `gazeora_app_tests` | The launcher's controller navigation and on-screen keyboard on a headless ImGui, `controls.ini`, head tracking, and the update steps, the Plugins page's tasks |
 
 Some tests depend on what the machine offers (for example a hardware encoder) and may skip
 themselves when it is missing.

@@ -35,8 +35,8 @@ At startup, `Gazeora.exe` removes games whose exe file no longer exists and save
 
 | Key | Values | Default | Effect |
 |---|---|---|---|
-| `protocol` | `rtsp-tcp`, `rtsp-udp`, `udp`, `http`, `usb` | `rtsp-tcp` | The stream protocol. Unknown values use the default. See [Choosing a protocol](streaming.md#choosing-a-protocol) |
-| `codec` | `h264`, `h265` | `h264` | The video codec |
+| `protocol` | `rtsp-tcp`, `rtsp-udp`, `udp`, `http`, `usb` | `rtsp-tcp` | The stream protocol. A value this version doesn't know streams over the default, and stays in the file until another protocol is chosen. See [Choosing a protocol](streaming.md#choosing-a-protocol) |
+| `codec` | `h264`, `h265` | `h264` | The video codec. A codec this version or this PC can't encode streams as `h264`, and stays in the file until another codec is chosen |
 | `max_bitrate_mbps` | 2 to 100 (clamped) | 20 | H.264 bitrate at full quality, in Mbit/s. H.265 uses 70% of it |
 | `fps` | 10 to 120 (clamped) | 60 | Stream frame rate. The app offers 30 and 60 |
 
