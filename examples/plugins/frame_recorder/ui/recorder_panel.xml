@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2026 Nithin Aashik
+     SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-Gazeora-Commercial
+
+     The Frame recorder's card on the Settings page (docs/plugin-ui.md). Every key is the
+     plugin's own (RecorderPanel); none is Gazeora's. -->
+<panel page="settings" title="Frame recorder" icon="camera">
+  <text tone="dim">Choose Record to file as the stream's protocol, then play a game. Each
+    recording starts at a key frame.</text>
+  <toggle bind="recording" label="Record"
+          help="While on, each frame of a game is written to the file. Turning it off ends
+                the file."/>
+  <input bind="folder" label="Folder" hint="Where recordings go"
+         help="Takes effect with the next file."/>
+  <text bind="status" tone-bind="tone"/>
+  <button action="new-file" icon="add" enabled-if="recording">Start a new file</button>
+</panel>

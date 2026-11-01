@@ -48,6 +48,13 @@ add_subdirectory(apps)   # Gazeora.exe (launcher UI) and GazeoraCLI.exe
 add_dependencies(Gazeora ${GAZEORA_BUNDLED_PLUGINS})
 add_subdirectory(tools)  # gazeora_testapp.exe, gazeora_stream_probe.exe
 
+# The example plugin plugin authors start from (docs/plugin-development.md). Built into a folder
+# of its own, so Gazeora.exe doesn't load it; the plugin tests do.
+option(GAZEORA_BUILD_EXAMPLES "Build the example plugin (examples/plugins)" ON)
+if(GAZEORA_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+
 option(GAZEORA_BUILD_TESTS "Build the GoogleTest unit tests" ON)
 if(GAZEORA_BUILD_TESTS)
     enable_testing()
