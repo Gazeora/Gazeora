@@ -20,15 +20,15 @@ public:
         : m_modules(modules), m_settingsFolder(std::move(settingsFolder)) {}
 
     PluginCatalog Load(const std::vector<std::wstring>& paths) const;
+    // One plugin: what it offered and its status, also when it didn't load.
+    PluginCatalog LoadOne(const std::wstring& path) const;
 
 private:
-    void LoadOne(const std::wstring& path, PluginCatalog& catalog) const;
     // Reads the plugin's info into `status`. False with status.error set if it's no plugin
     // of this API version.
     static bool ReadInfo(const IPluginModule& module, PluginStatus& status);
-    // Adds what one plugin registered to `catalog`, and counts it in `status`.
-    static void Collect(const PluginCatalog& registered, PluginCatalog& catalog,
-                        PluginStatus& status);
+    // Counts in `status` what one plugin registered.
+    static void Count(const PluginCatalog& registered, PluginStatus& status);
 
     const IPluginModuleLoader& m_modules;
     const std::wstring m_settingsFolder;

@@ -30,8 +30,27 @@ struct PluginCatalog {
     std::vector<std::shared_ptr<input::IGamepadDriverFactory>> gamepadDrivers;
     // Each driver's switch, in the same order.
     std::vector<std::shared_ptr<const input::IGamepadSwitch>> gamepadSwitches;
-    std::vector<ui::UiPanel> uiPanels;  // their ids not yet set
+    std::vector<ui::UiPanel> uiPanels;
     std::vector<PluginStatus> plugins;
+
+    // Adds what `other` offered after what this offers, and its plugins' statuses.
+    void Append(const PluginCatalog& other) {
+        AppendAll(gameStores, other.gameStores);
+        AppendAll(encoderProviders, other.encoderProviders);
+        AppendAll(codecs, other.codecs);
+        AppendAll(protocols, other.protocols);
+        AppendAll(outputs, other.outputs);
+        AppendAll(gamepadDrivers, other.gamepadDrivers);
+        AppendAll(gamepadSwitches, other.gamepadSwitches);
+        AppendAll(uiPanels, other.uiPanels);
+        AppendAll(plugins, other.plugins);
+    }
+
+private:
+    template <typename Item>
+    static void AppendAll(std::vector<Item>& to, const std::vector<Item>& items) {
+        to.insert(to.end(), items.begin(), items.end());
+    }
 };
 
 }  // namespace gazeora

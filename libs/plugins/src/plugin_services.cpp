@@ -3,6 +3,8 @@
 
 #include "gazeora/plugins/plugin_services.h"
 
+#include <windows.h>
+
 #include "gazeora/host/encode/built_in_video_codecs.h"
 #include "gazeora/host/encode/built_in_video_encoders.h"
 #include "gazeora/host/launch/built_in_game_stores.h"
@@ -16,15 +18,87 @@ namespace {
 
 constexpr char kPanelIdPrefix[] = "plugin-panel-";
 
+std::shared_ptr<const IPluginModuleLoader> OrWin32(
+    std::shared_ptr<const IPluginModuleLoader> modules) {
+    return modules ? std::move(modules) : std::make_shared<Win32PluginModuleLoader>();
+}
+
+std::wstring FileNameOf(const std::wstring& path) {
+    const size_t slash = path.find_last_of(L"\\/");
+    return slash == std::wstring::npos ? path : path.substr(slash + 1);
+}
+
+bool SameFileName(const std::wstring& a, const std::wstring& b) {
+    // Windows' file names ignore case.
+    return CompareStringOrdinal(a.c_str(), int(a.size()), b.c_str(), int(b.size()), TRUE) ==
+           CSTR_EQUAL;
+}
+
 }  // namespace
 
 PluginServices::PluginServices(const PluginFolder& folder, const std::wstring& settingsFolder,
                                std::shared_ptr<const IPluginModuleLoader> modules)
-    : m_folder(folder.Path()) {
-    if (!modules) {
-        modules = std::make_shared<Win32PluginModuleLoader>();
+    : m_folder(folder.Path()), m_settingsFolder(settingsFolder), m_modules(OrWin32(modules)) {
+    const PluginLoader loader(*m_modules, m_settingsFolder);
+    for (const std::wstring& path : folder.Dlls()) {
+        m_loaded.push_back(loader.LoadOne(path));
+        NameCards(m_loaded.back());
     }
-    Build(PluginLoader(*modules, settingsFolder).Load(folder.Dlls()));
+    Rebuild();
+}
+
+bool PluginServices::CanAdd(const std::wstring& fileName) const {
+    return IndexOf(m_loaded, fileName) == kNone && IndexOf(m_removed, fileName) == kNone;
+}
+
+const PluginStatus* PluginServices::Add(const std::wstring& fileName) {
+    if (!CanAdd(fileName)) {
+        return nullptr;
+    }
+    m_loaded.push_back(PluginLoader(*m_modules, m_settingsFolder).LoadOne(PathOf(fileName)));
+    NameCards(m_loaded.back());
+    Rebuild();
+    return &m_plugins.back();
+}
+
+std::optional<PluginStatus> PluginServices::Remove(const std::wstring& fileName) {
+    const size_t index = IndexOf(m_loaded, fileName);
+    if (index == kNone) {
+        return std::nullopt;
+    }
+    m_removed.push_back(std::move(m_loaded[index]));
+    m_loaded.erase(m_loaded.begin() + std::ptrdiff_t(index));
+    Rebuild();
+    return m_removed.back().plugins.front();
+}
+
+size_t PluginServices::IndexOf(const std::vector<PluginCatalog>& catalogs,
+                               const std::wstring& fileName) {
+    for (size_t i = 0; i < catalogs.size(); ++i) {
+        const std::vector<PluginStatus>& plugins = catalogs[i].plugins;
+        if (!plugins.empty() && SameFileName(FileNameOf(plugins.front().path), fileName)) {
+            return i;
+        }
+    }
+    return kNone;
+}
+
+std::wstring PluginServices::PathOf(const std::wstring& fileName) const {
+    return m_folder + L"\\" + fileName;
+}
+
+void PluginServices::NameCards(PluginCatalog& catalog) {
+    for (ui::UiPanel& panel : catalog.uiPanels) {
+        panel.id = kPanelIdPrefix + std::to_string(m_cardsNamed++);
+    }
+}
+
+void PluginServices::Rebuild() {
+    PluginCatalog all;
+    for (const PluginCatalog& catalog : m_loaded) {
+        all.Append(catalog);
+    }
+    Build(all);
 }
 
 void PluginServices::Build(const PluginCatalog& catalog) {
@@ -43,14 +117,9 @@ void PluginServices::Build(const PluginCatalog& catalog) {
     m_outputs = BuildOutputs(catalog);
     m_protocols = BuildProtocols(catalog);
     m_codecs = BuildCodecs(catalog);
-    if (!catalog.gamepadDrivers.empty()) {
-        m_gamepadDrivers = catalog.gamepadDrivers.front();
-        m_gamepadSwitch = catalog.gamepadSwitches.front();
-    }
+    m_gamepadDrivers = catalog.gamepadDrivers.empty() ? nullptr : catalog.gamepadDrivers.front();
+    m_gamepadSwitch = catalog.gamepadSwitches.empty() ? nullptr : catalog.gamepadSwitches.front();
     m_uiPanels = catalog.uiPanels;
-    for (size_t i = 0; i < m_uiPanels.size(); ++i) {
-        m_uiPanels[i].id = kPanelIdPrefix + std::to_string(i);
-    }
     m_plugins = catalog.plugins;
 }
 
