@@ -24,6 +24,10 @@ public:
     void SetGameRunning(bool running);
     // Reads them again, e.g. after an error.
     void Restart();
+    // Reads with another driver and switch from now on, e.g. after a plugin was installed or
+    // uninstalled; either may be null.
+    void SetDriver(std::shared_ptr<input::IGamepadDriverFactory> drivers,
+                   std::shared_ptr<const input::IGamepadSwitch> enabled);
 
     bool Enabled() const { return m_enabled && m_enabled->Enabled(); }
     // A plugin offers a driver to read controllers with.
@@ -39,7 +43,7 @@ private:
     bool Reading() const { return Enabled() && !m_gameRunning; }
 
     input::GamepadSession& m_session;
-    const std::shared_ptr<const input::IGamepadSwitch> m_enabled;
+    std::shared_ptr<const input::IGamepadSwitch> m_enabled;
     bool m_gameRunning = false;
     bool m_reading = false;  // what Refresh last applied
 };

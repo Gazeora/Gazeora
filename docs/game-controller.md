@@ -2,7 +2,8 @@
 
 A game controller can drive Gazeora's window, alongside the mouse and keyboard. It needs the
 **Game Controller** plugin, which comes with Gazeora but isn't installed: install it on the
-**Plugins** page (under **Available**, category **Controllers**) and restart Gazeora. See
+**Plugins** page (under **Available**, category **Controllers**). It works at once, without a
+restart. See
 [Bundled plugins](plugins.md#bundled-plugins). Without it, Gazeora reads no controllers, and
 the **Controls** page has no **Game controller** card.
 
@@ -76,8 +77,7 @@ same.
 ## Troubleshooting
 
 - **No Game controller card on the Controls page.** Install **Game Controller** from the
-  **Plugins** page, then restart Gazeora. If it's installed, check on the **Plugins** page that
-  it loaded.
+  **Plugins** page. If it's installed, check on the **Plugins** page that it loaded.
 - **"No controller connected: plug one in or pair it over Bluetooth".** Plug the controller in,
   or pair it in Windows' Bluetooth settings. It is detected without restarting Gazeora.
 - **An error instead of the controller list.** The controller system failed to start. Click

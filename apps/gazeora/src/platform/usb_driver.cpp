@@ -868,16 +868,19 @@ int RunUsbDriverCommand() {
     std::wstring result = count >= 3 ? arguments[2] : L"";
     std::vector<std::wstring> phoneIds(arguments + std::min(count, 3), arguments + count);
     LocalFree(arguments);
+    if (command != kInstallUsbDriverArgument && command != kRestoreFileTransferArgument &&
+        command != kUninstallUsbDriverArgument) {
+        return -1;  // not an elevated run of ours
+    }
+    ElevatedRun::HandForegroundToParent();
     std::wstring error;
     bool ok;
     if (command == kInstallUsbDriverArgument) {
         ok = InstallUsbDriver(phoneIds, error);
     } else if (command == kRestoreFileTransferArgument) {
         ok = RestoreFileTransfer(error);
-    } else if (command == kUninstallUsbDriverArgument) {
-        ok = UninstallUsbDriver(error);
     } else {
-        return -1;
+        ok = UninstallUsbDriver(error);
     }
     if (!ok && !result.empty()) {
         ElevatedRun::ReportToParent(result, error);

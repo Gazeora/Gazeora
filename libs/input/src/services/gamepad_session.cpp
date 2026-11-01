@@ -42,6 +42,12 @@ void GamepadSession::Stop() {
     Publish(Idle());
 }
 
+void GamepadSession::SetDrivers(std::shared_ptr<IGamepadDriverFactory> drivers) {
+    Stop();
+    m_drivers = std::move(drivers);
+    Publish(Idle());
+}
+
 GamepadSnapshot GamepadSession::Snapshot() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_snapshot;

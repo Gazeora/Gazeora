@@ -28,6 +28,7 @@ add_executable(Gazeora WIN32
     src/main.cpp
     src/app.cpp
     src/app_actions.cpp
+    src/app_plugins.cpp
     src/game_session.cpp
     src/textures.cpp
     src/gamepad/button_repeat.cpp
@@ -78,6 +79,7 @@ add_executable(Gazeora WIN32
     src/plugin_ui/ui_look.cpp
     src/plugins/elevated_plugin_installer.cpp
     src/plugins/plugin_command.cpp
+    src/plugins/plugin_activation.cpp
     src/plugins/plugin_list_fetch.cpp
     src/plugins/plugin_manager_control.cpp
     src/remote/imgui_pointer_input.cpp

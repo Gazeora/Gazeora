@@ -104,5 +104,19 @@ TEST_F(GamepadSessionTest, NeverStartsWithoutDrivers) {
     EXPECT_EQ(session.Snapshot().state, GamepadSessionState::Unavailable);
 }
 
+TEST_F(GamepadSessionTest, TakesADriverWhileRunning) {
+    GamepadSession session(nullptr, m_listener);
+    session.SetDrivers(m_drivers);
+    EXPECT_TRUE(session.Available());
+    EXPECT_EQ(session.Drivers(), m_drivers);
+    EXPECT_EQ(session.Snapshot().state, GamepadSessionState::Off);
+    session.Start();
+    EXPECT_TRUE(session.Running());
+    session.SetDrivers(nullptr);  // the plugin went: stops
+    EXPECT_FALSE(session.Running());
+    EXPECT_FALSE(session.Available());
+    EXPECT_EQ(session.Snapshot().state, GamepadSessionState::Unavailable);
+}
+
 }  // namespace
 }  // namespace gazeora::input

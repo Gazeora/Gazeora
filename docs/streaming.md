@@ -45,8 +45,8 @@ Changing it restarts the stream and disconnects everyone watching. The choice is
 | USB | `usb` | the USB cable | Gazeora app | GZF1 frames over Android Open Accessory (AOA). See [USB setup](#usb-setup) |
 
 UDP, HTTP and USB come from [bundled plugins](plugins.md#bundled-plugins): install **UDP
-Direct**, **HTTP Live** or **USB Cable** on the **Plugins** page and restart Gazeora, and the
-protocol appears in the list. Other plugins can add protocols of their own. If the saved
+Direct**, **HTTP Live** or **USB Cable** on the **Plugins** page, and the protocol appears in
+the list at once. Other plugins can add protocols of their own. If the saved
 protocol's plugin isn't installed, the stream uses RTSP over TCP.
 
 Multicast is not supported.

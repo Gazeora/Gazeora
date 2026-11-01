@@ -93,5 +93,30 @@ TEST_F(GamepadControlTest, TriesAgainAfterAnError) {
     EXPECT_TRUE(WaitForConnected(control));
 }
 
+TEST_F(GamepadControlTest, ReadsWithAPluginInstalledWhileRunning) {
+    input::GamepadSession session(nullptr, m_listener);
+    GamepadControl control(session, nullptr);
+    control.Refresh();
+    EXPECT_FALSE(control.Available());
+    m_gamepads.Connect(L"Xbox Controller");
+    control.SetDriver(m_drivers, m_switch);
+    EXPECT_TRUE(control.Available());
+    EXPECT_TRUE(WaitForConnected(control));
+    control.SetDriver(nullptr, nullptr);  // uninstalled
+    EXPECT_FALSE(control.Available());
+    EXPECT_FALSE(session.Running());
+}
+
+TEST_F(GamepadControlTest, KeepsReadingWhenTheDriverStaysTheSame) {
+    m_gamepads.Connect(L"Xbox Controller");
+    GamepadControl control(m_session, m_switch);
+    control.Refresh();
+    ASSERT_TRUE(WaitForConnected(control));
+    const uint64_t version = control.Version();
+    control.SetDriver(m_drivers, m_switch);  // another plugin changed, not this one
+    EXPECT_TRUE(control.Connected());
+    EXPECT_EQ(control.Version(), version);
+}
+
 }  // namespace
 }  // namespace gazeora::app

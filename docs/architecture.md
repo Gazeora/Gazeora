@@ -263,6 +263,29 @@ any window opens), as the USB driver install does. `ElevatedRun` starts that run
 its error back through a pipe. The elevated run checks the copy's SHA-256 in the plugins folder
 itself (`PluginFolderEditor`), so a file changed after the page checked it is refused.
 
+### Installing and uninstalling while running
+
+When the elevated run is done, `PluginManagerControl` asks `PluginActivation` (an
+`IPluginActivator`) to put the change into effect, on the UI thread, outside the frame:
+
+1. `PluginServices::Add` loads the new DLL, or `PluginServices::Remove` takes a plugin out. Each
+   keeps every plugin's parts apart (a `PluginCatalog` each) and builds all the registries again
+   as new objects, so whatever holds the old ones keeps working with them. A removed plugin's
+   parts are kept until exit, so its DLL is never unloaded while something might still use it.
+2. `App::OnPluginChanged` hands the new registries on: `GameLibraryServices::SetStores`,
+   `GamepadControl::SetDriver` (only if the first driver changed), and
+   `FrameStreamServer::SetParts`, which swaps the stream's `StreamParts` under a lock. The cards
+   are `PluginServices::UiPanels()`, which `PluginPanelsView` reads each frame; their ids stay
+   the same as other plugins come and go.
+3. The running stream keeps the output, encoders and codecs it started with. The app restarts
+   it when the plugin had encoders or codecs, or when the protocol saved in `stream.ini` is now
+   offered or no longer is.
+
+A file that was loaded once can't be loaded again while Gazeora runs: Windows keeps the loaded
+DLL under its name, and the plugin's own state (static objects, threads) can't be swapped
+safely. So updating or reinstalling a plugin loaded since start still waits for the next
+start, and the **Plugins** page says so.
+
 ## x64 and x86 releases
 
 The hook runs inside the game, so it must have the game's bitness, and so must the program that

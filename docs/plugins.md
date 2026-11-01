@@ -68,8 +68,20 @@ The **Plugins** page in the sidebar shows the installed plugins and the plugin l
   a file with the name of an installed plugin replaces it.
 
 Each install, update and uninstall asks for administrator permission, because the plugins folder
-is under Program Files. Changes take effect when Gazeora next starts: a plugin that's loaded
-stays loaded until then.
+is under Program Files.
+
+Installing and uninstalling take effect at once, without restarting Gazeora:
+
+- An installed plugin loads, and what it adds is there straight away: its protocol or codec in
+  the settings, its game store, its cards, its game controller driver.
+- An uninstalled plugin's parts go. If the stream used its protocol, it switches to RTSP over
+  TCP; if it used its codec, to H.264.
+- If the plugin adds encoders or codecs, or the stream's protocol changes, the stream restarts,
+  and anyone watching has to reconnect, as when the protocol is changed by hand.
+
+Updating or reinstalling a plugin that has been loaded since Gazeora started takes effect when
+Gazeora next starts: Windows doesn't let a running program load a new copy of a DLL it has
+loaded. The plugin's card says so, and the old version keeps working until then.
 
 A download from the list is kept only if its SHA-256 matches the list's. The copy in the plugins
 folder is checked again, as an administrator, before it replaces anything, also for a file from
@@ -85,7 +97,8 @@ installed.
 2. Copy the DLL into the `plugins` folder beside the `bin` folder `Gazeora.exe` is in. For an
    MSI install that's `C:\Program Files\Gazeora\plugins` (`Program Files (x86)` for x86).
    Create the folder if it doesn't exist. Writing there needs administrator rights.
-3. Restart Gazeora. Plugins load only at start.
+3. Restart Gazeora. Gazeora loads plugins copied there by hand only at start; the **Plugins**
+   page loads the ones it installs straight away.
 
 To remove a plugin by hand, close Gazeora, delete its DLL and start Gazeora again. The MSI
 doesn't install plugins, and uninstalling Gazeora leaves the plugins folder as it is.

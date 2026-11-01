@@ -159,7 +159,7 @@ void PluginCard::DrawAbout(const PluginEntry& entry) {
 void PluginCard::DrawNotes(const PluginEntry& entry) {
     const auto change = m_control.ChangeOf(entry.id);
     if (change == PluginChange::Installed) {
-        Wrapped(kSuccess, ICON_CHECK "  Installed. Restart Gazeora to load it.");
+        Wrapped(kSuccess, ICON_CHECK "  Installed. Restart Gazeora to load this copy.");
     } else if (change == PluginChange::Removed) {
         Wrapped(kWarning, "Uninstalled. Restart Gazeora to unload it.");
     } else if (entry.installed && !entry.installed->error.empty()) {

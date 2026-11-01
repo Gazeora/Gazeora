@@ -85,7 +85,8 @@ if(TESTAPP_HAVE_D3D8_H AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 gazeora_add_test(gazeora_library_tests
-    SOURCES library/game_library_test.cpp
+    SOURCES library/game_library_services_test.cpp
+            library/game_library_test.cpp
             library/launch_spec_factory_test.cpp
             library/missing_game_pruner_test.cpp
     LIBS gazeora_library)
@@ -121,6 +122,7 @@ gazeora_add_test(gazeora_plugin_tests
             plugins/exported_ui_panel_test.cpp
             plugins/plugin_dll_test.cpp
             plugins/plugin_loader_test.cpp
+            plugins/plugin_services_test.cpp
     LIBS gazeora_plugins gazeora_plugin_kit gazeora_plugin_api gazeora_bundled_parts
          gazeora_controller)
 target_include_directories(gazeora_plugin_tests PRIVATE
@@ -211,6 +213,7 @@ gazeora_add_test(gazeora_app_tests
         ${GAZEORA_APP_SOURCE_DIR}/ui/gamepad_status_line.cpp
         ${GAZEORA_APP_SOURCE_DIR}/ui/text_format.cpp
         ${GAZEORA_APP_SOURCE_DIR}/ui/widgets.cpp
+        ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_activation.cpp
         ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_list_fetch.cpp
         ${GAZEORA_APP_SOURCE_DIR}/plugins/plugin_manager_control.cpp
         ${GAZEORA_APP_SOURCE_DIR}/report/issue_link.cpp
@@ -234,6 +237,7 @@ gazeora_add_test(gazeora_app_tests
         app/pages/plugin_card_text_test.cpp
         app/plugin_ui/gamepad_ui_values_test.cpp
         app/plugin_ui/imgui_ui_renderer_test.cpp
+        app/plugins/plugin_activation_test.cpp
         app/plugins/plugin_manager_control_test.cpp
         app/report/issue_link_test.cpp
         app/report/windows_description_test.cpp

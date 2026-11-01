@@ -14,6 +14,7 @@
 #include "gazeora/update/services/installer_downloader.h"
 #include "plugin_manager/interfaces/plugin_index.h"
 #include "plugin_manager/models/plugin_entry.h"
+#include "plugins/plugin_activator.h"
 #include "plugins/plugin_installer.h"
 #include "plugins/plugin_list_fetch.h"
 
@@ -22,20 +23,22 @@ namespace gazeora::app {
 // The change to the plugins folder that's running, if any.
 enum class PluginTask { None, Installing, Removing };
 
-// What was changed for a plugin since Gazeora started; it applies at the next start.
+// A change to a plugin that waits for the next start: an update or reinstall of a plugin
+// loaded since start, or one the running Gazeora couldn't put into effect.
 enum class PluginChange { Installed, Removed };
 
 // State pattern: the Plugins page's work. The plugins that come with Gazeora are listed at
 // once; the web's plugin list loads on a thread of its own (PluginListFetch). Downloads and
 // changes to the plugins folder run one at a time on another thread. Tick() picks up the
-// results on the UI thread.
+// results on the UI thread, and has the activator put each into effect at once where it can.
 class PluginManagerControl {
 public:
-    // `installed` is how the plugins loaded at start, and outlives this. `bundled` lists the
-    // plugins that come with Gazeora, `web` the plugin list.
+    // `installed` is how the plugins loaded, kept up to date by `activator`, and outlives this.
+    // `bundled` lists the plugins that come with Gazeora, `web` the plugin list.
     PluginManagerControl(const std::vector<PluginStatus>& installed, IPluginIndex& web,
                          IPluginIndex& bundled, const InstallerDownloader& downloader,
-                         const IFileHasher& hasher, IPluginInstaller& installer);
+                         const IFileHasher& hasher, IPluginInstaller& installer,
+                         IPluginActivator& activator);
     ~PluginManagerControl();
     PluginManagerControl(const PluginManagerControl&) = delete;
     PluginManagerControl& operator=(const PluginManagerControl&) = delete;
@@ -69,6 +72,7 @@ private:
     struct Outcome {
         std::string error;
         std::wstring id;
+        std::wstring fileName;  // in the plugins folder
         std::optional<PluginChange> change;
     };
 
@@ -79,6 +83,8 @@ private:
     Outcome InstallFromDisk(const std::wstring& path) const;
     Outcome Remove(const std::wstring& id, const std::wstring& fileName) const;
     void Apply(Outcome outcome);
+    // Puts the change into effect at once; false if it waits for the next start.
+    bool Activate(const Outcome& outcome);
     void Rejoin();
     void AddInstalledSinceStart();
 
@@ -86,6 +92,7 @@ private:
     const InstallerDownloader& m_downloader;
     const IFileHasher& m_hasher;
     IPluginInstaller& m_installer;
+    IPluginActivator& m_activator;
     PluginListFetch m_list;
     bool m_listed = false;
     std::vector<PluginListing> m_bundled;

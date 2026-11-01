@@ -26,23 +26,9 @@ std::wstring Joined(const std::vector<std::wstring>& texts) {
     return joined;
 }
 
-template <typename Item>
-void Append(std::vector<Item>& to, const std::vector<Item>& items) {
-    to.insert(to.end(), items.begin(), items.end());
-}
-
 }  // namespace
 
-void PluginLoader::Collect(const PluginCatalog& registered, PluginCatalog& catalog,
-                           PluginStatus& status) {
-    Append(catalog.gameStores, registered.gameStores);
-    Append(catalog.encoderProviders, registered.encoderProviders);
-    Append(catalog.codecs, registered.codecs);
-    Append(catalog.protocols, registered.protocols);
-    Append(catalog.outputs, registered.outputs);
-    Append(catalog.gamepadDrivers, registered.gamepadDrivers);
-    Append(catalog.gamepadSwitches, registered.gamepadSwitches);
-    Append(catalog.uiPanels, registered.uiPanels);
+void PluginLoader::Count(const PluginCatalog& registered, PluginStatus& status) {
     status.gameStores = int(registered.gameStores.size());
     status.encoders = int(registered.encoderProviders.size());
     status.codecs = int(registered.codecs.size());
@@ -54,12 +40,13 @@ void PluginLoader::Collect(const PluginCatalog& registered, PluginCatalog& catal
 PluginCatalog PluginLoader::Load(const std::vector<std::wstring>& paths) const {
     PluginCatalog catalog;
     for (const std::wstring& path : paths) {
-        LoadOne(path, catalog);
+        catalog.Append(LoadOne(path));
     }
     return catalog;
 }
 
-void PluginLoader::LoadOne(const std::wstring& path, PluginCatalog& catalog) const {
+PluginCatalog PluginLoader::LoadOne(const std::wstring& path) const {
+    PluginCatalog catalog;
     PluginStatus status;
     status.path = path;
     status.name = FileName(path);
@@ -73,10 +60,12 @@ void PluginLoader::LoadOne(const std::wstring& path, PluginCatalog& catalog) con
         status.error =
             status.loaded ? Joined(registrar.Refusals()) : L"the plugin stopped while registering";
         if (status.loaded) {
-            Collect(registrar.Registered(), catalog, status);
+            catalog = registrar.Registered();
+            Count(catalog, status);
         }
     }
     catalog.plugins.push_back(std::move(status));
+    return catalog;
 }
 
 bool PluginLoader::ReadInfo(const IPluginModule& module, PluginStatus& status) {

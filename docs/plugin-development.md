@@ -75,8 +75,13 @@ sequenceDiagram
    keeps the DLL loaded while the adapter exists, and adds it to the registries. See
    [Architecture](architecture.md#plugins).
 
-Plugins load only when Gazeora starts. A plugin installed, updated or removed while Gazeora runs
-takes effect at the next start. [Why a plugin doesn't load](plugins.md#why-a-plugin-doesnt-load)
+Gazeora loads the plugins folder when it starts, and a plugin the **Plugins** page installs
+straight away, with the same steps. An uninstalled plugin's parts are taken out at once, but
+its DLL stays loaded until Gazeora exits, so nothing it made is freed under something still
+using it. A file loaded once isn't loaded again while Gazeora runs, so an update takes effect
+at the next start ([Managing plugins](plugins.md#managing-plugins)). Stop a plugin's work in
+the `destroy` of what it made, not when its DLL unloads: after an uninstall, Gazeora destroys
+the plugin's outputs, encoders and drivers, but the DLL stays until Gazeora exits. [Why a plugin doesn't load](plugins.md#why-a-plugin-doesnt-load)
 lists the errors the **Plugins** page shows.
 
 ## The example plugin
@@ -125,8 +130,8 @@ dumpbin /dependents build-recorder\frame-recorder.dll
 
 1. On the **Plugins** page, choose **Install from file** and pick `frame-recorder.dll`. It
    installs as `frame-recorder`. Approve the administrator prompt.
-2. Restart Gazeora. **Installed** lists **Frame recorder** with what it added: a protocol and a
-   card.
+2. **Installed** lists **Frame recorder** with what it added: a protocol and a card. No
+   restart is needed.
 3. In **Settings → Frame stream**, choose **Record to file** as the protocol. The **Frame
    recorder** card is on the same page.
 4. Play a game. The card says where it's recording. Files go to `Videos\Gazeora` until another

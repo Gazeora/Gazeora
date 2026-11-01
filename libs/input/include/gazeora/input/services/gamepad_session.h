@@ -33,8 +33,11 @@ public:
     // Starts over, stopping a session already running. Does nothing without drivers.
     void Start();
     void Stop();
+    // Stops, and reads with `drivers` from the next Start; null for none.
+    void SetDrivers(std::shared_ptr<IGamepadDriverFactory> drivers);
     bool Running() const { return m_thread.joinable(); }
     bool Available() const { return m_drivers != nullptr; }
+    const std::shared_ptr<IGamepadDriverFactory>& Drivers() const { return m_drivers; }
     GamepadSnapshot Snapshot() const;
     // Goes up each time Snapshot() would say something new, so a caller can keep what it made
     // of the last one instead of copying it again.
@@ -52,7 +55,7 @@ private:
     // What it is while not running: Off, or Unavailable without drivers.
     GamepadSnapshot Idle() const;
 
-    const std::shared_ptr<IGamepadDriverFactory> m_drivers;
+    std::shared_ptr<IGamepadDriverFactory> m_drivers;  // changed only while stopped
     IGamepadListener& m_listener;
     const GamepadStateFilter m_filter;
 

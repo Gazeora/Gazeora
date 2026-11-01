@@ -11,6 +11,7 @@
 #include "gazeora/update/interfaces/http_client.h"
 #include "plugin_manager/exceptions/plugin_manager_error.h"
 #include "plugin_manager/interfaces/plugin_index.h"
+#include "plugins/plugin_activator.h"
 #include "plugins/plugin_installer.h"
 
 namespace gazeora::app {
@@ -59,6 +60,21 @@ public:
     std::vector<std::wstring> installed, sources, removed;
     std::vector<std::string> hashes;
     bool refuse = false;
+};
+
+// Puts changes into effect at once only when `live` is set; otherwise they wait for a restart.
+class FakeActivator final : public IPluginActivator {
+public:
+    bool Activate(const std::wstring& fileName) override {
+        activated.push_back(fileName);
+        return live;
+    }
+    bool Deactivate(const std::wstring& fileName) override {
+        deactivated.push_back(fileName);
+        return live;
+    }
+    std::vector<std::wstring> activated, deactivated;
+    bool live = false;
 };
 
 }  // namespace gazeora::app
