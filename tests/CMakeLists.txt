@@ -8,8 +8,9 @@
 #  - gazeora_host_tests:      host library and the shared protocol header
 #  - gazeora_transport_tests: real hook and host talking to each other in one process
 #  - gazeora_library_tests:   the game library behind Gazeora.exe and GazeoraCLI.exe
-#  - gazeora_plugin_tests:    loading plugin DLLs, with a sample plugin and the bundled ones,
-#                             and the bundled plugins' own code (plugins/<name>)
+#  - gazeora_plugin_tests:    loading plugin DLLs, with a sample plugin, the bundled ones and
+#                             the example plugin, and the bundled plugins' own code
+#                             (plugins/<name>)
 #  - gazeora_plugin_manager_tests: the plugin list, and installing and removing plugins
 #  - gazeora_plugin_ui_tests: plugins' UI panels: reading their XML layouts, and bindings
 #  - gazeora_input_tests:     game controllers
@@ -130,6 +131,13 @@ target_compile_definitions(gazeora_plugin_tests PRIVATE
     GAZEORA_BUNDLED_PLUGIN_DIR="${GAZEORA_BUNDLED_PLUGIN_DIR}")
 add_dependencies(gazeora_plugin_tests gazeora_test_plugin gazeora_test_plugin_v1
     gazeora_test_plugin_v99 ${GAZEORA_BUNDLED_PLUGINS})
+# The example plugin, loaded as Gazeora loads one (examples/plugins/frame_recorder).
+if(TARGET gazeora_frame_recorder)
+    target_sources(gazeora_plugin_tests PRIVATE examples/frame_recorder_test.cpp)
+    target_compile_definitions(gazeora_plugin_tests PRIVATE
+        GAZEORA_EXAMPLE_PLUGIN_DIR="${GAZEORA_EXAMPLE_PLUGIN_DIR}")
+    add_dependencies(gazeora_plugin_tests gazeora_frame_recorder)
+endif()
 
 gazeora_add_test(gazeora_plugin_manager_tests
     SOURCES app/plugin_manager/bundled_plugin_index_test.cpp

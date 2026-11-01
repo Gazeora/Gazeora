@@ -15,15 +15,23 @@ endif()
 file(GLOB_RECURSE GAZEORA_FORMAT_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/libs/*.h ${CMAKE_SOURCE_DIR}/libs/*.cpp
     ${CMAKE_SOURCE_DIR}/apps/*.h ${CMAKE_SOURCE_DIR}/apps/*.cpp
+    ${CMAKE_SOURCE_DIR}/plugins/*.h ${CMAKE_SOURCE_DIR}/plugins/*.cpp
+    ${CMAKE_SOURCE_DIR}/examples/*.h ${CMAKE_SOURCE_DIR}/examples/*.cpp
     ${CMAKE_SOURCE_DIR}/tools/*.h ${CMAKE_SOURCE_DIR}/tools/*.cpp
     ${CMAKE_SOURCE_DIR}/tests/*.h ${CMAKE_SOURCE_DIR}/tests/*.cpp)
 
+# The files go in a list clang-format reads (--files, clang-format 16 or newer): on the command
+# line they're longer than Windows allows one to be. Rewritten when the glob above changes.
+list(JOIN GAZEORA_FORMAT_SOURCES "\n" GAZEORA_FORMAT_LIST)
+file(CONFIGURE OUTPUT ${CMAKE_BINARY_DIR}/format-sources.txt CONTENT "${GAZEORA_FORMAT_LIST}\n"
+    @ONLY)
+
 add_custom_target(format
-    COMMAND ${CLANG_FORMAT_EXE} -i ${GAZEORA_FORMAT_SOURCES}
+    COMMAND ${CLANG_FORMAT_EXE} -i --files=${CMAKE_BINARY_DIR}/format-sources.txt
     COMMENT "Formatting sources with clang-format"
     VERBATIM)
 
 add_custom_target(format-check
-    COMMAND ${CLANG_FORMAT_EXE} --dry-run --Werror ${GAZEORA_FORMAT_SOURCES}
+    COMMAND ${CLANG_FORMAT_EXE} --dry-run --Werror --files=${CMAKE_BINARY_DIR}/format-sources.txt
     COMMENT "Checking source formatting"
     VERBATIM)

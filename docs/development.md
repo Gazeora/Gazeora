@@ -27,8 +27,8 @@ Building, testing, benchmarks, formatting and releasing. For how the code is org
   | [pugixml](https://github.com/zeux/pugixml) | 1.15 | Plugins' card layouts |
   | [GoogleTest](https://github.com/google/googletest) | 1.15.2 | Tests and benchmarks |
 
-- Optional: the .NET SDK (for the MSI), clang-format (for the `format` targets), and Python
-  with [pre-commit](https://pre-commit.com).
+- Optional: the .NET SDK (for the MSI), clang-format 16 or newer (for the `format` targets),
+  and Python with [pre-commit](https://pre-commit.com).
 
 ### x64 and x86
 
@@ -66,6 +66,7 @@ chosen with `cmake --build build --config Release`.
 | `GAZEORA_STREAM_OVERLAY` | `ON` | Includes the [stream overlay](streaming.md#stream-overlay) in `Gazeora.exe`. CI and the released MSIs use `OFF` |
 | `GAZEORA_BUILD_TESTS` | `ON` | Builds the unit tests |
 | `GAZEORA_BUILD_BENCH` | `ON` | Builds `gazeora_bench.exe` |
+| `GAZEORA_BUILD_EXAMPLES` | `ON` | Builds the [example plugin](plugin-development.md#the-example-plugin), which `gazeora_plugin_tests` loads |
 | `GAZEORA_SIGN_CERT_FILE` | empty | A `.pfx` to Authenticode-sign the programs and the MSI. Its password is read from the `GAZEORA_SIGN_CERT_PASSWORD` environment variable |
 | `GAZEORA_SIGN_CERT_THUMBPRINT` | empty | Instead of a file, the SHA-1 thumbprint of a certificate in the user's store |
 
@@ -84,6 +85,7 @@ run without the Visual C++ Redistributable. If it is not found, configuring warn
 | `GazeoraCLI.exe` | [Command-line](command-line.md) front end |
 | `gazeora_hook.dll` | The capture hook, injected into games |
 | `..\bundled-plugins` | The [bundled plugins](plugins.md#bundled-plugins) and `bundled.json`, built with `Gazeora.exe`. Plugins installed from the Plugins page go in `..\plugins` |
+| `..\example_plugins` | The [example plugin](plugin-development.md#the-example-plugin), `frame-recorder.dll`. Gazeora doesn't load plugins from here |
 | `gazeora_testapp.exe` | [Test app](tools.md#test-app) |
 | `gazeora_stream_probe.exe` | [Stream probe](tools.md#stream-probe) |
 | `gazeora_*_tests.exe` | Unit tests |
@@ -130,7 +132,7 @@ each attach to a per-process shared memory block:
 | `gazeora_host_tests` | Capture client, injector, launcher, the test app captured end to end with the real hook, frame read-back, GPU scaling and the VR pass, NV12 conversion, H.264 and H.265 encoding, RTP round trips, the RTSP server, pointer and head pose input |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library, store resolution |
-| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output and game controller driver exported and loaded back, the bundled plugins streaming over UDP and HTTP, the Game Controller plugin starting SDL, and the SDL driver without a window |
+| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output and game controller driver exported and loaded back, the bundled plugins streaming over UDP and HTTP, the Game Controller plugin starting SDL, the SDL driver without a window, and the example plugin recording frames and keeping its settings |
 | `gazeora_plugin_manager_tests` | Reading the plugin list, matching it with installed plugins, and installing, replacing and removing DLLs in a temporary plugins folder, including a loaded one |
 | `gazeora_installer_tests` | The MSI's custom actions, against a fake installer session |
 | `gazeora_plugin_ui_tests` | Plugin cards: reading XML layouts and their mistakes, conditions, and which keys go to Gazeora |

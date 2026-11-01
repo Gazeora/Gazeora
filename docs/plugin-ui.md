@@ -5,7 +5,7 @@ which values its controls show and change. Gazeora reads the XML when the plugin
 draws the card itself, with its own controls, so a plugin card looks like the rest of Gazeora
 and a game controller moves through it the same way. The plugin never draws anything.
 
-This needs plugin API version 3. See [Plugins](plugins.md#writing-a-plugin) for writing a
+This needs plugin API version 3. See [Plugin development](plugin-development.md) for writing a
 plugin in general.
 
 ## Registering a card
@@ -125,13 +125,21 @@ and never asks the plugin. They are read-only: a control bound to one doesn't ch
 
 ## Settings
 
-A plugin keeps its own settings. `settings_folder` in `GazeoraPluginHostV3` is the folder
-Gazeora keeps its settings in (`%APPDATA%\Gazeora`, beside `library.json`), as UTF-8. Keep
-settings in a file named after the plugin there, and copy the path during
-`GazeoraPluginRegister`: the string is valid only during the call. It's `""` when Gazeora has
-no settings folder, as in the tests; then keep nothing.
+A card's values are the plugin's to keep. Keep them in a file named after the plugin in
+Gazeora's settings folder, which the version 3 host gives as `settings_folder`: see
+[Settings](plugin-development.md#settings).
 
-## Example: the Game Controller plugin
+## Examples
+
+### The Frame recorder example plugin
+
+[`examples/plugins/frame_recorder/ui/recorder_panel.xml`](../examples/plugins/frame_recorder/ui/recorder_panel.xml)
+is the card of the [example plugin](plugin-development.md#the-example-plugin), on the
+**Settings** page: a toggle, a text box, a line of status whose tone comes from a value, and a
+button enabled only while recording is on. `RecorderPanel` answers its keys from a table, one
+function per key.
+
+### The Game Controller plugin
 
 The bundled Game Controller plugin's card on the **Controls** page is
 [`plugins/controller/ui/controller_panel.xml`](../plugins/controller/ui/controller_panel.xml). Its

@@ -44,6 +44,11 @@ Changing it restarts the stream and disconnects everyone watching. The choice is
 | HTTP | `http` | `http://PC:8554/stream.ts` | Gazeora app, VLC, ffplay | A live MPEG-TS stream. Nothing is lost; a slow link skips frames |
 | USB | `usb` | the USB cable | Gazeora app | GZF1 frames over Android Open Accessory (AOA). See [USB setup](#usb-setup) |
 
+UDP, HTTP and USB come from [bundled plugins](plugins.md#bundled-plugins): install **UDP
+Direct**, **HTTP Live** or **USB Cable** on the **Plugins** page and restart Gazeora, and the
+protocol appears in the list. Other plugins can add protocols of their own. If the saved
+protocol's plugin isn't installed, the stream uses RTSP over TCP.
+
 Multicast is not supported.
 
 ### Discovery
@@ -84,8 +89,9 @@ Settings says so when this is the cause; run `adb kill-server` briefly to releas
 
 ## Choosing a codec
 
-**Settings → Frame stream → Video codec** switches between H.264 and H.265. The choice is saved
-as `[stream] codec`. Changing it disconnects everyone watching, because a player cannot switch
+**Settings → Frame stream → Video codec** switches between H.264 and H.265. H.265 comes from
+the bundled **H.265 (HEVC)** plugin: without it installed, only H.264 is offered, and a saved
+H.265 choice streams as H.264. The choice is saved as `[stream] codec`. Changing it disconnects everyone watching, because a player cannot switch
 codecs mid-stream.
 
 | | H.264 | H.265 |
