@@ -29,6 +29,7 @@
 #include "ui/text_format.h"
 #include "ui/theme.h"
 #include "ui/widgets.h"
+#include "version_info.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -69,6 +70,24 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_keyboardMouse.Register(m_hwnd);
     StartStream();
     m_gamepadControl.Resume();
+    m_updates.Start();
+}
+
+ReleaseVersion App::BuildVersion() {
+    // cmake/Version.cmake only accepts versions Parse reads.
+    return *ReleaseVersion::Parse(GAZEORA_VERSION_STRING);
+}
+
+std::string App::BuildArch() { return GAZEORA_ARCH; }
+
+UpdateEvents App::MakeUpdateEvents() {
+    UpdateEvents events;
+    events.found = [this](const Release& release) {
+        ShowToast("Gazeora " + release.Version().Label() +
+                  " is available: install it from Settings");
+    };
+    events.installerStarted = [this] { PostMessageW(m_hwnd, WM_CLOSE, 0, 0); };
+    return events;
 }
 
 void App::StartStream() {
@@ -216,6 +235,7 @@ void App::Tick() {
             ShowToast(U8(error), true);
         }
     }
+    m_updates.Tick();
     for (auto it = m_sessions.begin(); it != m_sessions.end();) {
         GameSession& session = **it;
         if (!session.Finished()) {
@@ -288,7 +308,8 @@ DWORD App::RunningGamePid() const {
 
 bool App::WantsContinuousFrames() const {
     if (!m_toasts.empty() || ImGui::GetIO().WantTextInput || ImGuiPointerInput::HasQueuedInput() ||
-        m_gamepadInput.Holding() || m_gamepadPresses.Holding() || m_panes.Settling()) {
+        m_gamepadInput.Holding() || m_gamepadPresses.Holding() || m_panes.Settling() ||
+        m_updates.Busy()) {
         return true;
     }
     for (const auto& session : m_sessions) {

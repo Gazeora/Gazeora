@@ -12,13 +12,14 @@ layout. For building and testing, see [Development](development.md).
 | `libs/host` | `gazeora_host_lib` | Launching and injecting, receiving frames, GPU processing, encoding, and the stream server |
 | `libs/library` | `gazeora_library` | The game library (`library.json`), shared by both front ends |
 | `libs/input` | `gazeora_input` | Game controllers through SDL |
+| `libs/update` | `gazeora_update` | [Updates](installer.md#updating): the website's release feed, the MSI download and its SHA-256 check, and starting the installer |
 | `apps/gazeora` | `Gazeora.exe` | The launcher UI (Dear ImGui on Direct3D 11), settings, head tracking, and the stream |
 | `apps/cli` | `GazeoraCLI.exe` | Command-line front end for the library and capture |
 | `tools/` | `gazeora_testapp.exe`, `gazeora_stream_probe.exe` | [Developer tools](tools.md) |
 | `installer/` | MSI | [Installer](installer.md) |
 
-Dependencies point downward: the apps use `host`, `library` and `input`; `host` and `hook` both
-use `common`; `hook` does not depend on `host`.
+Dependencies point downward: the apps use `host`, `library` and `input`, and `Gazeora.exe` also
+`update`; `host`, `hook` and `update` use `common`; `hook` does not depend on `host`.
 
 ## Capture to stream
 
@@ -122,10 +123,11 @@ libs/                 Libraries, in dependency order
     stream/               The stream server and its protocols
   library/              The game library
   input/                Game controllers (SDL)
+  update/               Finding, downloading and starting updates (WinHTTP, CNG, msiexec)
 apps/
   gazeora/              Gazeora.exe
     src/                  App, with pages/, ui/, platform/, gamepad/, keyboard/, head/,
-                          remote/, settings/ and config/
+                          remote/, settings/, update/ and config/
     resources/            Icon and resource script
   cli/                  GazeoraCLI.exe
 tools/                The test app, the stream probe, and license_headers.py

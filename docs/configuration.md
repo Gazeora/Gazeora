@@ -9,13 +9,14 @@ you change them in the app.
 | `library.json` | The game library | `Gazeora.exe`, `GazeoraCLI` |
 | `stream.ini` | Stream, VR viewer and stream overlay settings | `Gazeora.exe` |
 | `controls.ini` | Game controller and head tracking settings | `Gazeora.exe` |
+| `updates.ini` | Whether to check for updates at start | `Gazeora.exe` |
 | `stream.log` | What stream players did, rewritten at each start. See [Stream log](streaming.md#stream-log) | `Gazeora.exe` |
 
 ## Library location
 
 Set the environment variable `GAZEORA_LIBRARY` to the full path of a library file to use it
-instead of `%APPDATA%\Gazeora\library.json`. `stream.ini`, `controls.ini` and `stream.log` are
-always kept in the same folder as the library file.
+instead of `%APPDATA%\Gazeora\library.json`. `stream.ini`, `controls.ini`, `updates.ini` and
+`stream.log` are always kept in the same folder as the library file.
 
 ```powershell
 $env:GAZEORA_LIBRARY = "D:\Games\gazeora-library.json"
@@ -89,3 +90,11 @@ Values that are missing, negative or not a number use the default.
 | `counts_per_degree` | 1 to 100 | 20 | Mouse counts per degree of head turn |
 | `stick_degrees_per_second` | 30 to 720 | 180 | The game's camera turn speed at full stick, in degrees per second |
 | `stick_dead_zone` | 0 to 0.5 | 0.15 | The game's stick dead zone, as a share of full tilt |
+
+## updates.ini
+
+### `[updates]`
+
+| Key | Values | Default | Effect |
+|---|---|---|---|
+| `check_on_start` | `0`, `1` | `1` | Look for a newer release each time `Gazeora.exe` starts. See [Updating](installer.md#updating) |

@@ -26,6 +26,7 @@
 #include "gazeora/input/gamepad_services.h"
 #include "gazeora/library/game_library_services.h"
 #include "gazeora/library/platform/library_location.h"
+#include "gazeora/update/update_services.h"
 #include "head/controller_look_driver.h"
 #include "head/device_switching_driver.h"
 #include "head/foreground_game_focus.h"
@@ -41,11 +42,14 @@
 #include "pages/controls_page.h"
 #include "pages/gamepad_card.h"
 #include "pages/head_tracking_card.h"
+#include "pages/update_card.h"
 #include "remote/imgui_pointer_input.h"
 #include "remote/pointer_event_queue.h"
 #include "settings/controls_settings.h"
 #include "settings/stream_settings.h"
+#include "settings/update_settings.h"
 #include "textures.h"
+#include "update/update_control.h"
 
 struct ImFont;
 
@@ -176,6 +180,11 @@ private:
     uint64_t AccentGradient();  // ImTextureID of the horizontal gradient
     std::vector<const Game*> SortedGames(Sort sort, const std::string& filter) const;
     float S(float px) const { return px * m_scale; }
+    // This build's version (from VERSION) and architecture.
+    static ReleaseVersion BuildVersion();
+    static std::string BuildArch();
+    // The events of m_updates: a toast for a newer release, and closing for its installer.
+    UpdateEvents MakeUpdateEvents();
 
     HWND m_hwnd;
     float m_scale;
@@ -267,6 +276,13 @@ private:
         m_controlsSettings};
     HeadTrackingCard m_headTrackingCard{m_headTracking, m_scale};
     ControlsPage m_controls{m_gamepadCard, m_headTrackingCard, m_scale};
+
+    // Updates, declared last: m_updates waits for its threads, which use the services.
+    UpdateSettings m_updateSettings;
+    UpdateServices m_updateServices{BuildVersion(), BuildArch()};
+    UpdateControl m_updates{m_updateServices.Checker(), m_updateServices.Downloader(),
+                            m_updateServices.Runner(), m_updateSettings, MakeUpdateEvents()};
+    UpdateCard m_updateCard{m_updates, m_scale};
 };
 
 }  // namespace gazeora::app

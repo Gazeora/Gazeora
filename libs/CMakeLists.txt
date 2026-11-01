@@ -8,3 +8,4 @@ add_subdirectory(hook)     # gazeora_hook_core + gazeora_hook.dll, injected into
 add_subdirectory(host)     # gazeora_host_lib: launch, capture, encode, stream
 add_subdirectory(library)  # gazeora_library: the game library shared by both front ends
 add_subdirectory(input)    # gazeora_input: game controllers
+add_subdirectory(update)   # gazeora_update: finding, downloading and starting updates
