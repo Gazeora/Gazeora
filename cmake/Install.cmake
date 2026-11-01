@@ -3,8 +3,8 @@
 
 # `cmake --install`: what Gazeora needs to run, in one folder, as the programs find their hook
 # beside their own exe. Two components:
-#  - Runtime (the default): Gazeora.exe, GazeoraCLI.exe and gazeora_hook.dll, plus the README,
-#    guides and licenses.
+#  - Runtime (the default): Gazeora.exe, GazeoraCLI.exe, gazeora_hook.dll and the bundled
+#    plugins (bundled-plugins\), plus the README, guides and licenses.
 #  - Tools, only when asked for (--component Tools): the test apps and the stream probe.
 # Tests and benchmarks are never installed.
 
@@ -14,6 +14,12 @@ include(FetchContent)
 
 install(TARGETS Gazeora GazeoraCLI gazeora_hook
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT Runtime)
+# The bundled plugins wait in bundled-plugins/ until the Plugins page installs them into
+# plugins/; both are beside bin/ (PluginFolder).
+install(TARGETS ${GAZEORA_BUNDLED_PLUGINS}
+    RUNTIME DESTINATION bundled-plugins COMPONENT Runtime)
+install(FILES ${GAZEORA_BUNDLED_PLUGIN_DIR}/bundled.json
+    DESTINATION bundled-plugins COMPONENT Runtime)
 
 install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR} COMPONENT Runtime)
 

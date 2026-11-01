@@ -9,6 +9,7 @@
       <Directory Id="INSTALLFOLDER" Name="Gazeora">
         <Directory Id="BinFolder" Name="bin" />
         <Directory Id="ShareFolder" Name="share" />
+        <Directory Id="BundledPluginsFolder" Name="bundled-plugins" />
       </Directory>
     </StandardDirectory>
 
@@ -20,6 +21,8 @@
         <Exclude Files="!(bindpath.Runtime)\bin\Gazeora.exe" />
       </Files>
       <Files Directory="ShareFolder" Include="!(bindpath.Runtime)\share\**" />
+      <!-- The bundled plugins, which the Plugins page installs into plugins\ when asked. -->
+      <Files Directory="BundledPluginsFolder" Include="!(bindpath.Runtime)\bundled-plugins\**" />
       <!-- Starts the MSI's uninstall (installer/uninstaller). -->
       <Component Directory="INSTALLFOLDER">
         <File Id="UninstallExe" Source="!(bindpath.Actions)\Uninstall.exe" KeyPath="yes" />
