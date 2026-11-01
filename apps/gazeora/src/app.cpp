@@ -69,9 +69,7 @@ App::App(HWND hwnd, ID3D11Device* device, float scale)
     m_stream.SetCodec(m_settings.LoadCodec());
     m_stream.SetMaxBitrate(m_settings.LoadMaxBitrate());
     m_stream.SetFrameRate(m_settings.LoadFrameRate());
-    // A protocol this build doesn't have (saved by another version) falls back to the default.
-    const StreamProtocol protocol = m_settings.LoadProtocol();
-    m_stream.SetProtocol(m_plugins.Protocols()->Has(protocol) ? protocol : StreamProtocol::RtspTcp);
+    m_stream.SetProtocol(SavedProtocol());
     m_stream.SetPointerSink(&m_remoteTouches);
     m_stream.SetHeadPoseSink(&m_headLook);
     m_keyboardMouse.Register(m_hwnd);

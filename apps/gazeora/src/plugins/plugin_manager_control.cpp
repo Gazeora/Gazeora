@@ -32,11 +32,13 @@ void RemoveQuietly(const std::wstring& path) {
 PluginManagerControl::PluginManagerControl(const std::vector<PluginStatus>& installed,
                                            IPluginIndex& web, IPluginIndex& bundled,
                                            const InstallerDownloader& downloader,
-                                           const IFileHasher& hasher, IPluginInstaller& installer)
+                                           const IFileHasher& hasher, IPluginInstaller& installer,
+                                           IPluginActivator& activator)
     : m_installed(installed),
       m_downloader(downloader),
       m_hasher(hasher),
       m_installer(installer),
+      m_activator(activator),
       m_list(web) {
     // A file beside the exe: read at once, so the page has it from the start.
     try {
@@ -114,6 +116,7 @@ PluginManagerControl::Outcome PluginManagerControl::InstallChecked(
     std::wstring error;
     if (m_installer.Install(source, id, sha256, error)) {
         outcome.id = id;
+        outcome.fileName = id + kDll;
         outcome.change = PluginChange::Installed;
     } else {
         outcome.error = Utf8::FromWide(error);
@@ -138,6 +141,7 @@ PluginManagerControl::Outcome PluginManagerControl::Remove(const std::wstring& i
     std::wstring error;
     if (m_installer.Uninstall(fileName, error)) {
         outcome.id = id;
+        outcome.fileName = fileName;
         outcome.change = PluginChange::Removed;
     } else {
         outcome.error = Utf8::FromWide(error);
@@ -160,9 +164,18 @@ void PluginManagerControl::Tick() {
 void PluginManagerControl::Apply(Outcome outcome) {
     m_error = std::move(outcome.error);
     if (outcome.change) {
-        m_changes[outcome.id] = *outcome.change;
+        if (Activate(outcome)) {
+            m_changes.erase(outcome.id);  // in effect: the installed list now says so
+        } else {
+            m_changes[outcome.id] = *outcome.change;
+        }
     }
     Rejoin();
+}
+
+bool PluginManagerControl::Activate(const Outcome& outcome) {
+    return *outcome.change == PluginChange::Installed ? m_activator.Activate(outcome.fileName)
+                                                      : m_activator.Deactivate(outcome.fileName);
 }
 
 void PluginManagerControl::Rejoin() {

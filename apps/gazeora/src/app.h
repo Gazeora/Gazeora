@@ -50,6 +50,7 @@
 #include "plugin_ui/gazeora_ui_values.h"
 #include "plugin_ui/plugin_panels_view.h"
 #include "plugins/elevated_plugin_installer.h"
+#include "plugins/plugin_activation.h"
 #include "plugins/plugin_manager_control.h"
 #include "remote/imgui_pointer_input.h"
 #include "remote/pointer_event_queue.h"
@@ -176,6 +177,13 @@ private:
     // Starts the stream with its protocol, on kStreamPort or any free port; m_streamError
     // says why if it can't.
     void StartStream();
+    // Stops and starts the stream, so it uses its new parts; says so if anyone was watching.
+    void RestartStream();
+    // A plugin was installed or uninstalled while running (PluginActivation): hands the new
+    // registries to what uses them.
+    void OnPluginChanged(const PluginStatus& plugin, bool added);
+    // The protocol saved in stream.ini if a plugin offers it, RTSP over TCP otherwise.
+    StreamProtocol SavedProtocol();
     // Applies m_vr to the stream and saves it; the preview is redone on the next Tick.
     void ApplyVrLayout();
     // Draws the logo through the VR layout, for the preview under the VR settings.
@@ -305,12 +313,16 @@ private:
     // The Plugins page: the plugin list, and installing and removing as an administrator.
     PluginManagerServices m_pluginManagerServices{BuildVersion(), BuildArch()};
     ElevatedPluginInstaller m_pluginInstaller{m_hwnd};
+    PluginActivation m_pluginActivation{m_plugins, [this](const PluginStatus& plugin, bool added) {
+                                            OnPluginChanged(plugin, added);
+                                        }};
     PluginManagerControl m_pluginManager{m_plugins.Plugins(),
                                          m_pluginManagerServices.Index(),
                                          m_pluginManagerServices.Bundled(),
                                          m_pluginManagerServices.Downloader(),
                                          m_pluginManagerServices.Hasher(),
-                                         m_pluginInstaller};
+                                         m_pluginInstaller,
+                                         m_pluginActivation};
     PluginsPage m_pluginsPage{m_pluginManager, m_plugins.FolderPath(), m_pluginPanels, m_hwnd,
                               m_scale};
 };

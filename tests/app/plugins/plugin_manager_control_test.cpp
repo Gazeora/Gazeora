@@ -9,6 +9,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -79,12 +80,14 @@ protected:
     FakeIndex bundled;
     FakeHttp http;
     FakeInstaller installer;
+    FakeActivator activator;
     std::vector<PluginStatus> installed;
 };
 
 TEST_F(PluginManagerControlTest, ListsOnceUnlessAskedAgain) {
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     EXPECT_EQ(control.Entries().size(), 1u);  // the installed ones, before the list
     control.Refresh(false);
     Finish(control);
@@ -101,7 +104,8 @@ TEST_F(PluginManagerControlTest, ListsOnceUnlessAskedAgain) {
 
 TEST_F(PluginManagerControlTest, InstallsTheListedBuild) {
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     control.Refresh(false);
     Finish(control);
     control.Install(Entry(control, L"remote"));
@@ -115,9 +119,50 @@ TEST_F(PluginManagerControlTest, InstallsTheListedBuild) {
     EXPECT_TRUE(control.Error().empty());
 }
 
+TEST_F(PluginManagerControlTest, PutsAnInstallIntoEffectWithoutARestart) {
+    InstallerDownloader downloader(http, hasher, folder.wstring());
+    activator.live = true;
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
+    control.Refresh(false);
+    Finish(control);
+    control.Install(Entry(control, L"remote"));
+    Finish(control);
+    ASSERT_EQ(activator.activated.size(), 1u);
+    EXPECT_EQ(activator.activated[0], L"remote.dll");
+    EXPECT_EQ(control.ChangeOf(L"remote"), std::nullopt);
+    EXPECT_FALSE(control.RestartNeeded());
+}
+
+TEST_F(PluginManagerControlTest, PutsAnUninstallIntoEffectWithoutARestart) {
+    InstallerDownloader downloader(http, hasher, folder.wstring());
+    activator.live = true;
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
+    control.Uninstall(Entry(control, L"local"));
+    Finish(control);
+    ASSERT_EQ(activator.deactivated.size(), 1u);
+    EXPECT_EQ(activator.deactivated[0], L"Local.dll");
+    EXPECT_EQ(control.ChangeOf(L"local"), std::nullopt);
+    EXPECT_FALSE(control.RestartNeeded());
+}
+
+TEST_F(PluginManagerControlTest, LeavesAFailedChangeAlone) {
+    InstallerDownloader downloader(http, hasher, folder.wstring());
+    activator.live = true;
+    installer.refuse = true;
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
+    control.Uninstall(Entry(control, L"local"));
+    Finish(control);
+    EXPECT_TRUE(activator.deactivated.empty());
+    EXPECT_EQ(control.Error(), "no permission");
+}
+
 TEST_F(PluginManagerControlTest, InstallsAFileFromDiskUnderItsName) {
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     const fs::path file = folder / L"My Plugin.dll";
     std::ofstream(file, std::ios::binary) << kBytes;
     control.InstallFile(file.wstring());
@@ -130,7 +175,8 @@ TEST_F(PluginManagerControlTest, InstallsAFileFromDiskUnderItsName) {
 
 TEST_F(PluginManagerControlTest, UninstallsByTheInstalledFileName) {
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     control.Uninstall(Entry(control, L"local"));
     Finish(control);
     ASSERT_EQ(installer.removed.size(), 1u);
@@ -140,7 +186,8 @@ TEST_F(PluginManagerControlTest, UninstallsByTheInstalledFileName) {
 
 TEST_F(PluginManagerControlTest, ReportsFailures) {
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     index.fail = true;
     control.Refresh(false);
     Finish(control);
@@ -165,7 +212,8 @@ TEST_F(PluginManagerControlTest, OffersTheBundledPluginsBeforeTheListLoads) {
     udp.bundledFile = dll.wstring();
     bundled.listings = {udp};
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     const PluginEntry& entry = Entry(control, L"gazeora-udp");
     EXPECT_TRUE(entry.Bundled());
     EXPECT_FALSE(entry.installed.has_value());  // offered, not installed
@@ -180,7 +228,8 @@ TEST_F(PluginManagerControlTest, OffersTheBundledPluginsBeforeTheListLoads) {
 
 TEST_F(PluginManagerControlTest, ChangesPluginsWhileTheListLoads) {
     InstallerDownloader downloader(http, hasher, folder.wstring());
-    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer);
+    PluginManagerControl control(installed, index, bundled, downloader, hasher, installer,
+                                 activator);
     control.Refresh(false);
     control.Uninstall(Entry(control, L"local"));
     EXPECT_TRUE(control.Busy());
