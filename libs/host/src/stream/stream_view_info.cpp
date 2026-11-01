@@ -10,8 +10,6 @@ namespace gazeora {
 namespace {
 
 constexpr uint8_t kUserDataUnregistered = 5;  // SEI payload type
-constexpr uint8_t kH264Sei = 6;               // NAL unit types
-constexpr uint8_t kH265PrefixSei = 39;
 
 // Inserts emulation prevention bytes: no 00 00 followed by 00..03 inside a NAL unit.
 std::string Escape(const std::string& payload) {
@@ -43,7 +41,7 @@ std::string ViewInfoText(const VrLayout& vr, bool pair, FrameSource source) {
     return text;
 }
 
-std::string ViewInfoNal(VideoCodec codec, const std::string& text) {
+std::string ViewInfoNal(const VideoCodecFormat& format, const std::string& text) {
     std::string message(kViewInfoId, 16);
     message += text;
     std::string sei;
@@ -54,26 +52,7 @@ std::string ViewInfoNal(VideoCodec codec, const std::string& text) {
     sei += message;
     sei += '\x80';  // rbsp trailing bits
 
-    std::string nal;
-    if (codec == VideoCodec::H265) {
-        nal += char(kH265PrefixSei << 1);
-        nal += '\x01';  // layer 0, temporal id 0 (+1)
-    } else {
-        nal += char(kH264Sei);
-    }
-    return nal + Escape(sei);
-}
-
-bool IsPictureNal(VideoCodec codec, const std::string& nal) {
-    if (nal.empty()) {
-        return false;
-    }
-    uint8_t first = uint8_t(nal[0]);
-    if (codec == VideoCodec::H265) {
-        return (first >> 1 & 0x3F) < 32;  // VCL types are 0..31
-    }
-    uint8_t type = first & 0x1F;
-    return type >= 1 && type <= 5;
+    return format.SeiHeader() + Escape(sei);
 }
 
 }  // namespace gazeora

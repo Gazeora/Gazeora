@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "bench_util.h"
+#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/stream/frame_mailbox.h"
 #include "gazeora/host/stream/frame_stream.h"
 #include "gazeora/host/stream/net.h"
@@ -219,7 +220,7 @@ void BenchServer(VideoCodec codec, uint32_t fps) {
     std::wstring error;
     ASSERT_TRUE(server.Start(0, false, error)) << Narrow(error);
     if (!server.CodecAvailable(codec)) {
-        PrintNote(CodecName(codec), "no encoder on this PC");
+        PrintNote(BundledVideoCodecs::NameOf(codec).c_str(), "no encoder on this PC");
         return;
     }
     server.SetCodec(codec);
@@ -291,7 +292,7 @@ void BenchServer(VideoCodec codec, uint32_t fps) {
     size_t packets = 0;
     for (size_t n : packetCounts) packets += n;
     std::string label =
-        std::string(CodecName(codec)) + " " + size.name + " " + std::to_string(fps) + " fps";
+        BundledVideoCodecs::NameOf(codec) + " " + size.name + " " + std::to_string(fps) + " fps";
     PrintNote(label, Narrow(server.EncoderName()) + ", " + std::to_string(last.size()) + " of " +
                          std::to_string(counted) + " frames arrived, " +
                          std::to_string(packetCounts.empty() ? 0 : packets / packetCounts.size()) +

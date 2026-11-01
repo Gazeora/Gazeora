@@ -199,10 +199,14 @@ protected:
 
 }  // namespace
 
-const RtpPayloadFormat& RtpPayloadFormat::For(VideoCodec codec) {
-    static const H264PayloadFormat h264;
-    static const H265PayloadFormat h265;
-    return codec == VideoCodec::H265 ? static_cast<const RtpPayloadFormat&>(h265) : h264;
+const RtpPayloadFormat& RtpPayloadFormat::H264() {
+    static const H264PayloadFormat format;
+    return format;
+}
+
+const RtpPayloadFormat& RtpPayloadFormat::H265() {
+    static const H265PayloadFormat format;
+    return format;
 }
 
 void RtpPayloadFormat::Packetize(const std::vector<std::string>& nalUnits, uint32_t timestamp,

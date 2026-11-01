@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "bench_util.h"
+#include "gazeora/host/encode/bundled_video_codecs.h"
 #include "gazeora/host/stream/bitrate_controller.h"
 #include "gazeora/host/stream/rtcp.h"
 #include "gazeora/host/stream/rtp_video.h"
@@ -65,7 +66,7 @@ std::string ToAnnexB(const std::vector<std::string>& nals) {
 TEST(Rtp, PacketizeAndDepacketize) {
     PrintHeader("RTP video, 1400-byte packets");
     for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) {
-        const RtpPayloadFormat& format = RtpPayloadFormat::For(codec);
+        const RtpPayloadFormat& format = BundledVideoCodecs::FormatOf(codec).Rtp();
         AccessUnits units = UnitsFor(codec);
         struct Case {
             const char* name;
@@ -73,7 +74,7 @@ TEST(Rtp, PacketizeAndDepacketize) {
         };
         for (Case c :
              {Case{"frame 33 KB", &units.frame}, Case{"key frame 150 KB", &units.keyFrame}}) {
-            std::string prefix = std::string(CodecName(codec)) + " " + c.name + ": ";
+            std::string prefix = BundledVideoCodecs::NameOf(codec) + " " + c.name + ": ";
             std::string annexB = ToAnnexB(*c.nals);
             std::vector<std::string> nals, packets;
             Stats split = Measure(200, [&] {
@@ -89,7 +90,7 @@ TEST(Rtp, PacketizeAndDepacketize) {
             });
             Print(prefix + "Packetize", pack, std::to_string(packets.size()) + " packets");
 
-            RtpVideoDepacketizer depacketizer(codec);
+            RtpVideoDepacketizer depacketizer(BundledVideoCodecs::FormatOf(codec).Rtp());
             std::string rebuilt;
             Stats unpack = Measure(200, [&] {
                 rebuilt.clear();
@@ -108,35 +109,35 @@ TEST(Rtp, PacketizeAndDepacketize) {
 TEST(Rtp, ParameterSets) {
     PrintHeader("ParameterSetCache, per key frame");
     for (VideoCodec codec : {VideoCodec::H264, VideoCodec::H265}) {
-        const RtpPayloadFormat& format = RtpPayloadFormat::For(codec);
+        const RtpPayloadFormat& format = BundledVideoCodecs::FormatOf(codec).Rtp();
         AccessUnits units = UnitsFor(codec);
         ParameterSetCache cache(format);
-        Print(std::string(CodecName(codec)) + " Update", Measure(
-                                                             200,
-                                                             [&] {
-                                                                 Consume(&cache);
-                                                                 cache.Update(units.keyFrame);
-                                                             },
-                                                             3, 100));
+        Print(BundledVideoCodecs::NameOf(codec) + " Update", Measure(
+                                                                 200,
+                                                                 [&] {
+                                                                     Consume(&cache);
+                                                                     cache.Update(units.keyFrame);
+                                                                 },
+                                                                 3, 100));
         // A key frame without its parameter sets, as some encoders send them once only.
         std::vector<std::string> idrOnly = {units.keyFrame.back().substr(0, 64)};
         std::vector<std::string> nals;
-        Print(std::string(CodecName(codec)) + " PrependTo", Measure(
-                                                                200,
-                                                                [&] {
-                                                                    nals = idrOnly;
-                                                                    cache.PrependTo(nals);
-                                                                    Consume(nals.data());
-                                                                },
-                                                                3, 100));
+        Print(BundledVideoCodecs::NameOf(codec) + " PrependTo", Measure(
+                                                                    200,
+                                                                    [&] {
+                                                                        nals = idrOnly;
+                                                                        cache.PrependTo(nals);
+                                                                        Consume(nals.data());
+                                                                    },
+                                                                    3, 100));
         std::string fmtp;
-        Print(std::string(CodecName(codec)) + " Fmtp (SDP)", Measure(
-                                                                 200,
-                                                                 [&] {
-                                                                     fmtp = cache.Fmtp();
-                                                                     Consume(fmtp.data());
-                                                                 },
-                                                                 3, 100));
+        Print(BundledVideoCodecs::NameOf(codec) + " Fmtp (SDP)", Measure(
+                                                                     200,
+                                                                     [&] {
+                                                                         fmtp = cache.Fmtp();
+                                                                         Consume(fmtp.data());
+                                                                     },
+                                                                     3, 100));
     }
 }
 
