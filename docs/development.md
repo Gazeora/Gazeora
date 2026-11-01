@@ -130,11 +130,11 @@ each attach to a per-process shared memory block:
 | `gazeora_host_tests` | Capture client, injector, launcher, the test app captured end to end with the real hook, frame read-back, GPU scaling and the VR pass, NV12 conversion, H.264 and H.265 encoding, RTP round trips, the RTSP server, pointer and head pose input |
 | `gazeora_transport_tests` | The real hook and host exchanging frames in one process |
 | `gazeora_library_tests` | The game library, store resolution |
-| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output and game controller driver exported and loaded back, the bundled plugins streaming over UDP and HTTP, and the Game Controller plugin starting SDL |
+| `gazeora_plugin_tests` | Loading plugin DLLs: a sample plugin built in the tree, fake modules for broken plugins, a C++ output and game controller driver exported and loaded back, the bundled plugins streaming over UDP and HTTP, the Game Controller plugin starting SDL, and the SDL driver without a window |
 | `gazeora_plugin_manager_tests` | Reading the plugin list, matching it with installed plugins, and installing, replacing and removing DLLs in a temporary plugins folder, including a loaded one |
 | `gazeora_installer_tests` | The MSI's custom actions, against a fake installer session |
 | `gazeora_plugin_ui_tests` | Plugin cards: reading XML layouts and their mistakes, conditions, and which keys go to Gazeora |
-| `gazeora_input_tests` | Game controllers: stick filtering, the polling session with and without a driver, SDL without a window |
+| `gazeora_input_tests` | Game controllers: stick filtering, the polling session with and without a driver |
 | `gazeora_update_tests` | Release versions and channels, the release feed, and the MSI download's size and SHA-256 checks, against a fake web server |
 | `gazeora_app_tests` | The launcher's controller navigation, on-screen keyboard and plugin cards on a headless ImGui, `controls.ini`, head tracking, and the update steps, the Plugins page's tasks |
 
